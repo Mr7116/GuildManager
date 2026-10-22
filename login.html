@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เข้าสู่ระบบกิลด์ | Moonz Guild Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #0b0f19;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake {
+      animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+    }
+    .glow-amber {
+      box-shadow: 0 0 35px -5px rgba(245, 158, 11, 0.35);
+    }
+    .glow-indigo {
+      box-shadow: 0 0 45px -8px rgba(99, 102, 241, 0.35);
+    }
+  </style>
+  <script>
+    // If already logged in, redirect straight to target or index.html
+    (function() {
+      const isAuth = localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
+                     sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
+      if (isAuth) {
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect') || 'index.html';
+        window.location.replace(redirect);
+      }
+    })();
+  </script>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 relative overflow-hidden bg-[#070a13] text-slate-100">
+
+  <!-- Ambient Background Glows -->
+  <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-600/15 rounded-full blur-[120px] pointer-events-none"></div>
+  <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-amber-600/15 rounded-full blur-[120px] pointer-events-none"></div>
+  <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-slate-900/60 rounded-full blur-[140px] pointer-events-none"></div>
+
+  <!-- Login Card -->
+  <div class="relative w-full max-w-md z-10">
+    <div id="loginCard" class="bg-slate-900/90 backdrop-blur-xl border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl glow-indigo transition duration-300">
+      
+      <!-- Guild Emblem & Header -->
+      <div class="text-center space-y-3 mb-6">
+        <div class="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 text-4xl shadow-xl shadow-orange-500/25 glow-amber">
+          ⚔️
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-wide text-white flex items-center justify-center gap-2">
+            <span>Moonz Guild</span>
+          </h1>
+          <p class="text-xs sm:text-sm text-slate-400 mt-1">
+            ระบบบริหารจัดการทัพ & กิจกรรมกิลด์ Ragnarok
+          </p>
+        </div>
+        <!-- Cloud Sync Badge -->
+        <div class="flex justify-center">
+          <span id="cloudSyncStatusBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/30">
+            ⏳ กำลังเชื่อมต่อฐานข้อมูล Cloud...
+          </span>
+        </div>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+        <div>
+          <label for="passwordInput" class="block text-xs font-semibold text-slate-300 mb-1.5 flex items-center justify-between">
+            <span>🔑 รหัสผ่านเข้าใช้งาน (Passcode)</span>
+            <span class="text-[11px] text-slate-500 font-normal" id="pinHintDisplay">กรอกรหัสผ่านกิลด์เพื่อเข้าสู่ระบบ</span>
+          </label>
+          <div class="relative">
+            <input
+              type="password"
+              id="passwordInput"
+              required
+              autofocus
+              autocomplete="current-password"
+              placeholder="กรอกรหัสผ่าน เช่น Moonz"
+              class="w-full bg-slate-950/80 border border-slate-700/80 rounded-xl px-4 py-3 pl-11 pr-11 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 font-medium transition"
+            >
+            <!-- Lock Icon -->
+            <div class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none text-base">
+              🔒
+            </div>
+            <!-- Show/Hide Toggle Button -->
+            <button
+              type="button"
+              id="togglePasswordBtn"
+              onclick="togglePasswordVisibility()"
+              class="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-white text-sm transition focus:outline-none"
+              title="แสดง/ซ่อนรหัสผ่าน"
+            >
+              👁️
+            </button>
+          </div>
+        </div>
+
+        <!-- Remember Me Checkbox -->
+        <div class="flex items-center justify-between text-xs text-slate-400 pt-1">
+          <label class="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="rememberMeCheckbox"
+              checked
+              class="w-4 h-4 rounded bg-slate-950 border-slate-700 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-slate-900 cursor-pointer"
+            >
+            <span>จดจำการเข้าสู่ระบบในเครื่องนี้</span>
+          </label>
+          <button type="button" onclick="openChangePinModal()" class="text-indigo-400 hover:text-indigo-300 underline transition font-medium">
+            เปลี่ยนรหัสกิลด์
+          </button>
+        </div>
+
+        <!-- Error Message Alert -->
+        <div id="errorAlert" class="hidden p-3 rounded-xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
+          <span>⚠️</span>
+          <span id="errorMessage">รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง</span>
+        </div>
+
+        <!-- Success Message Alert -->
+        <div id="successAlert" class="hidden p-3 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2">
+          <span>✅</span>
+          <span>รหัสผ่านถูกต้อง กำลังเข้าสู่ระบบ...</span>
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          id="loginBtn"
+          class="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-700 hover:from-indigo-500 hover:to-indigo-600 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition transform active:scale-[0.98] flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>🚀 เข้าสู่ระบบ (Login)</span>
+        </button>
+
+        <!-- Public Leave Link for Guild Members -->
+        <div class="pt-2">
+          <a
+            href="public-leave.html"
+            class="w-full py-2.5 px-4 rounded-xl bg-slate-800/80 hover:bg-slate-800 border border-amber-500/30 hover:border-amber-500/50 text-amber-300 hover:text-amber-200 font-semibold text-xs transition flex items-center justify-center gap-2 shadow"
+          >
+            <span>🏖️ สำหรับลูกกิลด์: คลิกที่นี่เพื่อแจ้งลา (ไม่ต้องล็อกอิน)</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </form>
+
+      <!-- Footer Info -->
+      <div class="mt-6 pt-5 border-t border-slate-800/80 text-center text-[11px] text-slate-500 space-y-1">
+        <p>☁️ รหัสผ่านซิงค์ผ่าน Cloud อัตโนมัติ (เปลี่ยนครั้งเดียวมีผลทุกเครื่อง)</p>
+        <p>🛡️ Moonz Guild Management Portal</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Change PIN Modal -->
+  <div id="changePinModal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div>
+          <h3 class="font-bold text-white text-sm sm:text-base flex items-center gap-2">
+            <span>✏️ เปลี่ยนรหัสผ่านกิลด์ (Cloud Sync)</span>
+          </h3>
+          <p class="text-[11px] text-slate-400 mt-0.5">เปลี่ยนแล้วจะมีผลกับสมาชิกทุกคนในกิลด์ทันที</p>
+        </div>
+        <button type="button" onclick="closeChangePinModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-400 mb-1">รหัสผ่านเดิม</label>
+          <input type="password" id="oldPinInput" placeholder="กรอกรหัสผ่านปัจจุบัน (เช่น Moonz)" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">รหัสผ่านใหม่ที่ต้องการตั้ง</label>
+          <input type="password" id="newPinInput" placeholder="กรอกรหัสผ่านใหม่" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div>
+          <label class="block text-slate-400 mb-1">ยืนยันรหัสผ่านใหม่อีกครั้ง</label>
+          <input type="password" id="confirmNewPinInput" placeholder="ยืนยันรหัสผ่านใหม่" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button type="button" onclick="closeChangePinModal()" class="px-3 py-1.5 rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 text-xs">ยกเลิก</button>
+        <button type="button" id="saveNewPinBtn" onclick="saveNewPin()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30">
+          💾 บันทึกรหัสใหม่ขึ้น Cloud
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = 'https://lzlrlnmphtjotgeumqht.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_YjR6DcMPq2OD3l0JVVMzPg_tigMFS6H';
+    const DEFAULT_PIN = 'Moonz';
+
+    let supabaseClient = null;
+    let currentCloudPin = localStorage.getItem('Moonz_guild_pin') || DEFAULT_PIN;
+
+    // Initialize Supabase Client
+    try {
+      if (window.supabase && typeof window.supabase.createClient === 'function') {
+        supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+      }
+    } catch (e) {
+      console.warn('Supabase client init error:', e);
+    }
+
+    // Fetch synced PIN from Cloud
+    async function fetchCloudPin() {
+      const statusBadge = document.getElementById('cloudSyncStatusBadge');
+      try {
+        if (!supabaseClient) {
+          if (statusBadge) {
+            statusBadge.textContent = '☁️ รหัสผ่านพร้อมใช้งาน (โหมดออฟไลน์)';
+            statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700';
+          }
+          return;
+        }
+
+        const { data, error } = await supabaseClient
+          .from('guild_state')
+          .select('parties')
+          .eq('id', 1)
+          .maybeSingle();
+
+        if (error) throw error;
+        if (data && Array.isArray(data.parties)) {
+          const authEntry = data.parties.find(p => p.id === '__guild_auth_config__');
+          if (authEntry && authEntry.pin) {
+            currentCloudPin = authEntry.pin;
+            localStorage.setItem('Moonz_guild_pin', authEntry.pin);
+          }
+        }
+
+        if (statusBadge) {
+          statusBadge.textContent = '☁️ ซิงค์รหัสผ่านกับ Cloud แล้ว';
+          statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+        }
+      } catch (err) {
+        console.warn('Cannot fetch Cloud PIN, using cached:', err);
+        if (statusBadge) {
+          statusBadge.textContent = '☁️ รหัสผ่านพร้อมใช้งาน (ใช้ข้อมูลแคช)';
+          statusBadge.className = 'px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-800 text-slate-400 border border-slate-700';
+        }
+      }
+    }
+    const cloudPinPromise = fetchCloudPin();
+
+    function getActivePin() {
+      if (currentCloudPin && currentCloudPin.trim()) {
+        return currentCloudPin.trim();
+      }
+      const customPin = localStorage.getItem('Moonz_guild_pin');
+      if (customPin && customPin.trim()) {
+        return customPin.trim();
+      }
+      return DEFAULT_PIN;
+    }
+
+    function togglePasswordVisibility() {
+      const input = document.getElementById('passwordInput');
+      const btn = document.getElementById('togglePasswordBtn');
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+      }
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const input = document.getElementById('passwordInput');
+      const entered = (input.value || '').trim();
+      const remember = document.getElementById('rememberMeCheckbox').checked;
+      const errorEl = document.getElementById('errorAlert');
+      const successEl = document.getElementById('successAlert');
+      const card = document.getElementById('loginCard');
+
+      errorEl.classList.add('hidden');
+      successEl.classList.add('hidden');
+
+      // Await cloud sync if it's still in-flight
+      if (cloudPinPromise) {
+        try { await cloudPinPromise; } catch (err) {}
+      }
+
+      const activePin = getActivePin().toLowerCase();
+      if (!entered || entered.toLowerCase() !== activePin) {
+        errorEl.classList.remove('hidden');
+        card.classList.remove('shake');
+        void card.offsetWidth; // Trigger reflow
+        card.classList.add('shake');
+        input.select();
+        return;
+      }
+
+      // Success
+      successEl.classList.remove('hidden');
+      document.getElementById('loginBtn').disabled = true;
+      document.getElementById('loginBtn').innerHTML = '<span>⏳ กำลังเข้าสู่ระบบ...</span>';
+
+      const sessionStore = remember ? localStorage : sessionStorage;
+      sessionStore.setItem('Moonz_auth_session', 'logged_in');
+      sessionStore.setItem('Moonz_auth_timestamp', Date.now().toString());
+
+      if (remember) {
+        sessionStorage.removeItem('Moonz_auth_session');
+      } else {
+        localStorage.removeItem('Moonz_auth_session');
+      }
+
+      setTimeout(() => {
+        const params = new URLSearchParams(window.location.search);
+        const redirect = params.get('redirect') || 'index.html';
+        window.location.replace(redirect);
+      }, 400);
+    }
+
+    function openChangePinModal() {
+      document.getElementById('oldPinInput').value = '';
+      document.getElementById('newPinInput').value = '';
+      document.getElementById('confirmNewPinInput').value = '';
+      document.getElementById('changePinModal').classList.remove('hidden');
+      setTimeout(() => document.getElementById('oldPinInput').focus(), 50);
+    }
+
+    function closeChangePinModal() {
+      document.getElementById('changePinModal').classList.add('hidden');
+    }
+
+    async function saveNewPin() {
+      const oldPin = (document.getElementById('oldPinInput').value || '').trim();
+      const newPin = (document.getElementById('newPinInput').value || '').trim();
+      const confirmPin = (document.getElementById('confirmNewPinInput').value || '').trim();
+      const saveBtn = document.getElementById('saveNewPinBtn');
+
+      if (cloudPinPromise) {
+        try { await cloudPinPromise; } catch (err) {}
+      }
+
+      const activePin = getActivePin().toLowerCase();
+      if (oldPin.toLowerCase() !== activePin) {
+        alert('รหัสผ่านเดิมไม่ถูกต้อง กรุณาตรวจสอบอีกครั้ง');
+        return;
+      }
+      if (!newPin || newPin.length < 3) {
+        alert('กรุณากรอกรหัสผ่านใหม่อย่างน้อย 3 ตัวอักษร');
+        return;
+      }
+      if (newPin !== confirmPin) {
+        alert('รหัสผ่านใหม่และการยืนยันไม่ตรงกัน');
+        return;
+      }
+
+      try {
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = '⏳ กำลังบันทึกขึ้น Cloud...';
+        }
+
+        let latestParties = [];
+        if (supabaseClient) {
+          const { data, error } = await supabaseClient
+            .from('guild_state')
+            .select('parties')
+            .eq('id', 1)
+            .maybeSingle();
+
+          if (!error && data && Array.isArray(data.parties)) {
+            latestParties = data.parties;
+          }
+        }
+
+        const authEntry = {
+          id: '__guild_auth_config__',
+          category: '__system__',
+          pin: newPin,
+          updatedAt: new Date().toISOString()
+        };
+
+        const existingIdx = latestParties.findIndex(p => p.id === '__guild_auth_config__');
+        if (existingIdx !== -1) {
+          latestParties[existingIdx] = authEntry;
+        } else {
+          latestParties.push(authEntry);
+        }
+
+        if (supabaseClient) {
+          const { error: updateErr } = await supabaseClient
+            .from('guild_state')
+            .update({ parties: latestParties, updated_at: new Date().toISOString() })
+            .eq('id', 1);
+
+          if (updateErr) throw updateErr;
+        }
+
+        currentCloudPin = newPin;
+        localStorage.setItem('Moonz_guild_pin', newPin);
+        closeChangePinModal();
+        alert('✅ เปลี่ยนรหัสผ่านกิลด์บน Cloud สำเร็จแล้ว!\nรหัสผ่านใหม่คือ: ' + newPin + '\n(สมาชิกทุกคนต้องใช้รหัสใหม่นี้)');
+        document.getElementById('passwordInput').value = newPin;
+        document.getElementById('passwordInput').focus();
+      } catch (err) {
+        console.error('Save PIN Cloud Error:', err);
+        currentCloudPin = newPin;
+        localStorage.setItem('Moonz_guild_pin', newPin);
+        closeChangePinModal();
+        alert('บันทึกรหัสผ่านใหม่เรียบร้อยแล้ว (รหัสใหม่: ' + newPin + ')');
+        document.getElementById('passwordInput').value = newPin;
+        document.getElementById('passwordInput').focus();
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = '💾 บันทึกรหัสใหม่ขึ้น Cloud';
+        }
+      }
+    }
+  </script>
+</body>
+</html>

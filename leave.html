@@ -1,0 +1,1126 @@
+<!DOCTYPE html>
+
+<html lang="th" class="dark">
+
+<head>
+
+  <meta charset="UTF-8">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>ระบบบันทึกการลา — กิลด์ Moonz</title>
+  <script>
+    (function() {
+      const isAuth = localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
+                     sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
+      if (!isAuth) {
+        window.location.replace('login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop() || 'index.html'));
+      }
+    })();
+  </script>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+  <style>
+
+    body {
+
+      font-family: 'Kanit', sans-serif;
+
+      background-color: #0b0f19;
+
+      color: #f1f5f9;
+
+    }
+
+    .mono {
+
+      font-family: 'JetBrains Mono', monospace;
+
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+
+    ::-webkit-scrollbar-track { background: #0f172a; }
+
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    .slot-selected {
+
+      outline: 2px solid #f59e0b !important;
+
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+
+      filter: invert(0.8);
+
+      cursor: pointer;
+
+    }
+
+    [draggable="true"] {
+
+      cursor: grab;
+
+    }
+
+    [draggable="true"]:active {
+
+      cursor: grabbing;
+
+    }
+
+    .dnd-dragging {
+
+      opacity: 0.45 !important;
+
+      transform: scale(0.98);
+
+    }
+
+    .dnd-drop-target {
+
+      outline: 2px dashed #f59e0b !important;
+
+      background-color: rgba(245, 158, 11, 0.15) !important;
+
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+
+      transition: all 0.15s ease;
+
+    }
+
+    .dnd-pool-target {
+
+      outline: 2px dashed #f43f5e !important;
+
+      background-color: rgba(244, 63, 94, 0.08) !important;
+
+    }
+
+  </style>
+
+</head>
+
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+
+  <!-- Toast Notification Container -->
+
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Universal Action / Dialog Modal (Replaces alert, confirm, prompt) -->
+
+  <div id="customDialogModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+
+        <h3 id="dialogTitle" class="font-bold text-base text-white">แจ้งเตือน</h3>
+
+        <button onclick="closeCustomDialog()" class="text-slate-400 hover:text-white text-sm">✕</button>
+
+      </div>
+
+      <p id="dialogMessage" class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed"></p>
+
+      <div id="dialogCustomHtmlWrapper" class="hidden"></div>
+
+      <div id="dialogInputWrapper" class="hidden">
+
+        <input type="text" id="dialogInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+
+      </div>
+
+      <div id="dialogFieldPickerWrapper" class="hidden space-y-1.5">
+
+        <label class="block text-xs text-slate-400">เลือกสนามประจำทีม (สนามหลัก / สนามรอง):</label>
+
+        <div id="dialogFieldOptions" class="grid grid-cols-2 gap-2"></div>
+
+      </div>
+
+      <div id="dialogColorPickerWrapper" class="hidden space-y-1.5">
+
+        <label class="block text-xs text-slate-400">เลือกสีประจำทีม:</label>
+
+        <div id="dialogColorOptions" class="flex flex-wrap gap-2"></div>
+
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+
+        <button id="dialogCancelBtn" onclick="closeCustomDialog()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">ยกเลิก</button>
+
+        <button id="dialogConfirmBtn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">ตกลง</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Add Member Modal -->
+
+  <div id="addMemberModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+
+        <h3 class="font-bold text-base text-white">➕ เพิ่มสมาชิกใหม่เข้ากิลด์ (Manual)</h3>
+
+        <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm">
+
+        <div>
+
+          <label class="block text-slate-400 mb-1">ชื่อตัวละคร *</label>
+
+          <input type="text" id="newMemName" placeholder="เช่น เทพซ่า007" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <div>
+
+            <label class="block text-slate-400 mb-1">สายอาชีพ (15 สายหลัก)</label>
+
+            <select id="newMemJob" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+
+              <option value="Lord Knight">⚔️ Lord Knight (Knight)</option>
+
+              <option value="Knight">⚔️ Knight</option>
+
+              <option value="Paladin">🛡️ Paladin (Crusader)</option>
+
+              <option value="Crusader">🛡️ Crusader</option>
+
+              <option value="High Wizard">🔥 High Wizard (Wizard)</option>
+
+              <option value="Wizard">🔥 Wizard</option>
+
+              <option value="Professor">📖 Professor (Sage)</option>
+
+              <option value="Scholar">📖 Scholar (Sage)</option>
+
+              <option value="Sage">📖 Sage</option>
+
+              <option value="Sniper">🏹 Sniper (Hunter)</option>
+
+              <option value="Hunter">🏹 Hunter</option>
+
+              <option value="Clown">🎵 Clown (Bard)</option>
+
+              <option value="Bard">🎵 Bard</option>
+
+              <option value="Gypsy">💃 Gypsy (Dancer)</option>
+
+              <option value="Dancer">💃 Dancer</option>
+
+              <option value="High Priest">✨ High Priest (Priest)</option>
+
+              <option value="Priest">✚ Priest</option>
+
+              <option value="Champion">👊 Champion (Monk)</option>
+
+              <option value="Monk">👊 Monk</option>
+
+              <option value="Assassin Cross">☠️ Assassin Cross (Assassin)</option>
+
+              <option value="Assassin">🗡️ Assassin</option>
+
+              <option value="Stalker">🗡️ Stalker (Rogue)</option>
+
+              <option value="Rogue">🗡️ Rogue</option>
+
+              <option value="Whitesmith">🔨 Whitesmith (Blacksmith)</option>
+
+              <option value="Blacksmith">🔨 Blacksmith</option>
+
+              <option value="Creator">🧪 Creator (Alchemist)</option>
+
+              <option value="Alchemist">🧪 Alchemist</option>
+
+              <option value="Night Walker">🟤 Night Walker (Rebel)</option>
+
+              <option value="Rebel">🔫 Rebel</option>
+
+              <option value="Gunslinger">🔫 Gunslinger (Rebel)</option>
+
+              <option value="คานอส">🌳 คานอส (Kanos)</option>
+
+              <option value="อาลิเทีย">🌳 อาลิเทีย (สายคานอส)</option>
+
+              <option value="Novice">🌱 Novice</option>
+
+            </select>
+
+          </div>
+
+          <div>
+
+            <label class="block text-slate-400 mb-1">เลเวล (Lv.)</label>
+
+            <input type="number" id="newMemLv" value="90" min="1" max="150" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+
+          </div>
+
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+
+          <div>
+
+            <label class="block text-slate-400 mb-1">คะแนน Gear</label>
+
+            <input type="number" id="newMemGear" value="30000" step="500" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+
+          </div>
+
+          <div>
+
+            <label class="block text-slate-400 mb-1">ตำแหน่งในกิลด์</label>
+
+            <input type="text" id="newMemPos" value="สมาชิก" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+
+        <button onclick="closeAddMemberModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">ยกเลิก</button>
+
+        <button onclick="confirmAddMember()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">บันทึกสมาชิก</button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <!-- Top Header -->
+
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 lg:px-6 py-3">
+
+    <div class="max-w-[1850px] mx-auto flex flex-wrap items-center justify-between gap-3">
+
+      <div class="flex items-center gap-3">
+
+        <a href="index.html" class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 flex items-center justify-center shadow-lg shadow-orange-500/20 font-bold text-xl text-white transition hover:opacity-90">
+
+          ⚔️
+
+        </a>
+
+        <div>
+
+          <div class="flex items-center gap-2 flex-wrap">
+
+            <h1 class="text-lg sm:text-xl font-bold tracking-wide text-white" id="guildTitleDisplay">Moonz</h1>
+
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="fileMetaBadge">กำลังโหลด...</span>
+
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="cloudStatusBadge">☁️ กำลังเชื่อมต่อ Cloud...</span>
+
+          </div>
+
+          <p class="text-xs text-slate-400">ระบบจัดทัพ GVG แบ่งสนามหลัก/สนามรอง ครอบคลุมทีม (A, B, C) • บันทึกการลารายวัน &amp; เช็คชื่อ 6 กิจกรรมประจำสัปดาห์เชื่อม Cloud</p>
+
+        </div>
+
+      </div>
+
+      <!-- KPI Summary Bar (Synced with Active Date) -->
+
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
+
+        <div class="bg-indigo-950/70 border border-indigo-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+
+          <span class="text-indigo-300 font-medium">📅 ข้อมูลวันที่:</span>
+
+          <input type="date" id="headerDateInput" onchange="changeSelectedDate(this.value)" class="bg-transparent text-white font-bold mono text-xs focus:outline-none cursor-pointer">
+
+          <button onclick="setSelectedDateToToday()" class="px-1.5 py-0.5 rounded bg-indigo-600/40 hover:bg-indigo-600 text-[10px] text-indigo-200 hover:text-white transition" title="กลับมาวันนี้">วันนี้</button>
+
+        </div>
+
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+
+          <span class="text-slate-400">สมาชิก:</span>
+
+          <span class="mono font-bold text-white text-sm" id="statTotal">0</span>
+
+        </div>
+
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+
+          <span class="text-slate-400">พร้อมวอร์:</span>
+
+          <span class="mono font-bold text-emerald-400 text-sm" id="statReady">0</span>
+
+        </div>
+
+        <a href="leave.html" class="cursor-pointer bg-slate-800/90 hover:bg-rose-950/40 border border-slate-700/80 hover:border-rose-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2 transition" title="คลิกเพื่อดูรายละเอียดคนลาในวันนี้">
+
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+
+          <span class="text-slate-400">ลาวันนี้:</span>
+
+          <span class="mono font-bold text-rose-400 text-sm" id="statLeave">0</span>
+
+        </a>
+
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+
+          <span class="text-slate-400">ลงตี้แล้ว:</span>
+
+          <span class="mono font-bold text-amber-400 text-sm" id="statAssigned">0 / 0</span>
+
+        </div>
+
+        <a href="events.html" class="cursor-pointer bg-slate-800/90 hover:bg-amber-950/40 border border-slate-700/80 hover:border-amber-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2 transition" title="คลิกเพื่อเปิดระบบเช็คชื่อ 6 กิจกรรมประจำสัปดาห์">
+
+          <span class="text-amber-400">🏆 กิจกรรมสัปดาห์นี้:</span>
+
+          <span class="mono font-bold text-amber-300 text-sm" id="statWeeklyEvents">0%</span>
+
+        </a>
+
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+
+          <span class="text-slate-400">เฉลี่ย Gear:</span>
+
+          <span class="mono font-bold text-indigo-300 text-sm" id="statAvgGear">0</span>
+
+        </div>
+
+      </div>
+
+      <!-- Quick Import / Add / Export / Cloud Buttons -->
+
+      <div class="flex flex-wrap items-center gap-2">
+
+        <button onclick="loadFromDatabase(true)" class="px-3 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 font-medium text-xs sm:text-sm flex items-center gap-1.5 transition" title="ดึงข้อมูลล่าสุดจากฐานข้อมูล">
+
+          <span>🔄 ซิงค์ข้อมูล</span>
+
+        </button>
+
+        <button onclick="saveToDatabase()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition" title="บันทึกข้อมูลขึ้น Supabase Cloud">
+
+          <span>💾 บันทึก Cloud</span>
+
+        </button>
+        <button onclick="openAddMemberModal()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 transition">
+
+          <span>➕ เพิ่มสมาชิก</span>
+
+        </button>
+
+        <label class="cursor-pointer px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
+
+          <span>📂 นำเข้า .CSV</span>
+
+          <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+
+        </label>
+
+        <button onclick="exportLineupCSV()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition">
+
+          📥 ส่งออก CSV
+
+        </button>
+
+        <button onclick="clearAllGuildData()" class="px-2.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
+
+          🗑️ ล้างข้อมูล
+
+        </button>
+
+      </div>
+
+    </div>
+
+  </header>
+
+    <!-- Navigation Tabs (Row ละ 4) -->
+
+  <div class="bg-slate-900/60 border-b border-slate-800/80 px-4 lg:px-6 py-2.5">
+
+    <div class="max-w-[1850px] mx-auto space-y-2.5">
+
+      <nav class="grid grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+
+        <a href="index.html" id="tabBtn-board" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🛡️ กระดานจัดทีม & ปาร์ตี้ GVG</a>
+
+        <a href="siege.html" id="tabBtn-siege" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏰 จัดทีม Siege War (ศึกชิงปราสาท)</a>
+
+        <a href="polarity.html" id="tabBtn-polarity" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">⚡ จัดทีม Polarity (ทีมดาว)</a>
+
+        <a href="squads.html" id="tabBtn-squads" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">👥 จัดตี้ประจำ (Preset Squads)</a>
+
+        <a href="leave.html" id="tabBtn-leave" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-indigo-600 text-white shadow shadow-indigo-500/30 flex items-center justify-center gap-1.5 text-center truncate">🏖️ ระบบบันทึกการลา</a>
+
+        <a href="events.html" id="tabBtn-events" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏆 กิจกรรมประจำสัปดาห์</a>
+
+        <a href="roster.html" id="tabBtn-roster" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">📋 ตารางสมาชิก</a>
+
+        <a href="member.html" id="tabBtn-member" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🔍 มุมมองลูกกิลด์ (ค้นหาตี้/แจ้งลา)</a>
+
+      </nav>
+
+    </div>
+
+  </div>
+
+  <main class="flex-1 max-w-[1850px] w-full mx-auto p-4 lg:p-6">
+
+        <section id="tab-leave" class="space-y-6">
+
+      <!-- Top Date Navigation & 7-Day Interactive Calendar Strip -->
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4">
+
+        <div class="flex flex-wrap items-center justify-between gap-3">
+
+          <div>
+
+            <div class="flex items-center gap-2 flex-wrap">
+
+              <h2 class="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+
+                <span>🏖️ ระบบบันทึกการลา</span>
+
+              </h2>
+
+              <span id="leaveTabDateThaiBadge" class="px-3 py-0.5 rounded-full text-xs font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">📅 พฤหัส 22 ต.ค. 2569</span>
+
+              <span id="leaveDbSyncBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                ☁️ บันทึกลง Database อัตโนมัติ
+              </span>
+              <a href="public-leave.html" target="_blank" class="px-3 py-1 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/40 transition inline-flex items-center gap-1.5 shadow-sm">
+                <span>🔗 ลิงก์แจ้งลาสำหรับลูกกิลด์ (ไม่ต้องล็อกอิน)</span>
+                <span class="text-xs">↗</span>
+              </a>
+
+            </div>
+
+            <p class="text-xs text-slate-400 mt-1">เลือกวันที่ต้องการดูหรือบันทึกการลา ข้อมูลการลาของแต่ละวันจะถูกแยกเก็บรายวันและซิงค์เข้ากับกระดานจัดทัพ GVG โดยอัตโนมัติ</p>
+
+          </div>
+
+          <!-- Date Step Controls -->
+
+          <div class="flex flex-wrap items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-xl p-1.5">
+
+            <button onclick="shiftSelectedDate(-1)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition">
+
+              ◀ วันก่อนหน้า
+
+            </button>
+
+            <input type="date" id="leaveDatePicker" onchange="changeSelectedDate(this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1 text-xs sm:text-sm font-bold text-amber-300 mono focus:outline-none focus:border-indigo-500">
+
+            <button onclick="setSelectedDateToToday()" class="px-2.5 py-1.5 rounded-lg bg-indigo-600/30 hover:bg-indigo-600 text-indigo-200 hover:text-white border border-indigo-500/40 text-xs font-semibold transition">
+
+              วันนี้
+
+            </button>
+
+            <button onclick="shiftSelectedDate(1)" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition">
+
+              วันถัดไป ▶
+
+            </button>
+
+          </div>
+
+        </div>
+
+        <!-- 7-Day Calendar Strip -->
+
+        <div>
+
+          <div class="text-[11px] text-slate-400 mb-2 flex items-center justify-between">
+
+            <span>📅 แถบปฏิทินเช็คยอดคนลารายวัน (คลิกที่วันเพื่อสลับดูข้อมูลของวันนั้น):</span>
+
+            <span class="text-slate-500">แสดงจำนวนคนลาในแต่ละวันจากฐานข้อมูล</span>
+
+          </div>
+
+          <div id="leaveCalendarStrip" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+
+          <button onclick="changeSelectedDate('2026-10-20')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-slate-950/90 hover:bg-slate-800/80 border-slate-800 text-slate-300">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-slate-400">อังคาร</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">20 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+          <button onclick="changeSelectedDate('2026-10-21')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-slate-950/90 hover:bg-slate-800/80 border-slate-800 text-slate-300">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-slate-400">พุธ</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">21 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+          <button onclick="changeSelectedDate('2026-10-22')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-gradient-to-b from-indigo-600/40 to-slate-900 border-indigo-400 ring-2 ring-indigo-500/40 text-white">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-indigo-200">พฤหัส</span>
+
+              <span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">วันนี้</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">22 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+          <button onclick="changeSelectedDate('2026-10-23')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-slate-950/90 hover:bg-slate-800/80 border-slate-800 text-slate-300">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-slate-400">ศุกร์</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">23 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+          <button onclick="changeSelectedDate('2026-10-24')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-slate-950/90 hover:bg-slate-800/80 border-slate-800 text-slate-300">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-slate-400">เสาร์</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">24 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+          <button onclick="changeSelectedDate('2026-10-25')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-slate-950/90 hover:bg-slate-800/80 border-slate-800 text-slate-300">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-slate-400">อาทิตย์</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">25 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+          <button onclick="changeSelectedDate('2026-10-26')" class="p-2.5 rounded-xl border text-left transition flex flex-col justify-between bg-slate-950/90 hover:bg-slate-800/80 border-slate-800 text-slate-300">
+
+            <div class="flex items-center justify-between w-full">
+
+              <span class="text-[11px] font-semibold text-slate-400">จันทร์</span>
+
+            </div>
+
+            <div class="my-1 font-bold text-xs sm:text-sm text-white">26 ต.ค.</div>
+
+            <div class="flex items-center justify-between w-full pt-1 border-t border-slate-800/80">
+
+              <span class="text-[10px] text-slate-400">แจ้งลา:</span>
+
+              <span class="mono px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-800 text-slate-500">
+
+                0 คน
+
+              </span>
+
+            </div>
+
+          </button>
+
+        </div>
+
+        </div>
+
+      </div>
+
+      <!-- Main Grid: Left Form + Right Daily Leave List & Attendance Check -->
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Left Column: Record Leave Form (4 cols) -->
+
+        <div class="lg:col-span-5 xl:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 h-fit lg:sticky lg:top-20">
+
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+
+            <div>
+
+              <h3 class="font-bold text-base text-white flex items-center gap-2">
+
+                <span>📝 แบบฟอร์มบันทึกการลา</span>
+
+              </h3>
+
+              <p class="text-[11px] text-slate-400">บันทึกการลารายวัน หรือลาล่วงหน้าหลายวันลง Database</p>
+
+            </div>
+
+            <span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">Cloud Sync</span>
+
+          </div>
+
+          <div class="space-y-3.5 text-xs sm:text-sm">
+
+            <!-- Member Search & Select -->
+
+            <div>
+
+              <label class="block text-slate-300 font-medium mb-1">1. เลือกสมาชิกที่ต้องการแจ้งลา *</label>
+
+              <input type="text" id="leaveFormMemberSearch" oninput="populateLeaveMemberSelect()" placeholder="🔍 พิมพ์ค้นหาชื่อตัวละคร หรืออาชีพ..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white mb-2 focus:outline-none focus:border-indigo-500">
+
+              <select id="leaveFormMemberSelect" size="5" class="w-full bg-slate-950 border border-slate-800 rounded-xl p-2 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500 space-y-1"><option value="m_csv_1792521333043_28" selected="" class="py-1 px-2 rounded hover:bg-slate-800">✅ ゛6IX9!NE — High Wizard [ทีม C • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_112" class="py-1 px-2 rounded hover:bg-slate-800">✅ 0ไอ้หน้าไข่0 — Lord Knight [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_67" class="py-1 px-2 rounded hover:bg-slate-800">✅ ก็แดดมันร้อนนน — อาลิเทีย [ทีม B • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_20" class="py-1 px-2 rounded hover:bg-slate-800">✅ กร:หรี่อยู่ไหน — High Priest [ทีม A • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_121" class="py-1 px-2 rounded hover:bg-slate-800">✅ เกิดวันพุทธ — Creator [ทีม B • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_30" class="py-1 px-2 rounded hover:bg-slate-800">✅ โกยเถอะโยม — High Priest [ทีม B • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_60" class="py-1 px-2 rounded hover:bg-slate-800">✅ กsะหรี่ชๅย — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_127" class="py-1 px-2 rounded hover:bg-slate-800">✅ ขุนสิบขมิบศรี — High Wizard [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_4" class="py-1 px-2 rounded hover:bg-slate-800">✅ ความสุขของกะทะ — High Wizard [ทีม B • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_57" class="py-1 px-2 rounded hover:bg-slate-800">✅ จะอมมั้ย — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_108" class="py-1 px-2 rounded hover:bg-slate-800">✅ จับฉ่าย — Clown [ทีม C • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_124" class="py-1 px-2 rounded hover:bg-slate-800">✅ จารั่ว — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_84" class="py-1 px-2 rounded hover:bg-slate-800">✅ จิวแป๊ะทง — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_31" class="py-1 px-2 rounded hover:bg-slate-800">✅ โจจิ — Night Walker [ทีม C • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_62" class="py-1 px-2 rounded hover:bg-slate-800">✅ ชาอึนพง — High Priest [ทีม A • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_44" class="py-1 px-2 rounded hover:bg-slate-800">✅ ซีย์ท์Zzzzzzz' — High Priest [ทีม C • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_94" class="py-1 px-2 rounded hover:bg-slate-800">✅ ซึโหน่ยโจ่ย — Paladin [ทีม A • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_46" class="py-1 px-2 rounded hover:bg-slate-800">✅ โซ้ยหมี่เกี๊ยว — High Wizard [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_25" class="py-1 px-2 rounded hover:bg-slate-800">✅ โซโล — Lord Knight [ทีม B • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_103" class="py-1 px-2 rounded hover:bg-slate-800">✅ ณ๊องกัณฑ์งั้ย — อาลิเทีย [ทีม A • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_104" class="py-1 px-2 rounded hover:bg-slate-800">✅ ณ๊องต๊ะงั้ย — Creator [ทีม A • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_89" class="py-1 px-2 rounded hover:bg-slate-800">✅ ณ๊องฝนงั๊ย — Creator [ทีม C • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_35" class="py-1 px-2 rounded hover:bg-slate-800">✅ ณ๊องละงั๊ย — High Priest [ทีม B • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_95" class="py-1 px-2 rounded hover:bg-slate-800">✅ ณ๊องหรั่งงั๊ย — Clown [ทีม B • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_37" class="py-1 px-2 rounded hover:bg-slate-800">✅ ดงสาดแสง — High Wizard [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_53" class="py-1 px-2 rounded hover:bg-slate-800">✅ ดนัยวัฒนา — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_68" class="py-1 px-2 rounded hover:bg-slate-800">✅ ตาO — Night Walker [ทีม B • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_64" class="py-1 px-2 rounded hover:bg-slate-800">✅ ทนงทงทวย — Assassin Cross [ทีม A • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_2" class="py-1 px-2 rounded hover:bg-slate-800">✅ ทาสแมว˃_ — Lord Knight [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_43" class="py-1 px-2 rounded hover:bg-slate-800">✅ ไททศจงเจริญ — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_32" class="py-1 px-2 rounded hover:bg-slate-800">✅ เธอเธอ — Gypsy [ทีม B • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_7" class="py-1 px-2 rounded hover:bg-slate-800">✅ น้องๆ — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_45" class="py-1 px-2 rounded hover:bg-slate-800">✅ น้องยุพิน — Gypsy [ทีม C • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_6" class="py-1 px-2 rounded hover:bg-slate-800">✅ นิพพาน — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_69" class="py-1 px-2 rounded hover:bg-slate-800">✅ ไนท์ทิชชู่ — Lord Knight [ทีม A • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_52" class="py-1 px-2 rounded hover:bg-slate-800">✅ บอสDog789 — Champion [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_63" class="py-1 px-2 rounded hover:bg-slate-800">✅ ใบตอง — Clown [ทีม A • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_22" class="py-1 px-2 rounded hover:bg-slate-800">✅ เปี๊ยกเอง — Clown [ทีม B • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_98" class="py-1 px-2 rounded hover:bg-slate-800">✅ ไปบ้านผมมะ — Paladin [ทีม A • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_126" class="py-1 px-2 rounded hover:bg-slate-800">✅ ฝอยทอง — High Wizard [ทีม A • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_72" class="py-1 px-2 rounded hover:bg-slate-800">✅ ฝุ่น — Sniper [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_83" class="py-1 px-2 rounded hover:bg-slate-800">✅ พระKub — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_90" class="py-1 px-2 rounded hover:bg-slate-800">✅ พี่กระทิงดุ — Clown [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_92" class="py-1 px-2 rounded hover:bg-slate-800">✅ พี่ช้าง — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_99" class="py-1 px-2 rounded hover:bg-slate-800">✅ แพะนาโน — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_115" class="py-1 px-2 rounded hover:bg-slate-800">✅ ม่อน` — Assassin Cross [ทีม B • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_39" class="py-1 px-2 rounded hover:bg-slate-800">✅ มาดิครับ — Assassin Cross [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_134" class="py-1 px-2 rounded hover:bg-slate-800">✅ มายเมโลดี้ — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_113" class="py-1 px-2 rounded hover:bg-slate-800">✅ มาร์ชเมลโลว์ — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_86" class="py-1 px-2 rounded hover:bg-slate-800">✅ มู๋กรอบพริกเผา — Night Walker [ทีม A • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_131" class="py-1 px-2 rounded hover:bg-slate-800">✅ ระยำแมว — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_100" class="py-1 px-2 rounded hover:bg-slate-800">✅ รูกลวง — High Priest [ทีม C • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_58" class="py-1 px-2 rounded hover:bg-slate-800">✅ วันพุฒิ — Gypsy [ทีม C • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_50" class="py-1 px-2 rounded hover:bg-slate-800">✅ สะดุ้งปรี้ — Sniper [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_55" class="py-1 px-2 rounded hover:bg-slate-800">✅ หิวแกงส้ม — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_56" class="py-1 px-2 rounded hover:bg-slate-800">✅ เห็นหมีหนูไหม — อาลิเทีย [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_49" class="py-1 px-2 rounded hover:bg-slate-800">✅ อนุทวยหัวคิน — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_128" class="py-1 px-2 rounded hover:bg-slate-800">✅ ออกหลวงศรศิลา — Sniper [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_85" class="py-1 px-2 rounded hover:bg-slate-800">✅ อาจูไม่กินผัก — อาลิเทีย [ทีม A • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_54" class="py-1 px-2 rounded hover:bg-slate-800">✅ อาหวังใหญ่ — Paladin [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_13" class="py-1 px-2 rounded hover:bg-slate-800">✅ โอมากาเซะ — Clown [ทีม A • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_116" class="py-1 px-2 rounded hover:bg-slate-800">✅ ฮิลร้อยเปอร์ — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_34" class="py-1 px-2 rounded hover:bg-slate-800">✅ เxม็นก็เลียโยม — High Priest [ทีม B • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_48" class="py-1 px-2 rounded hover:bg-slate-800">✅ AieWลิ้นแมว — Lord Knight [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_88" class="py-1 px-2 rounded hover:bg-slate-800">✅ Airport — Lord Knight [ทีม A • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_41" class="py-1 px-2 rounded hover:bg-slate-800">✅ AlAiNa — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_27" class="py-1 px-2 rounded hover:bg-slate-800">✅ Bechuklz — High Wizard [ทีม C • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_61" class="py-1 px-2 rounded hover:bg-slate-800">✅ BenzDogecoin — Sniper [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_79" class="py-1 px-2 rounded hover:bg-slate-800">✅ BoomMi — Clown [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_16" class="py-1 px-2 rounded hover:bg-slate-800">✅ Caffeine — Sniper [ทีม A • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_133" class="py-1 px-2 rounded hover:bg-slate-800">✅ ChowDer00 — Assassin Cross [ทีม B • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_87" class="py-1 px-2 rounded hover:bg-slate-800">✅ DecimalX — Lord Knight [ทีม C • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_24" class="py-1 px-2 rounded hover:bg-slate-800">✅ DidyouCallBack — High Priest [ทีม B • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_18" class="py-1 px-2 rounded hover:bg-slate-800">✅ DukeDKT — Clown [ทีม A • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_119" class="py-1 px-2 rounded hover:bg-slate-800">✅ Emptyz — High Wizard [ทีม A • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_96" class="py-1 px-2 rounded hover:bg-slate-800">✅ E-Ngam — Lord Knight [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_122" class="py-1 px-2 rounded hover:bg-slate-800">✅ Fenris — Creator [ทีม A • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_80" class="py-1 px-2 rounded hover:bg-slate-800">✅ FerElL — High Priest [ทีม A • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_123" class="py-1 px-2 rounded hover:bg-slate-800">✅ ffk88 — Lord Knight [ทีม C • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_101" class="py-1 px-2 rounded hover:bg-slate-800">✅ FlukTheDust — Clown [ทีม B • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_23" class="py-1 px-2 rounded hover:bg-slate-800">✅ GaPPaLaB — Lord Knight [ทีม B • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_70" class="py-1 px-2 rounded hover:bg-slate-800">✅ [G]orlilaZ — Lord Knight [ทีม B • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_36" class="py-1 px-2 rounded hover:bg-slate-800">✅ GTz — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_51" class="py-1 px-2 rounded hover:bg-slate-800">✅ HaReeM — Assassin Cross [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_75" class="py-1 px-2 rounded hover:bg-slate-800">✅ IRa — Paladin [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_82" class="py-1 px-2 rounded hover:bg-slate-800">✅ JaoMint` — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_135" class="py-1 px-2 rounded hover:bg-slate-800">✅ JetDOW — High Priest [ทีม A • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_19" class="py-1 px-2 rounded hover:bg-slate-800">✅ ๋Jinglypop๋ — อาลิเทีย [ทีม B • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_26" class="py-1 px-2 rounded hover:bg-slate-800">✅ KHWANKHAO — Lord Knight [ทีม C • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_109" class="py-1 px-2 rounded hover:bg-slate-800">✅ Kirazry — Whitesmith [ทีม B • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_15" class="py-1 px-2 rounded hover:bg-slate-800">✅ KiTCHeN — Clown [ทีม A • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_12" class="py-1 px-2 rounded hover:bg-slate-800">✅ KuRobinA — Assassin Cross [ทีม A • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_1" class="py-1 px-2 rounded hover:bg-slate-800">✅ -lร- — Clown [ทีม B • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_8" class="py-1 px-2 rounded hover:bg-slate-800">✅ Legend[Z] — Paladin [ทีม A • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_129" class="py-1 px-2 rounded hover:bg-slate-800">✅ LucKyDream — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_59" class="py-1 px-2 rounded hover:bg-slate-800">✅ M2Sr — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_102" class="py-1 px-2 rounded hover:bg-slate-800">✅ Magnificent — Assassin Cross [ทีม C • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_118" class="py-1 px-2 rounded hover:bg-slate-800">✅ MeD — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_71" class="py-1 px-2 rounded hover:bg-slate-800">✅ Miyasaki-Rin — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_110" class="py-1 px-2 rounded hover:bg-slate-800">✅ money — Creator [ทีม B • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_11" class="py-1 px-2 rounded hover:bg-slate-800">✅ Mr7116 — Whitesmith [ทีม A • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_33" class="py-1 px-2 rounded hover:bg-slate-800">✅ MUMIMA — High Priest [ทีม B • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_107" class="py-1 px-2 rounded hover:bg-slate-800">✅ NANAMIji — Gypsy [ทีม A • ปาร์ตี้ 6]</option><option value="m_csv_1792521333043_97" class="py-1 px-2 rounded hover:bg-slate-800">✅ NEKOMAMUSHI- — Lord Knight [ทีม B • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_66" class="py-1 px-2 rounded hover:bg-slate-800">✅ NuBia — High Priest [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_73" class="py-1 px-2 rounded hover:bg-slate-800">✅ oattoツ — Clown [ทีม B • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_38" class="py-1 px-2 rounded hover:bg-slate-800">✅ oSISYPHUSo — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_91" class="py-1 px-2 rounded hover:bg-slate-800">✅ PAWAN4 — อาลิเทีย [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_125" class="py-1 px-2 rounded hover:bg-slate-800">✅ Phechr — Creator [ทีม C • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_29" class="py-1 px-2 rounded hover:bg-slate-800">✅ pololoy — High Priest [ทีม B • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_5" class="py-1 px-2 rounded hover:bg-slate-800">✅ polomintz — High Wizard [ทีม C • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_65" class="py-1 px-2 rounded hover:bg-slate-800">✅ Pr3DuceS — อาลิเทีย [ทีม B • ปาร์ตี้ 5]</option><option value="m_csv_1792521333043_42" class="py-1 px-2 rounded hover:bg-slate-800">✅ Redskale — High Priest [ทีม C • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_76" class="py-1 px-2 rounded hover:bg-slate-800">✅ Riricat — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_77" class="py-1 px-2 rounded hover:bg-slate-800">✅ Roronoa_Zoro — Assassin Cross [ทีม C • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_81" class="py-1 px-2 rounded hover:bg-slate-800">✅ Seasmoke — High Priest [ทีม A • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_74" class="py-1 px-2 rounded hover:bg-slate-800">✅ Serenella — High Wizard [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_130" class="py-1 px-2 rounded hover:bg-slate-800">✅ Shiny — Creator [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_3" class="py-1 px-2 rounded hover:bg-slate-800">✅ Shiraori — อาลิเทีย [ทีม B • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_47" class="py-1 px-2 rounded hover:bg-slate-800">✅ SlientSoul — Paladin [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_105" class="py-1 px-2 rounded hover:bg-slate-800">✅ Taomun — Lord Knight [ทีม B • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_78" class="py-1 px-2 rounded hover:bg-slate-800">✅ TER03 — High Wizard [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_93" class="py-1 px-2 rounded hover:bg-slate-800">✅ Toey — Paladin [ทีม C • ปาร์ตี้ 3]</option><option value="m_csv_1792521333043_17" class="py-1 px-2 rounded hover:bg-slate-800">✅ Top`Secrets — Assassin Cross [ทีม B • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_117" class="py-1 px-2 rounded hover:bg-slate-800">✅ wanon — High Priest [ทีม A • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_14" class="py-1 px-2 rounded hover:bg-slate-800">✅ WeedLDM — Lord Knight [ทีม A • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_10" class="py-1 px-2 rounded hover:bg-slate-800">✅ Wrist — Assassin Cross [ทีม A • ปาร์ตี้ 1]</option><option value="m_csv_1792521333043_132" class="py-1 px-2 rounded hover:bg-slate-800">✅ Xม่อม3Xยอย — อาลิเทีย [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_111" class="py-1 px-2 rounded hover:bg-slate-800">✅ xอยรุงรัง — Night Walker [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_40" class="py-1 px-2 rounded hover:bg-slate-800">✅ :xEMERGENCYx: — Whitesmith [ยังไม่ลงตี้]</option><option value="m_csv_1792521333043_21" class="py-1 px-2 rounded hover:bg-slate-800">✅ -Yร้าย- — Lord Knight [ทีม B • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_114" class="py-1 px-2 rounded hover:bg-slate-800">✅ YokYeenThird — High Priest [ทีม C • ปาร์ตี้ 4]</option><option value="m_csv_1792521333043_120" class="py-1 px-2 rounded hover:bg-slate-800">✅ YuizPAN — Gypsy [ทีม C • ปาร์ตี้ 2]</option><option value="m_csv_1792521333043_9" class="py-1 px-2 rounded hover:bg-slate-800">✅ エยざのะ — Clown [ทีม A • ปาร์ตี้ 1]</option></select>
+
+            </div>
+
+            <!-- Date Range Selection -->
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 bg-slate-950/70 p-3 rounded-xl border border-slate-800/90">
+
+              <div>
+
+                <label class="block text-[11px] text-slate-400 mb-1">ตั้งแต่วันที่ (วันเริ่มลา) *</label>
+
+                <input type="date" id="leaveFormStartDate" onchange="syncLeaveEndDateMin()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white mono focus:outline-none focus:border-indigo-500">
+
+              </div>
+
+              <div>
+
+                <label class="block text-[11px] text-slate-400 mb-1">ถึงวันที่ (กรณีลาหลายวัน)</label>
+
+                <input type="date" id="leaveFormEndDate" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white mono focus:outline-none focus:border-indigo-500">
+
+              </div>
+
+              <div class="col-span-full flex items-center justify-between pt-1">
+
+                <span class="text-[11px] text-slate-400">หากลาแค่วันเดียว ให้ตั้งวันที่ทั้งสองช่องตรงกัน</span>
+
+                <button type="button" onclick="setLeaveFormSingleDay()" class="text-[11px] text-indigo-400 hover:text-indigo-300 underline">ตั้งเป็นวันเดียว</button>
+
+              </div>
+
+            </div>
+
+            <!-- Leave Type -->
+
+            <div>
+
+              <label class="block text-slate-300 font-medium mb-1.5">2. ประเภทการลา *</label>
+
+              <div class="grid grid-cols-2 gap-2" id="leaveTypeRadioGroup">
+                <label class="cursor-pointer flex items-center gap-2 p-2.5 rounded-xl border border-rose-500/50 bg-rose-950/30 text-rose-200 text-xs font-medium transition">
+                  <input type="radio" name="leaveTypeRadio" value="ลากิลด์วอร์ GVG" checked="" onchange="updateLeaveTypeRadioStyles()" class="accent-rose-500">
+                  <span>⚔️ ลากิลด์วอร์ GVG</span>
+                </label>
+                <label class="cursor-pointer flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 text-xs font-medium transition">
+                  <input type="radio" name="leaveTypeRadio" value="ลาSiege War (ศึกชิงปราสาท)" onchange="updateLeaveTypeRadioStyles()" class="accent-amber-500">
+                  <span>🏰 ลาSiege War (ศึกชิงปราสาท)</span>
+                </label>
+                <label class="cursor-pointer flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 text-xs font-medium transition">
+                  <input type="radio" name="leaveTypeRadio" value="ลาPolarity" onchange="updateLeaveTypeRadioStyles()" class="accent-indigo-500">
+                  <span>⚡ ลาPolarity</span>
+                </label>
+                <label class="cursor-pointer flex items-center gap-2 p-2.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 text-xs font-medium transition">
+                  <input type="radio" name="leaveTypeRadio" value="ลา" onchange="updateLeaveTypeRadioStyles()" class="accent-sky-500">
+                  <span>📋 ลา</span>
+                </label>
+              </div>
+
+            </div>
+
+            <!-- Leave Reason + Quick Chips -->
+
+            <div>
+
+              <label class="block text-slate-300 font-medium mb-1.5">3. เหตุผลการลา / หมายเหตุ</label>
+
+              <div class="flex flex-wrap gap-1.5 mb-2">
+
+                <button type="button" onclick="setQuickLeaveReason('ติดงาน / โอทีด่วน')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition">💼 ติดงาน/โอที</button>
+
+                <button type="button" onclick="setQuickLeaveReason('ติดธุระส่วนตัว / ครอบครัว')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition">🏠 ติดธุระส่วนตัว</button>
+
+                <button type="button" onclick="setQuickLeaveReason('เดินทาง / ไปต่างจังหวัด')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition">🚗 ไปต่างจังหวัด</button>
+
+                <button type="button" onclick="setQuickLeaveReason('ไม่สบาย / พักผ่อน')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition">🤒 ป่วย/พักผ่อน</button>
+
+                <button type="button" onclick="setQuickLeaveReason('เน็ตล่ม / คอมมีปัญหา')" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition">🌐 เน็ต/คอมมีปัญหา</button>
+
+              </div>
+
+              <input type="text" id="leaveFormReasonInput" placeholder="ระบุเหตุผลการลา เช่น ติดโอทีเลิก 22.00 น. หรือไปต่างจังหวัด..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white focus:outline-none focus:border-indigo-500">
+
+            </div>
+
+            <!-- Submit Button -->
+
+            <button type="button" onclick="submitDailyLeaveForm()" class="w-full py-3 rounded-xl bg-gradient-to-r from-rose-600 via-orange-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-rose-600/25 flex items-center justify-center gap-2 transition">
+
+              <span>💾 บันทึกการลาลง Database ทันที</span>
+
+            </button>
+
+          </div>
+
+        </div>
+
+        <!-- Right Column: Selected Date Leave Dashboard, Quick Attendance & History (8 cols) -->
+
+        <div class="lg:col-span-7 xl:col-span-8 space-y-6">
+
+          <!-- Summary Cards for Selected Date -->
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5">
+
+              <div class="text-[11px] text-slate-400">พร้อมวอร์ (วันที่เลือก)</div>
+
+              <div class="mono text-xl font-bold text-emerald-400 mt-1" id="leaveStatReadyDay">134 คน</div>
+
+            </div>
+
+            <div class="bg-slate-900 border border-rose-500/30 rounded-2xl p-3.5">
+
+              <div class="text-[11px] text-rose-300">ลากิลด์วอร์ GVG</div>
+
+              <div class="mono text-xl font-bold text-rose-400 mt-1" id="leaveStatAbsentDay">0 คน</div>
+
+            </div>
+
+            <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-3.5">
+
+              <div class="text-[11px] text-amber-300">ลาศึกชิง / Siege War / Polarity</div>
+
+              <div class="mono text-xl font-bold text-amber-400 mt-1" id="leaveStatLateDay">0 คน</div>
+
+            </div>
+
+            <div class="bg-slate-900 border border-indigo-500/30 rounded-2xl p-3.5">
+
+              <div class="text-[11px] text-indigo-300">คนในปาร์ตี้ที่ติดลาวันนี้</div>
+
+              <div class="mono text-xl font-bold text-indigo-400 mt-1" id="leaveStatInPartyDay">0 คน</div>
+
+            </div>
+
+          </div>
+
+          <!-- Sub-Navigation inside Right Panel -->
+
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+
+            <div class="flex flex-wrap items-center justify-between gap-2 p-3.5 bg-slate-950/70 border-b border-slate-800">
+
+              <div class="flex items-center gap-1.5">
+
+                <button onclick="switchLeaveSubView('dailyList')" id="leaveSubBtn-dailyList" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-600 text-white transition">
+
+                  🏖️ รายชื่อคนลาในวันที่เลือก (<span id="leaveDailyCountLabel">0</span>)
+
+                </button>
+
+                <button onclick="switchLeaveSubView('quickCheckin')" id="leaveSubBtn-quickCheckin" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+
+                  ⚡ เช็คชื่อ / กดลาด่วนรายคน
+
+                </button>
+
+                <button onclick="switchLeaveSubView('statsHistory')" id="leaveSubBtn-statsHistory" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 hover:text-white transition">
+
+                  📊 สถิติการลาสะสมรายบุคคล
+
+                </button>
+
+              </div>
+
+              <div class="flex items-center gap-1.5">
+
+                <button onclick="copyDailyLeaveReport()" class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition">
+
+                  📋 คัดลอกสรุปคนลาวันนี้
+
+                </button>
+
+                <button onclick="exportLeaveHistoryCSV()" class="px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition">
+
+                  📥 Export ประวัติการลา CSV
+
+                </button>
+
+              </div>
+
+            </div>
+
+            <!-- SUB-VIEW 1: Daily Leave List for Selected Date -->
+
+            <div id="leaveSubView-dailyList" class="p-4 space-y-3">
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+
+                <span class="text-xs text-slate-400">รายชื่อสมาชิกที่ติดสถานะแจ้งลาในวันที่เลือก (กด <strong class="text-emerald-300">"✅ ยกเลิกการลาวันนี้"</strong> เพื่อเปลี่ยนสถานะกลับเป็นพร้อมวอร์ทันที)</span>
+
+                <button onclick="clearAllLeaveForSelectedDate()" id="btnClearAllDailyLeave" class="hidden px-3 py-1 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-semibold transition">
+
+                  🗑️ ยกเลิกการลาทุกคนในวันนี้
+
+                </button>
+
+              </div>
+
+              <div id="dailyLeaveCardsContainer" class="space-y-2.5 max-h-[58vh] overflow-y-auto pr-1">
+
+            <div class="py-12 text-center space-y-2 border border-dashed border-slate-800 rounded-2xl">
+
+              <div class="text-2xl">🎉</div>
+
+              <div class="text-sm font-semibold text-emerald-400">ไม่มีสมาชิกแจ้งลาในวันที่ พฤหัส 22 ต.ค. 2569</div>
+
+              <div class="text-xs text-slate-400">สมาชิกทุกคนพร้อมเข้าร่วมกิลด์วอร์และกิจกรรมกิลด์ หรือสามารถบันทึกการลาได้ที่ฟอร์มด้านซ้าย</div>
+
+            </div>
+
+          </div>
+
+            </div>
+
+            <!-- SUB-VIEW 2: Quick Daily Attendance / Leave Toggle -->
+
+            <div id="leaveSubView-quickCheckin" class="hidden p-4 space-y-3">
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+
+                <input type="text" id="quickCheckinSearch" oninput="renderLeaveQuickCheckin()" placeholder="ค้นหาชื่อสมาชิก, อาชีพ, หรือทีม..." class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white w-full sm:w-64 focus:outline-none focus:border-indigo-500">
+
+                <div class="flex items-center gap-2">
+
+                  <span class="text-[11px] text-slate-400">คลิกสถานะเพื่อสลับและบันทึกลง Database ทันที</span>
+
+                  <button onclick="clearAllLeaveForSelectedDate()" class="px-2.5 py-1 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-xs transition">
+
+                    ✅ ตั้งทุกคนพร้อมวอร์ในวันนี้
+
+                  </button>
+
+                </div>
+
+              </div>
+
+              <div id="quickCheckinListContainer" class="space-y-2 max-h-[54vh] overflow-y-auto pr-1">
+
+                <!-- Populated by JS -->
+
+              </div>
+
+            </div>
+
+            <!-- SUB-VIEW 3: Individual Leave Statistics & Full History -->
+
+            <div id="leaveSubView-statsHistory" class="hidden p-4 space-y-3">
+
+              <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+
+                <div>
+
+                  <p class="text-xs text-slate-300 font-semibold">📊 สรุปสถิติการลารายวันสะสม &amp; เชื่อมโยงสถิติ ลา/ขาด จาก 6 กิจกรรมประจำสัปดาห์</p>
+
+                  <p class="text-[11px] text-slate-400">คลิกที่ป้ายวันที่เพื่อสลับไปดูข้อมูลวันนั้น หรือกดปุ่มด้านขวาเพื่อดูตารางวิเคราะห์การลา/ขาดแยกตาม 6 กิจกรรม</p>
+
+                </div>
+
+                <div class="flex flex-wrap items-center gap-2">
+
+                  <select id="leaveStatsSortSelect" onchange="renderLeaveStatsTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-2.5 py-1.5 text-xs text-slate-200">
+
+                    <option value="daily_desc">เรียงตาม: วันลารายวันสะสม (มาก → น้อย)</option>
+
+                    <option value="event_leave_absent_desc">เรียงตาม: ลา+ขาด 6 กิจกรรม (มาก → น้อย)</option>
+
+                    <option value="event_absent_desc">เรียงตาม: ขาดกิจกรรมโดยไม่แจ้ง (มาก → น้อย)</option>
+
+                    <option value="total_all_desc">เรียงตาม: รวมวันลา + ลา/ขาดกิจกรรมทั้งหมด</option>
+
+                  </select>
+
+                  <input type="text" id="leaveStatsSearch" oninput="renderLeaveStatsTable()" placeholder="🔍 ค้นหาชื่อสมาชิก..." class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white w-full sm:w-48 focus:outline-none focus:border-indigo-500">
+
+                  <button onclick="switchTab('events'); switchEventSubView('ranking');" class="px-3 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-xs font-semibold transition">
+
+                    🚨 ดูสถิติลา/ขาด 6 กิจกรรมเชิงลึก
+
+                  </button>
+
+                </div>
+
+              </div>
+
+              <div class="overflow-x-auto max-h-[54vh]">
+
+                <table class="w-full text-left border-collapse text-xs">
+
+                  <thead class="bg-slate-950 text-slate-400 sticky top-0 border-b border-slate-800 uppercase text-[11px]">
+
+                    <tr>
+
+                      <th class="py-2.5 px-3">สมาชิก</th>
+
+                      <th class="py-2.5 px-3">ทีม / ปาร์ตี้</th>
+
+                      <th class="py-2.5 px-3 text-center">📅 วันลารายวันสะสม</th>
+
+                      <th class="py-2.5 px-3 text-center">🏆 สถิติ 6 กิจกรรม (ลา / ขาด)</th>
+
+                      <th class="py-2.5 px-3">ประวัติวันที่ลารายวัน &amp; เหตุผล</th>
+
+                      <th class="py-2.5 px-3 text-right">จัดการ</th>
+
+                    </tr>
+
+                  </thead>
+
+                  <tbody id="leaveStatsTableBody" class="divide-y divide-slate-800/70">
+
+                    <!-- Populated by JS -->
+
+                  </tbody>
+
+                </table>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+  </main>
+
+  <script src="js/shared.js"></script>
+
+  <script src="js/leave.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>จัดทีม &amp; ปาร์ตี้ GVG — กิลด์ Moonz</title>
+  <script>
+    (function() {
+      const isAuth = localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
+                     sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
+      if (!isAuth) {
+        window.location.replace('login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop() || 'index.html'));
+      }
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .slot-selected {
+      outline: 2px solid #f59e0b !important;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.8);
+      cursor: pointer;
+    }
+    [draggable="true"] {
+      cursor: grab;
+    }
+    [draggable="true"]:active {
+      cursor: grabbing;
+    }
+    .dnd-dragging {
+      opacity: 0.45 !important;
+      transform: scale(0.98);
+    }
+    .dnd-drop-target {
+      outline: 2px dashed #f59e0b !important;
+      background-color: rgba(245, 158, 11, 0.15) !important;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+      transition: all 0.15s ease;
+    }
+    .dnd-pool-target {
+      outline: 2px dashed #f43f5e !important;
+      background-color: rgba(244, 63, 94, 0.08) !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Universal Action / Dialog Modal (Replaces alert, confirm, prompt) -->
+  <div id="customDialogModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="dialogTitle" class="font-bold text-base text-white">แจ้งเตือน</h3>
+        <button onclick="closeCustomDialog()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <p id="dialogMessage" class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed"></p>
+      <div id="dialogCustomHtmlWrapper" class="hidden"></div>
+      <div id="dialogInputWrapper" class="hidden">
+        <input type="text" id="dialogInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+      </div>
+      <div id="dialogFieldPickerWrapper" class="hidden space-y-1.5">
+        <label class="block text-xs text-slate-400">เลือกสนามประจำทีม (สนามหลัก / สนามรอง):</label>
+        <div id="dialogFieldOptions" class="grid grid-cols-2 gap-2"></div>
+      </div>
+      <div id="dialogColorPickerWrapper" class="hidden space-y-1.5">
+        <label class="block text-xs text-slate-400">เลือกสีประจำทีม:</label>
+        <div id="dialogColorOptions" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button id="dialogCancelBtn" onclick="closeCustomDialog()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">ยกเลิก</button>
+        <button id="dialogConfirmBtn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Donate QR Zoom Modal -->
+  <div id="donateQrModal" onclick="if(event.target===this)this.classList.add('hidden')" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-amber-500/50 rounded-3xl max-w-sm w-full p-6 space-y-4 text-center shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-sm sm:text-base text-amber-300">💸 สนับสนุนค่าขนม</h3>
+        <button onclick="document.getElementById('donateQrModal').classList.add('hidden')" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <p class="text-sm font-semibold text-white leading-relaxed">
+        สนับสนุนค่าขนมได้ตามความหล่อ/สวย ของคนโดเนท ✨
+      </p>
+      <div class="bg-white p-4 rounded-2xl inline-block mx-auto shadow-xl border-4 border-amber-400/70">
+        <img src="data:image/png;base64,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" alt="QR Code โดเนท" class="w-60 h-60 object-contain mx-auto">
+      </div>
+      <div class="pt-2">
+        <button onclick="document.getElementById('donateQrModal').classList.add('hidden')" class="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs sm:text-sm transition">
+          ปิดหน้าต่าง
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div id="addMemberModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-base text-white">➕ เพิ่มสมาชิกใหม่เข้ากิลด์ (Manual)</h3>
+        <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block text-slate-400 mb-1">ชื่อตัวละคร *</label>
+          <input type="text" id="newMemName" placeholder="เช่น เทพซ่า007" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">สายอาชีพ (15 สายหลัก)</label>
+            <select id="newMemJob" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+              <option value="Lord Knight">⚔️ Lord Knight (Knight)</option>
+              <option value="Knight">⚔️ Knight</option>
+              <option value="Paladin">🛡️ Paladin (Crusader)</option>
+              <option value="Crusader">🛡️ Crusader</option>
+              <option value="High Wizard">🔥 High Wizard (Wizard)</option>
+              <option value="Wizard">🔥 Wizard</option>
+              <option value="Professor">📖 Professor (Sage)</option>
+              <option value="Scholar">📖 Scholar (Sage)</option>
+              <option value="Sage">📖 Sage</option>
+              <option value="Sniper">🏹 Sniper (Hunter)</option>
+              <option value="Hunter">🏹 Hunter</option>
+              <option value="Clown">🎵 Clown (Bard)</option>
+              <option value="Bard">🎵 Bard</option>
+              <option value="Gypsy">💃 Gypsy (Dancer)</option>
+              <option value="Dancer">💃 Dancer</option>
+              <option value="High Priest">✨ High Priest (Priest)</option>
+              <option value="Priest">✚ Priest</option>
+              <option value="Champion">👊 Champion (Monk)</option>
+              <option value="Monk">👊 Monk</option>
+              <option value="Assassin Cross">☠️ Assassin Cross (Assassin)</option>
+              <option value="Assassin">🗡️ Assassin</option>
+              <option value="Stalker">🗡️ Stalker (Rogue)</option>
+              <option value="Rogue">🗡️ Rogue</option>
+              <option value="Whitesmith">🔨 Whitesmith (Blacksmith)</option>
+              <option value="Blacksmith">🔨 Blacksmith</option>
+              <option value="Creator">🧪 Creator (Alchemist)</option>
+              <option value="Alchemist">🧪 Alchemist</option>
+              <option value="Night Walker">🟤 Night Walker (Rebel)</option>
+              <option value="Rebel">🔫 Rebel</option>
+              <option value="Gunslinger">🔫 Gunslinger (Rebel)</option>
+              <option value="คานอส">🌳 คานอส (Kanos)</option>
+              <option value="อาลิเทีย">🌳 อาลิเทีย (สายคานอส)</option>
+              <option value="Novice">🌱 Novice</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">เลเวล (Lv.)</label>
+            <input type="number" id="newMemLv" value="90" min="1" max="150" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">คะแนน Gear</label>
+            <input type="number" id="newMemGear" value="30000" step="500" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">ตำแหน่งในกิลด์</label>
+            <input type="text" id="newMemPos" value="สมาชิก" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeAddMemberModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">ยกเลิก</button>
+        <button onclick="confirmAddMember()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">บันทึกสมาชิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Export Image Preview & Customizer Modal -->
+  <div id="exportImageModal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-3">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-[98vw] 2xl:max-w-[1860px] w-full max-h-[96vh] flex flex-col shadow-2xl overflow-hidden">
+      <!-- Modal Top Controls Bar -->
+      <div class="px-5 py-3.5 bg-slate-950 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-fuchsia-600 to-indigo-600 flex items-center justify-center text-white text-lg shadow">
+            📸
+          </div>
+          <div>
+            <h3 class="font-bold text-sm sm:text-base text-white">ส่งออกรูปภาพผังทัพที่จัด (Export PNG)</h3>
+            <p class="text-[11px] text-slate-400">ปรับแต่งข้อมูลและความกว้างของตาราง แล้วกดดาวน์โหลดเป็นไฟล์รูปภาพ .PNG ความละเอียดสูงได้ทันที</p>
+          </div>
+        </div>
+
+        <!-- Customization Filters & Toggles -->
+        <div class="flex flex-wrap items-center gap-2.5 text-xs">
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-slate-400">เลือกทีม:</span>
+            <select id="exportTeamSelect" onchange="renderExportPosterPreview()" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-white font-semibold focus:outline-none focus:border-indigo-500">
+              <option value="all">ทุกทีมทั้งหมด</option>
+            </select>
+          </div>
+
+          <div class="flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5">
+            <span class="text-slate-400">ความกว้างรูป:</span>
+            <select id="exportWidthSelect" onchange="renderExportPosterPreview()" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-amber-300 font-semibold focus:outline-none focus:border-indigo-500">
+              <option value="2400">2400px (Ultra Wide กว้างพิเศษ)</option>
+              <option value="2048">2048px (แนะนำ ป้องกันข้อความตก)</option>
+              <option value="1920">1920px (Full HD)</option>
+              <option value="1680" selected="">1680px (มาตรฐาน)</option>
+            </select>
+          </div>
+
+          <label class="cursor-pointer flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-200 select-none">
+            <input type="checkbox" id="exportOptShowGear" checked="" onchange="renderExportPosterPreview()" class="accent-indigo-500 rounded">
+            <span>แสดง Gear</span>
+          </label>
+
+          <label class="cursor-pointer flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-200 select-none">
+            <input type="checkbox" id="exportOptShowStatus" checked="" onchange="renderExportPosterPreview()" class="accent-indigo-500 rounded">
+            <span>แสดงสถานะ/ลา</span>
+          </label>
+
+          <label class="cursor-pointer flex items-center gap-1.5 bg-slate-900 border border-slate-800 rounded-xl px-2.5 py-1.5 text-slate-200 select-none">
+            <input type="checkbox" id="exportOptShowLeaveFooter" checked="" onchange="renderExportPosterPreview()" class="accent-indigo-500 rounded">
+            <span>สรุปคนลาท้ายตาราง</span>
+          </label>
+
+          <!-- Action Buttons -->
+          <button id="btnDownloadExportImg" onclick="downloadExportedTeamImage()" class="px-4 py-2 rounded-xl bg-gradient-to-r from-fuchsia-600 via-indigo-600 to-cyan-600 hover:from-fuchsia-500 hover:to-cyan-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-indigo-600/30 flex items-center gap-1.5 transition">
+            <span>💾 ดาวน์โหลดรูปภาพ (.PNG)</span>
+          </button>
+          <button onclick="closeExportImageModal()" class="w-8 h-8 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center text-sm transition" title="ปิดหน้าต่าง">
+            ✕
+          </button>
+        </div>
+      </div>
+
+      <!-- Scrollable Poster Preview Viewport -->
+      <div class="flex-1 overflow-auto bg-[#070a12] p-4 sm:p-6 flex justify-center items-start">
+        <!-- Target Poster Container for html2canvas -->
+        <div id="exportPosterBoard" style="width: 1680px; min-width: 1680px; background: linear-gradient(180deg, #0b0f19 0%, #111827 100%); color: #f8fafc; font-family: 'Kanit', sans-serif;" class="rounded-3xl border-2 border-slate-700/80 p-8 space-y-6 shadow-2xl">
+          <!-- Populated dynamically by renderExportPosterPreview() -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 lg:px-6 py-3">
+    <div class="max-w-[1850px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 flex items-center justify-center shadow-lg shadow-orange-500/20 font-bold text-xl text-white transition hover:opacity-90">
+          ⚔️
+        </a>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-lg sm:text-xl font-bold tracking-wide text-white" id="guildTitleDisplay">Moonz</h1>
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="fileMetaBadge">กำลังโหลด...</span>
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="cloudStatusBadge">☁️ กำลังเชื่อมต่อ Cloud...</span>
+          </div>
+          <p class="text-xs text-slate-400">ระบบจัดทัพ GVG แบ่งสนามหลัก/สนามรอง ครอบคลุมทีม (A, B, C) • บันทึกการลารายวัน &amp; เช็คชื่อ 6 กิจกรรมประจำสัปดาห์เชื่อม Cloud</p>
+        </div>
+      </div>
+
+      <!-- KPI Summary Bar (Synced with Active Date) -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
+        <div class="bg-indigo-950/70 border border-indigo-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+          <span class="text-indigo-300 font-medium">📅 ข้อมูลวันที่:</span>
+          <input type="date" id="headerDateInput" onchange="changeSelectedDate(this.value)" class="bg-transparent text-white font-bold mono text-xs focus:outline-none cursor-pointer">
+          <button onclick="setSelectedDateToToday()" class="px-1.5 py-0.5 rounded bg-indigo-600/40 hover:bg-indigo-600 text-[10px] text-indigo-200 hover:text-white transition" title="กลับมาวันนี้">วันนี้</button>
+        </div>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="text-slate-400">สมาชิก:</span>
+          <span class="mono font-bold text-white text-sm" id="statTotal">0</span>
+        </div>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-slate-400">พร้อมวอร์:</span>
+          <span class="mono font-bold text-emerald-400 text-sm" id="statReady">0</span>
+        </div>
+        <a href="leave.html" class="cursor-pointer bg-slate-800/90 hover:bg-rose-950/40 border border-slate-700/80 hover:border-rose-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2 transition" title="คลิกเพื่อดูรายละเอียดคนลาในวันนี้">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          <span class="text-slate-400">ลาวันนี้:</span>
+          <span class="mono font-bold text-rose-400 text-sm" id="statLeave">0</span>
+        </a>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="text-slate-400">ลงตี้แล้ว:</span>
+          <span class="mono font-bold text-amber-400 text-sm" id="statAssigned">0 / 0</span>
+        </div>
+        <a href="events.html" class="cursor-pointer bg-slate-800/90 hover:bg-amber-950/40 border border-slate-700/80 hover:border-amber-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2 transition" title="คลิกเพื่อเปิดระบบเช็คชื่อ 6 กิจกรรมประจำสัปดาห์">
+          <span class="text-amber-400">🏆 กิจกรรมสัปดาห์นี้:</span>
+          <span class="mono font-bold text-amber-300 text-sm" id="statWeeklyEvents">0%</span>
+        </a>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="text-slate-400">เฉลี่ย Gear:</span>
+          <span class="mono font-bold text-indigo-300 text-sm" id="statAvgGear">0</span>
+        </div>
+      </div>
+
+      <!-- Quick Import / Add / Export / Cloud Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="loadFromDatabase(true)" class="px-3 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 font-medium text-xs sm:text-sm flex items-center gap-1.5 transition" title="ดึงข้อมูลล่าสุดจากฐานข้อมูล">
+          <span>🔄 ซิงค์ข้อมูล</span>
+        </button>
+        <button onclick="saveToDatabase()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition" title="บันทึกข้อมูลขึ้น Supabase Cloud">
+          <span>💾 บันทึก Cloud</span>
+        </button>
+        <button onclick="openAddMemberModal()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 transition">
+          <span>➕ เพิ่มสมาชิก</span>
+        </button>
+        <label class="cursor-pointer px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
+          <span>📂 นำเข้า .CSV</span>
+          <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+        </label>
+        <button onclick="exportLineupCSV()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition">
+          📥 ส่งออก CSV
+        </button>
+        <button onclick="clearAllGuildData()" class="px-2.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
+          🗑️ ล้างข้อมูล
+        </button>
+      </div>
+    </div>
+  </header>
+
+    <!-- Navigation Tabs (Row ละ 4) -->
+  <div class="bg-slate-900/60 border-b border-slate-800/80 px-4 lg:px-6 py-2.5">
+    <div class="max-w-[1850px] mx-auto space-y-2.5">
+      <nav class="grid grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+        <a href="index.html" id="tabBtn-board" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-indigo-600 text-white shadow shadow-indigo-500/30 flex items-center justify-center gap-1.5 text-center truncate">🛡️ กระดานจัดทีม & ปาร์ตี้ GVG</a>
+        <a href="siege.html" id="tabBtn-siege" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏰 จัดทีม Siege War (ศึกชิงปราสาท)</a>
+        <a href="polarity.html" id="tabBtn-polarity" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">⚡ จัดทีม Polarity (ทีมดาว)</a>
+        <a href="squads.html" id="tabBtn-squads" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">👥 จัดตี้ประจำ (Preset Squads)</a>
+        <a href="leave.html" id="tabBtn-leave" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏖️ ระบบบันทึกการลา</a>
+        <a href="events.html" id="tabBtn-events" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏆 กิจกรรมประจำสัปดาห์</a>
+        <a href="roster.html" id="tabBtn-roster" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">📋 ตารางสมาชิก</a>
+        <a href="member.html" id="tabBtn-member" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🔍 มุมมองลูกกิลด์ (ค้นหาตี้/แจ้งลา)</a>
+      </nav>
+      <!-- Smart Actions Bar -->
+      <div class="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-slate-800/60">
+        <button onclick="openExportImageModal('all')" class="px-3 py-1.5 rounded-lg bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+          <span>📸 ส่งออกรูปผังทัพ</span>
+        </button>
+        <button onclick="autoAssignByGearAndRole()" class="px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 text-xs font-medium transition flex items-center gap-1.5">
+          ⚡ จัดตี้สมดุลอัตโนมัติ (ตาม Gear)
+        </button>
+        <button onclick="markOfflineAsLeave()" class="px-3 py-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 text-xs font-medium transition">
+          💤 ตั้งคนออฟไลน์ ≥ 4 วันเป็น "ลาวันนี้"
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROWORLDDB-STYLE 13 JOB CLASS EMBLEM BAR -->
+  <div class="bg-[#141822] border-b border-slate-800/90 px-4 lg:px-6 py-2.5">
+    <div class="max-w-[1850px] mx-auto">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-[11px] font-medium text-slate-400 flex items-center gap-1.5">
+          <span>🎖️ ตราสัญลักษณ์และสีประจำสายอาชีพทั้ง 15 สาย (คลิกที่ไอคอนอาชีพเพื่อกรองดูเฉพาะสายนั้น)</span>
+        </span>
+        <button onclick="selectJobBarFamily('all')" id="resetJobBarBtn" class="hidden text-[11px] px-2.5 py-0.5 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition">
+          ✕ แสดงทุกสายอาชีพทั้งหมด
+        </button>
+      </div>
+      <div id="jobEmblemBarContainer" class="bg-[#1c202b] border border-slate-800 rounded-2xl p-2 flex items-center gap-1.5 sm:gap-2 overflow-x-auto select-none">
+          <button onclick="selectJobBarFamily('knight')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Knight (Knight / Lord Knight) — 16 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">16</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#881313" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#dc2626" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#dc2626" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#881313" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M19 45 L44 20 M40 18 L46 18 L46 24" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path><path d="M23 35 L29 41 M18 46 L22 42" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"></path><path d="M45 45 L20 20 M24 18 L18 18 L18 24" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" fill="none"></path><path d="M41 35 L35 41 M46 46 L42 42" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Knight</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('crusader')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Crusader (Crusader / Paladin) — 7 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">7</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#5f0f12" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#9f1d20" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#9f1d20" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#5f0f12" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M32 16 L45 21 V32 C45 40.5 39 46.5 32 49 C25 46.5 19 40.5 19 32 V21 L32 16 Z" fill="rgba(255,255,255,0.18)" stroke="#ffffff" stroke-width="3.4" stroke-linejoin="round"></path><path d="M32 22 V42 M24 29 H40" stroke="#ffffff" stroke-width="3.6" stroke-linecap="round"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Crusader</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('wizard')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Wizard (Wizard / High Wizard) — 11 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">11</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#133785" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#1d5bd6" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#1d5bd6" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#133785" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M24 46 L37 29" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round"></path><path d="M32 28 C30 21 36 16 42 19 C47 22 45 30 39 31 C36 31.5 35 28 37 26" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" fill="none"></path><circle cx="39" cy="24" r="2.6" fill="#ffffff"></circle></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Wizard</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('hunter')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Hunter (Hunter / Sniper) — 5 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">5</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#7c4711" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#c67a2b" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#c67a2b" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#7c4711" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M24 18 C38 21 41 41 24 46" stroke="#ffffff" stroke-width="3.5" stroke-linecap="round" fill="none"></path><line x1="24" y1="19" x2="24" y2="45" stroke="#ffffff" stroke-width="2" stroke-opacity="0.85"></line><path d="M19 32 H45 M39 26 L46 32 L39 38" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Hunter</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('bard')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Bard (Bard / Clown) — 13 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">13</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#73410e" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#b86f24" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#b86f24" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#73410e" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M22 20 C22 34 25 44 33 44 C41 44 43 34 42 22" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round" fill="none"></path><path d="M20 20 H44" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"></path><line x1="29" y1="22" x2="29" y2="42" stroke="#ffffff" stroke-width="2.2"></line><line x1="35" y1="22" x2="35" y2="42" stroke="#ffffff" stroke-width="2.2"></line></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Bard</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('dancer')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Dancer (Dancer / Gypsy) — 5 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">5</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#7c3f0e" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#c46d25" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#c46d25" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#7c3f0e" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M22 45 L29 36" stroke="#ffffff" stroke-width="4" stroke-linecap="round"></path><path d="M29 36 C38 35 45 27 41 20 C37 15 27 19 29 26 C31 32 42 33 45 41" stroke="#ffffff" stroke-width="3.3" stroke-linecap="round" fill="none"></path><circle cx="21" cy="45" r="2.5" fill="#ffffff"></circle></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Dancer</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('priest')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Priest (Priest / High Priest) — 27 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">27</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#124c1d" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#218332" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#218332" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#124c1d" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M32 16 V48 M18 30 H46" stroke="#ffffff" stroke-width="4.4" stroke-linecap="round"></path><circle cx="32" cy="30" r="5" fill="#218332" stroke="#ffffff" stroke-width="2.6"></circle><path d="M29 18 H35 M29 46 H35 M20 27 V33 M44 27 V33" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Priest</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('monk')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Monk (Monk / Champion) — 1 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">1</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#15521e" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#288d36" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#288d36" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#15521e" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M22 29 C22 23 26 20 32 20 C38 20 42 23 42 29 V37 C42 42 38 45 32 45 C26 45 22 42 22 37 Z" fill="#ffffff"></path><path d="M32 26 L33.8 30.2 L38 32 L33.8 33.8 L32 38 L30.2 33.8 L26 32 L30.2 30.2 Z" fill="#288d36"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Monk</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('assassin')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Assassin (Assassin / Assassin Cross) — 10 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">10</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#3f1770" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#6b2fb5" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#6b2fb5" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#3f1770" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M32 16 L42 37 L32 33 L22 37 Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"></path><path d="M21 41 H43 M25 45 H39" stroke="#ffffff" stroke-width="3.4" stroke-linecap="round"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Assassin</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('blacksmith')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Blacksmith (Blacksmith / Whitesmith) — 3 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">3</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#692b0e" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#ad4f22" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#ad4f22" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#692b0e" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><line x1="32" y1="17" x2="32" y2="47" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round"></line><path d="M32 22 C24 18 18 22 18 28 C18 34 24 38 32 34 Z" fill="#ffffff"></path><path d="M32 22 C40 18 46 22 46 28 C46 34 40 38 32 34 Z" fill="#ffffff"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Blacksmith</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('alchemist')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Alchemist (Alchemist / Creator) — 14 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">14</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#632e0e" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#a65422" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#a65422" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#632e0e" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M28 18 H36 M30 18 V26 L21 41 C19.5 43.5 21.5 46 24.5 46 H39.5 C42.5 46 44.5 43.5 43 41 L34 26 V18" stroke="#ffffff" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round" fill="none"></path><path d="M24 38 H40 L42 42 H22 Z" fill="#ffffff"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Alchemist</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('rebel')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="Rebel (Rebel / Night Walker / Gunslinger) — 13 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">13</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#421d17" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#6c352c" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#6c352c" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#421d17" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M19 25 H43 V31 H32 L29 43 H22 L25 31 H19 Z" fill="#ffffff" stroke="#ffffff" stroke-width="1.8" stroke-linejoin="round"></path><circle cx="31" cy="28" r="2.4" fill="#6c352c"></circle></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">Rebel</span>
+          </button>
+        
+          <button onclick="selectJobBarFamily('kanos')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer bg-transparent border-transparent hover:bg-[#272c3a]" title="คานอส (คานอส / อาลิเทีย / Kanos / Alithea) — 9 คน">
+            <span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">9</span>
+            <div class="transform group-hover:scale-110 transition duration-200">
+              <svg width="42" height="42" style="width:42px;height:42px;min-width:42px;" viewBox="0 0 64 64" class="shrink-0 drop-shadow" xmlns="http://www.w3.org/2000/svg"><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(22.5 32 32)" fill="#16403b" stroke="rgba(255,255,255,0.75)" stroke-width="2"></rect><rect x="11" y="11" width="42" height="42" rx="6" transform="rotate(67.5 32 32)" fill="#296e67" stroke="rgba(255,255,255,0.9)" stroke-width="2"></rect><polygon points="24,9 40,9 55,24 55,40 40,55 24,55 9,40 9,24" fill="#296e67" stroke="#ffffff" stroke-width="2.4" stroke-linejoin="round"></polygon><polygon points="26,14 38,14 50,26 50,38 38,50 26,50 14,38 14,26" fill="#16403b" stroke="rgba(255,255,255,0.45)" stroke-width="1.3" stroke-linejoin="round"></polygon><path d="M32 46 V26" stroke="#ffffff" stroke-width="3.8" stroke-linecap="round"></path><path d="M32 34 C25 34 21 29 22 24 C23 19 28 17 32 21 C36 17 41 19 42 24 C43 29 39 34 32 34 Z" fill="none" stroke="#ffffff" stroke-width="3.3" stroke-linecap="round" stroke-linejoin="round"></path><path d="M25 46 H39" stroke="#ffffff" stroke-width="3.2" stroke-linecap="round"></path></svg>
+            </div>
+            <span class="mt-1.5 text-xs font-bold tracking-tight text-slate-400 group-hover:text-slate-200">คานอส</span>
+          </button>
+        </div>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-[1850px] w-full mx-auto p-4 lg:p-6">
+    <!-- TAB 1: TACTICAL BOARD (TEAMS & PARTIES) -->
+    <section id="tab-board" class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      <!-- Left: Unassigned Pool & Donate QR Box -->
+      <div class="lg:col-span-3 flex flex-col gap-4 lg:sticky lg:top-20 self-start">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-3.5 flex flex-col h-[62vh]">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="font-bold text-sm sm:text-base text-white">สมาชิกที่ยังไม่ได้ลงตี้</h2>
+              <p class="text-[11px] text-slate-400">คลิกเลือกชื่อ แล้วคลิกช่องว่างในตี้เพื่อจัดวาง</p>
+            </div>
+            <span id="unassignedCountBadge" class="mono px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-800 text-amber-300 border border-slate-700">0</span>
+          </div>
+
+          <!-- Pool Search & Filters -->
+          <div class="space-y-2 mb-3">
+            <input type="text" id="poolSearch" oninput="renderBoard()" placeholder="ค้นหาชื่อ, คลาส, ตำแหน่ง..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500">
+            <div class="flex gap-1.5">
+              <select id="poolRoleFilter" onchange="renderBoard()" class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 focus:outline-none">
+                <option value="all">ทุกบทบาท (Role)</option>
+                <option value="healer">✨ พระ (Priest / High Priest)</option>
+                <option value="tank">🛡️ แทงค์ (Knight / Crusader)</option>
+                <option value="bard">🎵 บัฟเพลง (Bard / Dancer)</option>
+                <option value="dps">⚔️ ดาเมจ (DPS ทุกคลาส)</option>
+              </select>
+              <select id="poolStatusFilter" onchange="renderBoard()" class="bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 focus:outline-none">
+                <option value="ready">เฉพาะพร้อมวอร์</option>
+                <option value="all">รวมคนลาวันนี้</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="unassignedPoolList" class="flex-1 overflow-y-auto space-y-2 pr-1">
+            <!-- Populated dynamically by renderBoard() -->
+          </div>
+        </div>
+
+        <!-- Donate QR Box (Permanent Left Box) -->
+        <div onclick="document.getElementById('donateQrModal').classList.remove('hidden')" class="bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-3 flex flex-col items-center text-center cursor-pointer group transition shadow-lg shadow-amber-950/20">
+          <div class="flex items-center gap-1.5 mb-1 text-amber-300 font-bold text-xs">
+            <span>☕</span>
+            <span>สนับสนุน / โดเนทค่าน้ำชา</span>
+          </div>
+          <p class="text-[11px] text-slate-400">สแกน QR Code ด้านล่าง (คลิกที่รูปเพื่อขยายใหญ่)</p>
+          <p class="text-[11px] text-slate-400">ลิงค์โดเนท : </p><a href="https://hiwdo.com/natdanai1256"></a>
+          <div class="bg-white p-2.5 rounded-2xl shadow-md border-2 border-amber-400/70 group-hover:scale-105 transition duration-200 mt-2">
+            <img src="data:image/png;base64,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" alt="QR Code โดเนท" class="w-36 h-36 sm:w-40 sm:h-40 object-contain">
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Teams & Parties Hierarchy -->
+      <div class="lg:col-span-9 space-y-5">
+        <!-- Team Filter & Management Top Bar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-900 border border-slate-800 rounded-2xl p-3.5">
+          <div id="teamFilterButtons" class="flex flex-wrap items-center gap-1.5">
+            <!-- Populated dynamically by renderTeamFilterBar() -->
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openCreateTeamModal('main')" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-md shadow-indigo-600/20 transition flex items-center gap-1.5">
+              <span>➕ สร้างทีมใหม่</span>
+            </button>
+            <button onclick="resetDefaultTeamsStructure()" class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium transition" title="รีเซ็ตกลับเป็นผังเริ่มต้น (ทีม A, B สนามหลัก / ทีม C สนามรอง)">
+              <span>🔄 รีเซ็ตทีม</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Rendered Teams Hierarchy -->
+        <div id="teamsHierarchyContainer" class="space-y-6">
+          <!-- Populated dynamically by renderBoard() -->
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="js/shared.js"></script>
+  <script src="js/gvg.js"></script>
+</body>
+</html>

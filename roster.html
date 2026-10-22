@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ตารางสมาชิกกิลด์ — กิลด์ Moonz</title>
+  <script>
+    (function() {
+      const isAuth = localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
+                     sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
+      if (!isAuth) {
+        window.location.replace('login.html?redirect=' + encodeURIComponent(window.location.pathname.split('/').pop() || 'index.html'));
+      }
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #0b0f19;
+      color: #f1f5f9;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .slot-selected {
+      outline: 2px solid #f59e0b !important;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+    }
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.8);
+      cursor: pointer;
+    }
+    [draggable="true"] {
+      cursor: grab;
+    }
+    [draggable="true"]:active {
+      cursor: grabbing;
+    }
+    .dnd-dragging {
+      opacity: 0.45 !important;
+      transform: scale(0.98);
+    }
+    .dnd-drop-target {
+      outline: 2px dashed #f59e0b !important;
+      background-color: rgba(245, 158, 11, 0.15) !important;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.25) !important;
+      transition: all 0.15s ease;
+    }
+    .dnd-pool-target {
+      outline: 2px dashed #f43f5e !important;
+      background-color: rgba(244, 63, 94, 0.08) !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white">
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Universal Action / Dialog Modal (Replaces alert, confirm, prompt) -->
+  <div id="customDialogModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="dialogTitle" class="font-bold text-base text-white">แจ้งเตือน</h3>
+        <button onclick="closeCustomDialog()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <p id="dialogMessage" class="text-xs sm:text-sm text-slate-300 whitespace-pre-line leading-relaxed"></p>
+      <div id="dialogCustomHtmlWrapper" class="hidden"></div>
+      <div id="dialogInputWrapper" class="hidden">
+        <input type="text" id="dialogInput" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+      </div>
+      <div id="dialogFieldPickerWrapper" class="hidden space-y-1.5">
+        <label class="block text-xs text-slate-400">เลือกสนามประจำทีม (สนามหลัก / สนามรอง):</label>
+        <div id="dialogFieldOptions" class="grid grid-cols-2 gap-2"></div>
+      </div>
+      <div id="dialogColorPickerWrapper" class="hidden space-y-1.5">
+        <label class="block text-xs text-slate-400">เลือกสีประจำทีม:</label>
+        <div id="dialogColorOptions" class="flex flex-wrap gap-2"></div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button id="dialogCancelBtn" onclick="closeCustomDialog()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium transition">ยกเลิก</button>
+        <button id="dialogConfirmBtn" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition">ตกลง</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Member Modal -->
+  <div id="addMemberModal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="font-bold text-base text-white">➕ เพิ่มสมาชิกใหม่เข้ากิลด์ (Manual)</h3>
+        <button onclick="closeAddMemberModal()" class="text-slate-400 hover:text-white text-sm">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block text-slate-400 mb-1">ชื่อตัวละคร *</label>
+          <input type="text" id="newMemName" placeholder="เช่น เทพซ่า007" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">สายอาชีพ (15 สายหลัก)</label>
+            <select id="newMemJob" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+              <option value="Lord Knight">⚔️ Lord Knight (Knight)</option>
+              <option value="Knight">⚔️ Knight</option>
+              <option value="Paladin">🛡️ Paladin (Crusader)</option>
+              <option value="Crusader">🛡️ Crusader</option>
+              <option value="High Wizard">🔥 High Wizard (Wizard)</option>
+              <option value="Wizard">🔥 Wizard</option>
+              <option value="Professor">📖 Professor (Sage)</option>
+              <option value="Scholar">📖 Scholar (Sage)</option>
+              <option value="Sage">📖 Sage</option>
+              <option value="Sniper">🏹 Sniper (Hunter)</option>
+              <option value="Hunter">🏹 Hunter</option>
+              <option value="Clown">🎵 Clown (Bard)</option>
+              <option value="Bard">🎵 Bard</option>
+              <option value="Gypsy">💃 Gypsy (Dancer)</option>
+              <option value="Dancer">💃 Dancer</option>
+              <option value="High Priest">✨ High Priest (Priest)</option>
+              <option value="Priest">✚ Priest</option>
+              <option value="Champion">👊 Champion (Monk)</option>
+              <option value="Monk">👊 Monk</option>
+              <option value="Assassin Cross">☠️ Assassin Cross (Assassin)</option>
+              <option value="Assassin">🗡️ Assassin</option>
+              <option value="Stalker">🗡️ Stalker (Rogue)</option>
+              <option value="Rogue">🗡️ Rogue</option>
+              <option value="Whitesmith">🔨 Whitesmith (Blacksmith)</option>
+              <option value="Blacksmith">🔨 Blacksmith</option>
+              <option value="Creator">🧪 Creator (Alchemist)</option>
+              <option value="Alchemist">🧪 Alchemist</option>
+              <option value="Night Walker">🟤 Night Walker (Rebel)</option>
+              <option value="Rebel">🔫 Rebel</option>
+              <option value="Gunslinger">🔫 Gunslinger (Rebel)</option>
+              <option value="คานอส">🌳 คานอส (Kanos)</option>
+              <option value="อาลิเทีย">🌳 อาลิเทีย (สายคานอส)</option>
+              <option value="Novice">🌱 Novice</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">เลเวล (Lv.)</label>
+            <input type="number" id="newMemLv" value="90" min="1" max="150" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-400 mb-1">คะแนน Gear</label>
+            <input type="number" id="newMemGear" value="30000" step="500" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">ตำแหน่งในกิลด์</label>
+            <input type="text" id="newMemPos" value="สมาชิก" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500">
+          </div>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+        <button onclick="closeAddMemberModal()" class="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">ยกเลิก</button>
+        <button onclick="confirmAddMember()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold">บันทึกสมาชิก</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Header -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 lg:px-6 py-3">
+    <div class="max-w-[1850px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-500 via-orange-500 to-rose-600 flex items-center justify-center shadow-lg shadow-orange-500/20 font-bold text-xl text-white transition hover:opacity-90">
+          ⚔️
+        </a>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="text-lg sm:text-xl font-bold tracking-wide text-white" id="guildTitleDisplay">Moonz</h1>
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="fileMetaBadge">กำลังโหลด...</span>
+            <span class="px-2 py-0.5 text-[11px] font-semibold rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30" id="cloudStatusBadge">☁️ กำลังเชื่อมต่อ Cloud...</span>
+          </div>
+          <p class="text-xs text-slate-400">ระบบจัดทัพ GVG แบ่งสนามหลัก/สนามรอง ครอบคลุมทีม (A, B, C) • บันทึกการลารายวัน &amp; เช็คชื่อ 6 กิจกรรมประจำสัปดาห์เชื่อม Cloud</p>
+        </div>
+      </div>
+
+      <!-- KPI Summary Bar (Synced with Active Date) -->
+      <div class="flex flex-wrap items-center gap-2 sm:gap-2.5 text-xs">
+        <div class="bg-indigo-950/70 border border-indigo-500/40 rounded-lg px-2.5 py-1 flex items-center gap-1.5">
+          <span class="text-indigo-300 font-medium">📅 ข้อมูลวันที่:</span>
+          <input type="date" id="headerDateInput" onchange="changeSelectedDate(this.value)" class="bg-transparent text-white font-bold mono text-xs focus:outline-none cursor-pointer">
+          <button onclick="setSelectedDateToToday()" class="px-1.5 py-0.5 rounded bg-indigo-600/40 hover:bg-indigo-600 text-[10px] text-indigo-200 hover:text-white transition" title="กลับมาวันนี้">วันนี้</button>
+        </div>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="text-slate-400">สมาชิก:</span>
+          <span class="mono font-bold text-white text-sm" id="statTotal">0</span>
+        </div>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="text-slate-400">พร้อมวอร์:</span>
+          <span class="mono font-bold text-emerald-400 text-sm" id="statReady">0</span>
+        </div>
+        <a href="leave.html" class="cursor-pointer bg-slate-800/90 hover:bg-rose-950/40 border border-slate-700/80 hover:border-rose-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2 transition" title="คลิกเพื่อดูรายละเอียดคนลาในวันนี้">
+          <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+          <span class="text-slate-400">ลาวันนี้:</span>
+          <span class="mono font-bold text-rose-400 text-sm" id="statLeave">0</span>
+        </a>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="text-slate-400">ลงตี้แล้ว:</span>
+          <span class="mono font-bold text-amber-400 text-sm" id="statAssigned">0 / 0</span>
+        </div>
+        <a href="events.html" class="cursor-pointer bg-slate-800/90 hover:bg-amber-950/40 border border-slate-700/80 hover:border-amber-500/40 rounded-lg px-3 py-1.5 flex items-center gap-2 transition" title="คลิกเพื่อเปิดระบบเช็คชื่อ 6 กิจกรรมประจำสัปดาห์">
+          <span class="text-amber-400">🏆 กิจกรรมสัปดาห์นี้:</span>
+          <span class="mono font-bold text-amber-300 text-sm" id="statWeeklyEvents">0%</span>
+        </a>
+        <div class="bg-slate-800/90 border border-slate-700/80 rounded-lg px-3 py-1.5 flex items-center gap-2">
+          <span class="text-slate-400">เฉลี่ย Gear:</span>
+          <span class="mono font-bold text-indigo-300 text-sm" id="statAvgGear">0</span>
+        </div>
+      </div>
+
+      <!-- Quick Import / Add / Export / Cloud Buttons -->
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="loadFromDatabase(true)" class="px-3 py-2 rounded-xl bg-sky-600/20 hover:bg-sky-600/30 border border-sky-500/30 text-sky-300 font-medium text-xs sm:text-sm flex items-center gap-1.5 transition" title="ดึงข้อมูลล่าสุดจากฐานข้อมูล">
+          <span>🔄 ซิงค์ข้อมูล</span>
+        </button>
+        <button onclick="saveToDatabase()" class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition" title="บันทึกข้อมูลขึ้น Supabase Cloud">
+          <span>💾 บันทึก Cloud</span>
+        </button>
+        <button onclick="openAddMemberModal()" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-indigo-600/20 flex items-center gap-1.5 transition">
+          <span>➕ เพิ่มสมาชิก</span>
+        </button>
+        <label class="cursor-pointer px-3 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-medium text-xs sm:text-sm shadow-lg shadow-emerald-600/20 flex items-center gap-1.5 transition">
+          <span>📂 นำเข้า .CSV</span>
+          <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleCSVUpload(event)">
+        </label>
+        <button onclick="exportLineupCSV()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs sm:text-sm font-medium transition">
+          📥 ส่งออก CSV
+        </button>
+        <button onclick="clearAllGuildData()" class="px-2.5 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
+          🗑️ ล้างข้อมูล
+        </button>
+      </div>
+    </div>
+  </header>
+
+    <!-- Navigation Tabs (Row ละ 4) -->
+  <div class="bg-slate-900/60 border-b border-slate-800/80 px-4 lg:px-6 py-2.5">
+    <div class="max-w-[1850px] mx-auto space-y-2.5">
+      <nav class="grid grid-cols-2 lg:grid-cols-4 gap-2 w-full">
+        <a href="index.html" id="tabBtn-board" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🛡️ กระดานจัดทีม & ปาร์ตี้ GVG</a>
+        <a href="siege.html" id="tabBtn-siege" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏰 จัดทีม Siege War (ศึกชิงปราสาท)</a>
+        <a href="polarity.html" id="tabBtn-polarity" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">⚡ จัดทีม Polarity (ทีมดาว)</a>
+        <a href="squads.html" id="tabBtn-squads" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">👥 จัดตี้ประจำ (Preset Squads)</a>
+        <a href="leave.html" id="tabBtn-leave" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏖️ ระบบบันทึกการลา</a>
+        <a href="events.html" id="tabBtn-events" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🏆 กิจกรรมประจำสัปดาห์</a>
+        <a href="roster.html" id="tabBtn-roster" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition bg-indigo-600 text-white shadow shadow-indigo-500/30 flex items-center justify-center gap-1.5 text-center truncate">📋 ตารางสมาชิก</a>
+        <a href="member.html" id="tabBtn-member" class="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition text-slate-400 hover:text-white hover:bg-slate-800/80 bg-slate-950/40 border border-slate-800/60 flex items-center justify-center gap-1.5 text-center truncate">🔍 มุมมองลูกกิลด์ (ค้นหาตี้/แจ้งลา)</a>
+      </nav>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-[1850px] w-full mx-auto p-4 lg:p-6">
+        <section id="tab-roster" class="space-y-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2 flex-1">
+          <input type="text" id="rosterSearch" oninput="renderRosterTable()" placeholder="ค้นหาชื่อผู้เล่น, คลาส, ตำแหน่ง, Title..." class="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white w-full sm:w-60 focus:outline-none focus:border-indigo-500">
+          <select id="rosterClassFilter" onchange="renderRosterTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200"><option value="all">ทุกคลาสอาชีพ (13 คลาส)</option><option value="High Priest">High Priest (27 คน)</option><option value="Lord Knight">Lord Knight (16 คน)</option><option value="Creator">Creator (14 คน)</option><option value="Clown">Clown (13 คน)</option><option value="Night Walker">Night Walker (13 คน)</option><option value="High Wizard">High Wizard (11 คน)</option><option value="Assassin Cross">Assassin Cross (10 คน)</option><option value="อาลิเทีย">อาลิเทีย (9 คน)</option><option value="Paladin">Paladin (7 คน)</option><option value="Sniper">Sniper (5 คน)</option><option value="Gypsy">Gypsy (5 คน)</option><option value="Whitesmith">Whitesmith (3 คน)</option><option value="Champion">Champion (1 คน)</option></select>
+          <select id="rosterSortBy" onchange="renderRosterTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="gear_desc">เรียงตาม: คะแนน Gear (มาก → น้อย)</option>
+            <option value="gear_asc">เรียงตาม: คะแนน Gear (น้อย → มาก)</option>
+            <option value="lv_desc">เรียงตาม: Lv. (มาก → น้อย)</option>
+            <option value="act_desc">เรียงตาม: กิจกรรมสัปดาห์นี้</option>
+            <option value="contrib_desc">เรียงตาม: แต้มสนับสนุนสะสม</option>
+            <option value="id_asc">เรียงตาม: ลำดับ ID ในไฟล์</option>
+          </select>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="deleteSelectedMembers()" id="btnDeleteSelected" class="hidden px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/20 transition">
+            🗑️ ลบที่เลือก (0 คน)
+          </button>
+          <button onclick="deleteOfflineMembers('7')" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
+            🗑️ ลบคนออฟไลน์เกิน 7 วัน
+          </button>
+          <button onclick="deleteOfflineMembers('4')" class="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
+            🗑️ ลบคนออฟไลน์ ≥ 4 วัน
+          </button>
+          <button onclick="markAllReady()" class="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition">
+            ✅ ตั้งทุกคนพร้อมวอร์ (วันนี้)
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+        <div class="overflow-x-auto max-h-[72vh]">
+          <table class="w-full text-left border-collapse text-xs sm:text-sm">
+            <thead class="bg-slate-950/90 text-slate-400 sticky top-0 z-10 border-b border-slate-800 text-[11px] uppercase">
+              <tr>
+                <th class="py-3 px-3 w-8">
+                  <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAllVisible(this.checked)" class="rounded bg-slate-900 border-slate-700 text-indigo-600 focus:ring-0 cursor-pointer">
+                </th>
+                <th class="py-3 px-3">ID</th>
+                <th class="py-3 px-3">ชื่อผู้เล่น (สีตามสายอาชีพ)</th>
+                <th class="py-3 px-3">Lv.</th>
+                <th class="py-3 px-3">คลาส</th>
+                <th class="py-3 px-3">คะแนน Gear</th>
+                <th class="py-3 px-3">ตำแหน่ง / Title</th>
+                <th class="py-3 px-3">กิจกรรม / สนับสนุนสะสม</th>
+                <th class="py-3 px-3">สถานะในเกม</th>
+                <th class="py-3 px-3">ทีม &amp; ปาร์ตี้ปัจจุบัน</th>
+                <th class="py-3 px-3 text-right">สถานะวันที่เลือก / จัดการ</th>
+              </tr>
+            </thead>
+            <tbody id="rosterTableBody" class="divide-y divide-slate-800/70">
+
+            <!-- Populated dynamically by renderRosterTable() -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  </main>
+
+  <script src="js/shared.js"></script>
+  <script src="js/roster.js"></script>
+</body>
+</html>
