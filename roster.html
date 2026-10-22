@@ -263,7 +263,24 @@
       <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-3">
         <div class="flex flex-wrap items-center gap-2 flex-1">
           <input type="text" id="rosterSearch" oninput="renderRosterTable()" placeholder="ค้นหาชื่อผู้เล่น, คลาส, ตำแหน่ง, Title..." class="bg-slate-950 border border-slate-800 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white w-full sm:w-60 focus:outline-none focus:border-indigo-500">
-          <select id="rosterClassFilter" onchange="renderRosterTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200"><option value="all">ทุกคลาสอาชีพ (13 คลาส)</option><option value="High Priest">High Priest (27 คน)</option><option value="Lord Knight">Lord Knight (16 คน)</option><option value="Creator">Creator (14 คน)</option><option value="Clown">Clown (13 คน)</option><option value="Night Walker">Night Walker (13 คน)</option><option value="High Wizard">High Wizard (11 คน)</option><option value="Assassin Cross">Assassin Cross (10 คน)</option><option value="อาลิเทีย">อาลิเทีย (9 คน)</option><option value="Paladin">Paladin (7 คน)</option><option value="Sniper">Sniper (5 คน)</option><option value="Gypsy">Gypsy (5 คน)</option><option value="Whitesmith">Whitesmith (3 คน)</option><option value="Champion">Champion (1 คน)</option></select>
+          <select id="rosterClassFilter" onchange="renderRosterTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200">
+            <option value="all">ทุกคลาสอาชีพ (15 คลาสหลัก)</option>
+            <option value="High Priest">High Priest (27 คน)</option>
+            <option value="Lord Knight">Lord Knight (16 คน)</option>
+            <option value="Creator">Creator (14 คน)</option>
+            <option value="Clown">Clown (13 คน)</option>
+            <option value="Night Walker">Night Walker (13 คน)</option>
+            <option value="High Wizard">High Wizard (11 คน)</option>
+            <option value="Assassin Cross">Assassin Cross (10 คน)</option>
+            <option value="อาลิเทีย">อาลิเทีย (9 คน)</option>
+            <option value="Paladin">Paladin (7 คน)</option>
+            <option value="Sniper">Sniper (5 คน)</option>
+            <option value="Gypsy">Gypsy (5 คน)</option>
+            <option value="Whitesmith">Whitesmith (3 คน)</option>
+            <option value="Champion">Champion (1 คน)</option>
+            <option value="Scholar">Scholar (0 คน)</option>
+            <option value="Stalker">Stalker (0 คน)</option>
+          </select>
           <select id="rosterSortBy" onchange="renderRosterTable()" class="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-xs sm:text-sm text-slate-200">
             <option value="gear_desc">เรียงตาม: คะแนน Gear (มาก → น้อย)</option>
             <option value="gear_asc">เรียงตาม: คะแนน Gear (น้อย → มาก)</option>
@@ -278,12 +295,7 @@
           <button onclick="deleteSelectedMembers()" id="btnDeleteSelected" class="hidden px-3 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/20 transition">
             🗑️ ลบที่เลือก (0 คน)
           </button>
-          <button onclick="deleteOfflineMembers('7')" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
-            🗑️ ลบคนออฟไลน์เกิน 7 วัน
-          </button>
-          <button onclick="deleteOfflineMembers('4')" class="px-3 py-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-medium transition">
-            🗑️ ลบคนออฟไลน์ ≥ 4 วัน
-          </button>
+          
           <button onclick="markAllReady()" class="px-3 py-2 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-medium transition">
             ✅ ตั้งทุกคนพร้อมวอร์ (วันนี้)
           </button>

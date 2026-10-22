@@ -86,16 +86,75 @@
       });
     }
 
+    const ROSTER_MAIN_CLASSES = [
+      { name: 'High Priest', familyKey: 'priest', alt: ['Priest'] },
+      { name: 'Lord Knight', familyKey: 'knight', alt: ['Knight'] },
+      { name: 'Creator', familyKey: 'alchemist', alt: ['Alchemist'] },
+      { name: 'Clown', familyKey: 'bard', alt: ['Bard'] },
+      { name: 'Night Walker', familyKey: 'rebel', alt: ['Rebel', 'Gunslinger'] },
+      { name: 'High Wizard', familyKey: 'wizard', alt: ['Wizard'] },
+      { name: 'Assassin Cross', familyKey: 'assassin', alt: ['Assassin'] },
+      { name: 'อาลิเทีย', familyKey: 'kanos', alt: ['คานอส', 'Kanos', 'Alithea'] },
+      { name: 'Paladin', familyKey: 'crusader', alt: ['Crusader'] },
+      { name: 'Sniper', familyKey: 'hunter', alt: ['Hunter'] },
+      { name: 'Gypsy', familyKey: 'dancer', alt: ['Dancer'] },
+      { name: 'Whitesmith', familyKey: 'blacksmith', alt: ['Blacksmith'] },
+      { name: 'Champion', familyKey: 'monk', alt: ['Monk'] },
+      { name: 'Scholar', familyKey: 'sage', alt: ['Professor', 'Sage', 'เซจ'] },
+      { name: 'Stalker', familyKey: 'rogue', alt: ['Rogue', 'โร้ก'] }
+    ];
+
     function populateClassFilterDropdown() {
       const select = document.getElementById('rosterClassFilter');
       if (!select) return;
       const currentVal = select.value || 'all';
-      const counts = {};
-      members.forEach(m => { counts[m.job] = (counts[m.job] || 0) + 1; });
-      const sortedJobs = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
-      select.innerHTML = `<option value="all">ทุกคลาสอาชีพ (${sortedJobs.length} คลาส)</option>` +
-        sortedJobs.map(j => `<option value="${j}">${j} (${counts[j]} คน)</option>`).join('');
-      if (counts[currentVal]) select.value = currentVal;
+
+      const itemMap = new Map();
+      ROSTER_MAIN_CLASSES.forEach(item => {
+        itemMap.set(item.name, {
+          name: item.name,
+          familyKey: item.familyKey,
+          alt: item.alt,
+          count: 0
+        });
+      });
+
+      members.forEach(m => {
+        const mJob = (m.job || '').trim();
+        let matched = false;
+        for (const [key, item] of itemMap.entries()) {
+          if (mJob.toLowerCase() === item.name.toLowerCase() ||
+              item.alt.some(a => a.toLowerCase() === mJob.toLowerCase()) ||
+              (typeof getJobFamily === 'function' && getJobFamily(mJob).familyKey === item.familyKey)) {
+            item.count++;
+            matched = true;
+            break;
+          }
+        }
+        if (!matched && mJob) {
+          if (!itemMap.has(mJob)) {
+            itemMap.set(mJob, {
+              name: mJob,
+              familyKey: typeof getJobFamily === 'function' ? getJobFamily(mJob).familyKey : 'novice',
+              alt: [],
+              count: 0
+            });
+          }
+          itemMap.get(mJob).count++;
+        }
+      });
+
+      const items = Array.from(itemMap.values()).sort((a, b) => {
+        if (b.count !== a.count) return b.count - a.count;
+        return a.name.localeCompare(b.name);
+      });
+
+      select.innerHTML = `<option value="all">ทุกคลาสอาชีพ (15 คลาสหลัก)</option>` +
+        items.map(it => `<option value="${it.name}">${it.name} (${it.count} คน)</option>`).join('');
+
+      if (currentVal && (currentVal === 'all' || itemMap.has(currentVal))) {
+        select.value = currentVal;
+      }
     }
 
     function renderRosterTable() {
@@ -105,7 +164,17 @@
       const sortBy = document.getElementById('rosterSortBy').value;
 
       let list = members.filter(m => {
-        if (cls !== 'all' && m.job !== cls) return false;
+        if (cls !== 'all') {
+          const mJob = (m.job || '').trim().toLowerCase();
+          const targetCls = cls.trim().toLowerCase();
+          const cfg = ROSTER_MAIN_CLASSES.find(x => x.name.toLowerCase() === targetCls);
+          let match = (mJob === targetCls);
+          if (!match && cfg) {
+            match = cfg.alt.some(a => a.toLowerCase() === mJob) ||
+                    (typeof getJobFamily === 'function' && getJobFamily(m.job).familyKey === cfg.familyKey);
+          }
+          if (!match) return false;
+        }
         if (activeJobBarFamily !== 'all' && getJobFamily(m.job).familyKey !== activeJobBarFamily) return false;
         if (!q) return true;
         return m.name.toLowerCase().includes(q) || m.job.toLowerCase().includes(q) || m.position.toLowerCase().includes(q) || m.title.toLowerCase().includes(q);
