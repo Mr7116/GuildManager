@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="th" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ผังทัพและปาร์ตี้กิลด์ Moonz — สำหรับสมาชิก (GVG / Siege / Polarity)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background-color: #080c16;
+      color: #f1f5f9;
+    }
+    .mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 9999px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    .slot-highlight {
+      border-color: #f59e0b !important;
+      background: linear-gradient(90deg, rgba(245, 158, 11, 0.28) 0%, rgba(15, 23, 42, 0.95) 85%) !important;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.45);
+      transform: scale(1.02);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#070b14] text-slate-100 flex flex-col justify-between relative overflow-x-hidden">
+
+  <!-- Ambient Glows -->
+  <div class="absolute -top-32 -left-32 w-96 h-96 bg-indigo-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+  <div class="absolute top-1/3 -right-32 w-96 h-96 bg-rose-600/10 rounded-full blur-[140px] pointer-events-none"></div>
+
+  <!-- Top Sticky Header -->
+  <header class="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800/80 px-4 sm:px-6 py-3">
+    <div class="max-w-[1850px] mx-auto flex flex-wrap items-center justify-between gap-3">
+      
+      <!-- Brand & Info -->
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-rose-600 flex items-center justify-center text-xl shadow-lg shadow-indigo-500/25">
+          ⚔️
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h1 class="font-bold text-base sm:text-lg text-white tracking-wide">Moonz Guild</h1>
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
+              👀 มุมมองสมาชิก (ไม่ต้องล็อกอิน)
+            </span>
+            <span id="cloudStatusBadge" class="px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              🟢 ข้อมูล Live จาก Cloud
+            </span>
+          </div>
+          <p class="text-xs text-slate-400">ตรวจสอบผังจัดทีม GVG, ศึกชิงปราสาท Siege War และทีมดาว Polarity</p>
+        </div>
+      </div>
+
+      <!-- Quick Action Buttons -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="refreshData(true)" class="px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-200 border border-slate-700 hover:border-slate-600 text-xs font-medium transition flex items-center gap-1.5 shadow-sm">
+          <span>🔄</span>
+          <span>รีเฟรชข้อมูล</span>
+        </button>
+        <a href="public-leave.html" class="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-semibold shadow-md shadow-orange-600/20 transition flex items-center gap-1.5">
+          <span>🏖️</span>
+          <span>แจ้งลากิลด์วอร์</span>
+        </a>
+        <a href="login.html" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 text-xs font-medium transition flex items-center gap-1.5">
+          <span>🔐</span>
+          <span>หัวกิลด์ (Login)</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="max-w-[1850px] w-full mx-auto p-4 sm:p-6 flex-1 space-y-6">
+
+    <!-- Search Hero & Quick Self Lookup -->
+    <section class="bg-gradient-to-r from-slate-900 via-slate-900/90 to-indigo-950/40 border border-slate-800/90 rounded-2xl p-4 sm:p-6 shadow-xl space-y-3">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <span>🔍 ค้นหาชื่อตัวละครของคุณ</span>
+          </h2>
+          <p class="text-xs text-slate-400">พิมพ์ชื่อเพื่อดูว่าคุณอยู่ทีมไหน ปาร์ตี้อะไรในทุกโหมด และไฮไลท์ช่องทันที</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="exportBoardImage()" class="px-3 py-1.5 rounded-xl bg-gradient-to-r from-fuchsia-600 to-indigo-600 hover:from-fuchsia-500 hover:to-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1.5">
+            <span>📸</span>
+            <span>บันทึกรูปผังทัพ</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="relative max-w-xl">
+        <input
+          type="text"
+          id="memberSearchInput"
+          oninput="handleSearchMember(this.value)"
+          placeholder="พิมพ์ชื่อตัวละครในเกม เช่น Legend, Wrist, Mr7116..."
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 pl-10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition font-medium"
+        >
+        <span class="absolute left-3.5 top-3 text-slate-500 text-sm">🔎</span>
+      </div>
+
+      <!-- Quick Search Result Card -->
+      <div id="searchResultContainer" class="hidden pt-2">
+        <!-- Rendered dynamically -->
+      </div>
+    </section>
+
+    <!-- Mode Navigation Tabs -->
+    <section class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+        
+        <!-- Tab Switcher -->
+        <div class="inline-flex p-1 bg-slate-950 border border-slate-800 rounded-2xl gap-1">
+          <button
+            onclick="switchMode('gvg')"
+            id="tabBtn-gvg"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-indigo-600 text-white shadow shadow-indigo-600/30"
+          >
+            <span>🛡️ กิลด์วอร์ GVG</span>
+            <span id="gvgCountBadge" class="mono text-[10px] bg-indigo-950/80 px-2 py-0.5 rounded-full text-indigo-200 border border-indigo-400/30">0 คน</span>
+          </button>
+          
+          <button
+            onclick="switchMode('siege')"
+            id="tabBtn-siege"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900"
+          >
+            <span>🏰 ศึกชิงปราสาท Siege War</span>
+            <span id="siegeCountBadge" class="mono text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-300">0 คน</span>
+          </button>
+          
+          <button
+            onclick="switchMode('polarity')"
+            id="tabBtn-polarity"
+            class="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900"
+          >
+            <span>⚡ ทีมดาว Polarity</span>
+            <span id="polarityCountBadge" class="mono text-[10px] bg-slate-800 px-2 py-0.5 rounded-full text-slate-300">0 คน</span>
+          </button>
+        </div>
+
+        <!-- Mode Sub-Filter / Team Filter -->
+        <div id="teamFilterContainer" class="flex items-center gap-1.5 flex-wrap">
+          <!-- Dynamically populated per active mode -->
+        </div>
+
+      </div>
+
+      <!-- Board Header Title & Stats Strip -->
+      <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-xl px-4 py-2.5 text-xs text-slate-300">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="boardTitleDisplay" class="font-bold text-white text-sm">🛡️ ผังทัพ GVG</span>
+          <span class="text-slate-600">•</span>
+          <span id="boardStatsDisplay">กำลังโหลดข้อมูล...</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+            <span>พร้อมวอร์</span>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span>
+            <span>ลา</span>
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span>
+            <span>ชื่อที่ค้นหา</span>
+          </span>
+        </div>
+      </div>
+
+      <!-- The Active War Board Container -->
+      <div id="captureBoardArea" class="bg-[#0b0f19] border border-slate-800/90 rounded-2xl p-4 sm:p-5 shadow-2xl">
+        <div id="boardGridContainer" class="space-y-6">
+          <div class="py-16 text-center text-slate-500 text-sm">
+            ⏳ กำลังโหลดผังทัพและเชื่อมต่อ Cloud...
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Simple Footer -->
+  <footer class="mt-8 border-t border-slate-800/80 bg-slate-950/80 px-4 py-4 text-center text-xs text-slate-500 space-y-1">
+    <p>🛡️ Moonz Guild War Management Portal • อัปเดตข้อมูลอัตโนมัติผ่าน Supabase Cloud</p>
+    <p>สมาชิกลูกกิลด์สามารถกดแจ้งลาได้ที่ <a href="public-leave.html" class="text-amber-400 hover:underline">ฟอร์มแจ้งลา (ไม่ต้องล็อกอิน)</a></p>
+  </footer>
+
+  <!-- Include Shared Libraries -->
+  <script src="js/shared.js"></script>
+
+  <!-- Page Specific Logic -->
+  <script>
+    let activeMode = 'gvg'; // 'gvg' | 'siege' | 'polarity'
+    let currentTeamFilter = 'all';
+    let searchedKeyword = '';
+
+    // Initialize on window load
+    window.addEventListener('DOMContentLoaded', async () => {
+      // Setup default rebuild hooks so shared.js populates all 3 modes
+      setupSharedRebuildHooks();
+
+      // Check URL params for mode if specified e.g. ?mode=siege
+      const urlParams = new URLSearchParams(window.location.search);
+      const requestedMode = urlParams.get('mode');
+      if (['gvg', 'siege', 'polarity'].includes(requestedMode)) {
+        activeMode = requestedMode;
+      }
+
+      await loadPublicData();
+    });
+
+    function setupSharedRebuildHooks() {
+      // Hook Siege War rebuild
+      window.rebuildSiegeTeamsFromLoadedParties = function(loadedParties) {
+        if (!Array.isArray(loadedParties) || !loadedParties.length) {
+          initDefaultSiegeData();
+          return;
+        }
+        const teamMap = new Map();
+        loadedParties.forEach(p => {
+          p.category = 'siege';
+          if (!p.slots || !Array.isArray(p.slots)) p.slots = [null, null, null, null, null];
+          while (p.slots.length < 5) p.slots.push(null);
+          if (!teamMap.has(p.teamId)) {
+            teamMap.set(p.teamId, { id: p.teamId, name: p.teamName || 'ทัพปราสาท', color: p.teamColor || 'rose' });
+          }
+        });
+        window.publicSiegeTeams = Array.from(teamMap.values());
+        window.publicSiegeParties = loadedParties;
+      };
+
+      // Hook Polarity rebuild
+      window.rebuildPolarityTeamsFromLoadedParties = function(loadedParties) {
+        if (!Array.isArray(loadedParties) || !loadedParties.length) {
+          initDefaultPolarityData();
+          return;
+        }
+        const teamMap = new Map();
+        loadedParties.forEach(p => {
+          p.category = 'polarity';
+          if (!p.slots || !Array.isArray(p.slots)) p.slots = [null, null, null, null, null];
+          while (p.slots.length < 5) p.slots.push(null);
+          if (!teamMap.has(p.teamId)) {
+            teamMap.set(p.teamId, { id: p.teamId, name: p.teamName || 'ทีมดาว', color: p.teamColor || 'amber' });
+          }
+        });
+        window.publicPolarityTeams = Array.from(teamMap.values());
+        window.publicPolarityParties = loadedParties;
+      };
+    }
+
+    function initDefaultSiegeData() {
+      window.publicSiegeTeams = [
+        { id: 'siege_team_1', name: '🏰 ทัพบุกหลัก / ตีหิน (Main Breaker)', color: 'rose' },
+        { id: 'siege_team_2', name: '🛡️ ทัพป้องกัน / เฝ้าหิน (Castle Defense)', color: 'blue' },
+        { id: 'siege_team_3', name: '⚡ ทัพดักหน้าวาป / ตัดกำลัง (Warp Interceptor)', color: 'amber' },
+        { id: 'siege_team_4', name: '🎯 ทัพเคลื่อนที่เร็ว / กองหนุน (Mobile Scout)', color: 'emerald' }
+      ];
+      window.publicSiegeParties = [];
+      window.publicSiegeTeams.forEach(t => {
+        for (let i = 1; i <= 2; i++) {
+          window.publicSiegeParties.push({
+            id: `siege_p_${t.id}_${i}`,
+            name: `ปาร์ตี้ ${i}`,
+            teamId: t.id,
+            teamName: t.name,
+            teamColor: t.color,
+            category: 'siege',
+            slots: [null, null, null, null, null]
+          });
+        }
+      });
+    }
+
+    function initDefaultPolarityData() {
+      window.publicPolarityTeams = [
+        { id: 'star_team_1', name: '🌟 ทีมดาว 1 (Star 1)', color: 'amber' },
+        { id: 'star_team_2', name: '🌟 ทีมดาว 2 (Star 2)', color: 'purple' },
+        { id: 'star_team_3', name: '🌟 ทีมดาว 3 (Star 3)', color: 'cyan' },
+        { id: 'star_team_4', name: '🌟 ทีมดาว 4 (Star 4)', color: 'rose' }
+      ];
+      window.publicPolarityParties = [];
+      window.publicPolarityTeams.forEach(t => {
+        for (let i = 1; i <= 2; i++) {
+          window.publicPolarityParties.push({
+            id: `pol_p_${t.id}_${i}`,
+            name: `ปาร์ตี้ ${i}`,
+            teamId: t.id,
+            teamName: t.name,
+            teamColor: t.color,
+            category: 'polarity',
+            slots: [null, null, null, null, null]
+          });
+        }
+      });
+    }
+
+    async function loadPublicData() {
+      const badge = document.getElementById('cloudStatusBadge');
+      if (badge) {
+        badge.textContent = '⏳ กำลังดึงข้อมูลจาก Cloud...';
+        badge.className = 'px-2 py-0.5 rounded-full text-[11px] font-medium bg-amber-500/20 text-amber-300 border border-amber-500/30';
+      }
+
+      await loadFromDatabase(false);
+
+      if (badge) {
+        badge.textContent = '🟢 ซิงค์กับ Cloud แล้ว';
+        badge.className = 'px-2 py-0.5 rounded-full text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30';
+      }
+
+      updateModeCountBadges();
+      renderCurrentBoard();
+    }
+
+    async function refreshData(manual = false) {
+      await loadPublicData();
+      if (manual && typeof showToast === 'function') {
+        showToast('🔄 อัปเดตผังทัพล่าสุดจาก Cloud เรียบร้อยแล้ว', 'success');
+      }
+    }
+
+    function updateModeCountBadges() {
+      // Count GVG assigned
+      const gvgAssigned = parties.filter(p => p.category !== 'polarity' && p.category !== 'siege' && p.category !== 'preset' && p.category !== '__system__')
+        .reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
+      const gvgBadge = document.getElementById('gvgCountBadge');
+      if (gvgBadge) gvgBadge.textContent = `${gvgAssigned} คน`;
+
+      // Count Siege assigned
+      const siegeList = window.publicSiegeParties || (typeof rawSiegeParties !== 'undefined' ? rawSiegeParties : []);
+      const siegeAssigned = siegeList.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
+      const siegeBadge = document.getElementById('siegeCountBadge');
+      if (siegeBadge) siegeBadge.textContent = `${siegeAssigned} คน`;
+
+      // Count Polarity assigned
+      const polList = window.publicPolarityParties || (typeof rawPolarityParties !== 'undefined' ? rawPolarityParties : []);
+      const polAssigned = polList.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
+      const polBadge = document.getElementById('polarityCountBadge');
+      if (polBadge) polBadge.textContent = `${polAssigned} คน`;
+    }
+
+    function switchMode(newMode) {
+      activeMode = newMode;
+      currentTeamFilter = 'all';
+
+      // Update Tab Styles
+      ['gvg', 'siege', 'polarity'].forEach(m => {
+        const btn = document.getElementById(`tabBtn-${m}`);
+        if (!btn) return;
+        if (m === activeMode) {
+          btn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition flex items-center gap-2 bg-indigo-600 text-white shadow shadow-indigo-600/30';
+        } else {
+          btn.className = 'px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold transition flex items-center gap-2 text-slate-400 hover:text-white hover:bg-slate-900';
+        }
+      });
+
+      renderCurrentBoard();
+    }
+
+    function renderCurrentBoard() {
+      renderTeamFilterButtons();
+      const container = document.getElementById('boardGridContainer');
+      const titleDisplay = document.getElementById('boardTitleDisplay');
+      const statsDisplay = document.getElementById('boardStatsDisplay');
+
+      if (activeMode === 'gvg') {
+        renderGvgBoard(container, titleDisplay, statsDisplay);
+      } else if (activeMode === 'siege') {
+        renderSiegeBoard(container, titleDisplay, statsDisplay);
+      } else if (activeMode === 'polarity') {
+        renderPolarityBoard(container, titleDisplay, statsDisplay);
+      }
+    }
+
+    function renderTeamFilterButtons() {
+      const container = document.getElementById('teamFilterContainer');
+      if (!container) return;
+
+      let filterItems = [{ id: 'all', name: 'ทั้งหมด' }];
+
+      if (activeMode === 'gvg') {
+        filterItems.push({ id: 'field_main', name: 'สนามหลัก (Main)' });
+        filterItems.push({ id: 'field_sub', name: 'สนามรอง (Sub)' });
+        (teams || []).forEach(t => {
+          filterItems.push({ id: t.id, name: t.name });
+        });
+      } else if (activeMode === 'siege') {
+        const sTeams = window.publicSiegeTeams || [];
+        sTeams.forEach(t => filterItems.push({ id: t.id, name: t.name }));
+      } else if (activeMode === 'polarity') {
+        const pTeams = window.publicPolarityTeams || [];
+        pTeams.forEach(t => filterItems.push({ id: t.id, name: t.name }));
+      }
+
+      container.innerHTML = filterItems.map(item => {
+        const isActive = currentTeamFilter === item.id;
+        const activeClass = isActive
+          ? 'bg-indigo-600 text-white font-bold border-indigo-500 shadow-sm'
+          : 'bg-slate-900 text-slate-300 hover:text-white border-slate-800 hover:bg-slate-850';
+        return `
+          <button
+            onclick="setTeamFilter('${item.id}')"
+            class="px-2.5 py-1 rounded-lg text-xs border transition ${activeClass}"
+          >
+            ${item.name}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function setTeamFilter(filterId) {
+      currentTeamFilter = filterId;
+      renderCurrentBoard();
+    }
+
+    // ------------------------------------------------------------------------
+    // GVG BOARD RENDERER
+    // ------------------------------------------------------------------------
+    function renderGvgBoard(container, titleDisplay, statsDisplay) {
+      titleDisplay.textContent = '🛡️ ผังทัพ GVG (กิลด์วอร์)';
+      
+      let relevantTeams = [...teams];
+      if (currentTeamFilter === 'field_main') {
+        relevantTeams = relevantTeams.filter(t => t.field === 'main');
+      } else if (currentTeamFilter === 'field_sub') {
+        relevantTeams = relevantTeams.filter(t => t.field === 'sub');
+      } else if (currentTeamFilter !== 'all') {
+        relevantTeams = relevantTeams.filter(t => t.id === currentTeamFilter);
+      }
+
+      const gvgParties = parties.filter(p => p.category !== 'polarity' && p.category !== 'siege' && p.category !== 'preset' && p.category !== '__system__');
+      
+      const totalAssigned = gvgParties.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
+      const totalParties = gvgParties.length;
+      statsDisplay.textContent = `${relevantTeams.length} ทีม • ${totalParties} ปาร์ตี้ • ลงทะเบียนแล้ว ${totalAssigned} คน`;
+
+      if (!relevantTeams.length) {
+        container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs">ไม่พบทีมในเงื่อนไขที่เลือก</div>`;
+        return;
+      }
+
+      container.innerHTML = relevantTeams.map(t => {
+        const tTheme = getTeamTheme(t.color);
+        const tParties = gvgParties.filter(p => p.teamId === t.id);
+        const tFieldBadge = t.field === 'main'
+          ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">⚔️ สนามหลัก</span>`
+          : `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40">🛡️ สนามรอง</span>`;
+
+        const partiesHtml = tParties.map(p => renderPartyCard(p, tTheme)).join('');
+
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-3 border-b border-slate-800/80 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full ${tTheme.badgeBg} border ${tTheme.border}"></span>
+                <h3 class="font-bold text-sm sm:text-base text-white">${t.name}</h3>
+                ${tFieldBadge}
+                <span class="text-xs text-slate-400">(${tParties.length} ปาร์ตี้)</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              ${partiesHtml || `<div class="col-span-full py-6 text-center text-slate-500 text-xs">ยังไม่มีปาร์ตี้ในทีมนี้</div>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ------------------------------------------------------------------------
+    // SIEGE WAR BOARD RENDERER
+    // ------------------------------------------------------------------------
+    function renderSiegeBoard(container, titleDisplay, statsDisplay) {
+      titleDisplay.textContent = '🏰 ผังทัพ Siege War (ศึกชิงปราสาท)';
+      
+      const sTeams = window.publicSiegeTeams || [];
+      const sParties = window.publicSiegeParties || (typeof rawSiegeParties !== 'undefined' ? rawSiegeParties : []);
+
+      let relevantTeams = [...sTeams];
+      if (currentTeamFilter !== 'all') {
+        relevantTeams = relevantTeams.filter(t => t.id === currentTeamFilter);
+      }
+
+      const totalAssigned = sParties.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
+      statsDisplay.textContent = `${relevantTeams.length} ทัพ • ${sParties.length} ปาร์ตี้ • ลงทะเบียนแล้ว ${totalAssigned} คน`;
+
+      if (!relevantTeams.length) {
+        container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs">ไม่พบทัพในเงื่อนไขที่เลือก</div>`;
+        return;
+      }
+
+      container.innerHTML = relevantTeams.map(t => {
+        const tTheme = getTeamTheme(t.color);
+        const tParties = sParties.filter(p => p.teamId === t.id);
+        const partiesHtml = tParties.map(p => renderPartyCard(p, tTheme)).join('');
+
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-3 border-b border-slate-800/80 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full ${tTheme.badgeBg} border ${tTheme.border}"></span>
+                <h3 class="font-bold text-sm sm:text-base text-white">${t.name}</h3>
+                <span class="text-xs text-slate-400">(${tParties.length} ปาร์ตี้)</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              ${partiesHtml || `<div class="col-span-full py-6 text-center text-slate-500 text-xs">ยังไม่มีปาร์ตี้ในทัพนี้</div>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ------------------------------------------------------------------------
+    // POLARITY BOARD RENDERER
+    // ------------------------------------------------------------------------
+    function renderPolarityBoard(container, titleDisplay, statsDisplay) {
+      titleDisplay.textContent = '⚡ ผังจัดทีม Polarity (ทีมดาว)';
+      
+      const pTeams = window.publicPolarityTeams || [];
+      const pParties = window.publicPolarityParties || (typeof rawPolarityParties !== 'undefined' ? rawPolarityParties : []);
+
+      let relevantTeams = [...pTeams];
+      if (currentTeamFilter !== 'all') {
+        relevantTeams = relevantTeams.filter(t => t.id === currentTeamFilter);
+      }
+
+      const totalAssigned = pParties.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
+      statsDisplay.textContent = `${relevantTeams.length} ทีมดาว • ${pParties.length} ปาร์ตี้ • ลงทะเบียนแล้ว ${totalAssigned} คน`;
+
+      if (!relevantTeams.length) {
+        container.innerHTML = `<div class="py-12 text-center text-slate-500 text-xs">ไม่พบทีมดาวในเงื่อนไขที่เลือก</div>`;
+        return;
+      }
+
+      container.innerHTML = relevantTeams.map(t => {
+        const tTheme = getTeamTheme(t.color);
+        const tParties = pParties.filter(p => p.teamId === t.id);
+        const partiesHtml = tParties.map(p => renderPartyCard(p, tTheme)).join('');
+
+        return `
+          <div class="space-y-3">
+            <div class="flex items-center justify-between gap-3 border-b border-slate-800/80 pb-2">
+              <div class="flex items-center gap-2">
+                <span class="w-3 h-3 rounded-full ${tTheme.badgeBg} border ${tTheme.border}"></span>
+                <h3 class="font-bold text-sm sm:text-base text-white">${t.name}</h3>
+                <span class="text-xs text-slate-400">(${tParties.length} ปาร์ตี้)</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              ${partiesHtml || `<div class="col-span-full py-6 text-center text-slate-500 text-xs">ยังไม่มีปาร์ตี้ในทีมดาวนี้</div>`}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // ------------------------------------------------------------------------
+    // SINGLE PARTY CARD RENDERER
+    // ------------------------------------------------------------------------
+    function renderPartyCard(party, theme) {
+      const slots = party.slots || [null, null, null, null, null];
+      const filledMembers = slots.map(id => id ? members.find(m => String(m.id) === String(id)) : null);
+      const filledCount = filledMembers.filter(Boolean).length;
+      
+      const totalGear = filledMembers.reduce((sum, m) => sum + (m ? m.gear || 0 : 0), 0);
+      const avgGear = filledCount ? Math.round(totalGear / filledCount) : 0;
+
+      const slotsHtml = slots.map((id, sIdx) => {
+        const m = id ? members.find(x => String(x.id) === String(id)) : null;
+        if (!m) {
+          return `
+            <div class="border border-dashed border-slate-800/80 rounded-xl p-2.5 flex items-center justify-between bg-slate-950/40 text-[11px] text-slate-600">
+              <span class="mono text-slate-600 font-semibold">#${sIdx + 1}</span>
+              <span>— ว่าง —</span>
+              <span></span>
+            </div>
+          `;
+        }
+
+        const meta = getJobMeta(m.job);
+        const isLeave = m.leaveHistory && m.leaveHistory[selectedDate];
+        const isSearched = searchedKeyword && m.name.toLowerCase().includes(searchedKeyword);
+        const highlightClass = isSearched ? 'slot-highlight' : '';
+
+        return `
+          <div style="${meta.cardTintStyle}" class="${highlightClass} border rounded-xl p-2 flex items-center justify-between gap-2 text-xs transition duration-150">
+            <div class="flex items-center gap-2 min-w-0">
+              <span class="mono text-[10px] text-slate-400 font-bold w-4 text-center">#${sIdx + 1}</span>
+              <div class="shrink-0">
+                ${renderJobEmblem(m.job, 30)}
+              </div>
+              <div class="min-w-0">
+                <div class="flex items-center gap-1.5 flex-wrap truncate">
+                  ${renderColoredMemberName(m, 'text-xs')}
+                  <span class="text-[10px] text-slate-400">Lv.${m.lv}</span>
+                </div>
+                <div class="text-[10px] text-slate-400 truncate">
+                  ${m.job}
+                </div>
+              </div>
+            </div>
+
+            <div class="flex flex-col items-end shrink-0 gap-0.5">
+              <span class="mono text-[11px] font-bold text-amber-300">★ ${(m.gear || 0).toLocaleString()}</span>
+              ${isLeave
+                ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-rose-500/25 text-rose-300 border border-rose-500/40">🏖️ ลา</span>`
+                : `<span class="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-emerald-500/20 text-emerald-300">✅ พร้อม</span>`
+              }
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div class="bg-slate-900/90 border border-slate-800/90 rounded-2xl p-3.5 space-y-2.5 shadow-md flex flex-col justify-between">
+          <div class="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
+            <div>
+              <h4 class="font-bold text-sm text-white flex items-center gap-1.5">
+                <span>${party.name}</span>
+              </h4>
+              <span class="text-[11px] text-slate-400">${party.teamName || ''}</span>
+            </div>
+            <div class="text-right">
+              <span class="mono text-[11px] font-bold text-indigo-300">${filledCount}/5 คน</span>
+              <div class="text-[10px] text-slate-400">Gear เฉลี่ย: <strong class="text-amber-300 mono">${avgGear.toLocaleString()}</strong></div>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            ${slotsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    // ------------------------------------------------------------------------
+    // MEMBER SEARCH & QUICK SUMMARY
+    // ------------------------------------------------------------------------
+    function handleSearchMember(query) {
+      searchedKeyword = (query || '').trim().toLowerCase();
+      const resContainer = document.getElementById('searchResultContainer');
+
+      if (!searchedKeyword) {
+        resContainer.classList.add('hidden');
+        renderCurrentBoard();
+        return;
+      }
+
+      const matches = members.filter(m => m.name.toLowerCase().includes(searchedKeyword));
+      if (!matches.length) {
+        resContainer.classList.remove('hidden');
+        resContainer.innerHTML = `
+          <div class="p-3 rounded-xl bg-slate-950/80 border border-slate-800 text-xs text-rose-400 text-center">
+            ❌ ไม่พบชื่อตัวละคร "${query}" ในรายชื่อสมาชิกกิลด์
+          </div>
+        `;
+        renderCurrentBoard();
+        return;
+      }
+
+      resContainer.classList.remove('hidden');
+      resContainer.innerHTML = matches.slice(0, 3).map(m => {
+        const meta = getJobMeta(m.job);
+        const pInfo = findMemberPartyInfo(m.id);
+        const sInfo = (window.publicSiegeParties || []).find(p => (p.slots || []).includes(m.id));
+        const polInfo = (window.publicPolarityParties || []).find(p => (p.slots || []).includes(m.id));
+        const isLeave = m.leaveHistory && m.leaveHistory[selectedDate];
+
+        return `
+          <div style="${meta.cardTintStyle}" class="p-3.5 rounded-xl border border-indigo-500/40 mb-2 space-y-2 shadow-lg">
+            <div class="flex items-center justify-between flex-wrap gap-2">
+              <div class="flex items-center gap-2.5">
+                ${renderJobEmblem(m.job, 36)}
+                <div>
+                  <div class="flex items-center gap-2">
+                    ${renderColoredMemberName(m, 'text-sm font-bold')}
+                    <span class="text-xs text-slate-300">Lv.${m.lv} ${m.job}</span>
+                  </div>
+                  <div class="text-[11px] text-slate-400">Gear: <strong class="text-amber-300 mono">${(m.gear || 0).toLocaleString()}</strong></div>
+                </div>
+              </div>
+
+              <div>
+                ${isLeave
+                  ? `<span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/30">🏖️ ลาวันนี้: ${isLeave.type} (${isLeave.reason || 'ไม่ระบุ'})</span>`
+                  : `<span class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✅ พร้อมวอร์วันนี้</span>`
+                }
+              </div>
+            </div>
+
+            <!-- Assignments across modes -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-800/80 text-xs">
+              <div class="bg-slate-950/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-indigo-400 font-bold block mb-0.5">🛡️ GVG:</span>
+                ${pInfo
+                  ? `<span class="text-white">${pInfo.team.name} • <strong>${pInfo.party.name}</strong></span>`
+                  : `<span class="text-slate-500">ยังไม่ได้ลงตี้</span>`
+                }
+              </div>
+              <div class="bg-slate-950/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-rose-400 font-bold block mb-0.5">🏰 Siege War:</span>
+                ${sInfo
+                  ? `<span class="text-white">${sInfo.teamName} • <strong>${sInfo.name}</strong></span>`
+                  : `<span class="text-slate-500">ยังไม่ได้ลงตี้</span>`
+                }
+              </div>
+              <div class="bg-slate-950/80 p-2 rounded-lg border border-slate-800/80">
+                <span class="text-amber-400 font-bold block mb-0.5">⚡ Polarity:</span>
+                ${polInfo
+                  ? `<span class="text-white">${polInfo.teamName} • <strong>${polInfo.name}</strong></span>`
+                  : `<span class="text-slate-500">ยังไม่ได้ลงตี้</span>`
+                }
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      renderCurrentBoard();
+    }
+
+    // ------------------------------------------------------------------------
+    // EXPORT BOARD IMAGE (PNG)
+    // ------------------------------------------------------------------------
+    async function exportBoardImage() {
+      const targetEl = document.getElementById('captureBoardArea');
+      if (!targetEl) return;
+
+      if (typeof showToast === 'function') {
+        showToast('📸 กำลังประมวลผลรูปภาพผังทัพ กรุณารอสักครู่...', 'info');
+      }
+
+      try {
+        const canvas = await html2canvas(targetEl, {
+          backgroundColor: '#080c16',
+          scale: 2,
+          useCORS: true
+        });
+
+        const link = document.createElement('a');
+        link.download = `Moonz_WarFormation_${activeMode.toUpperCase()}_${Date.now()}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+
+        if (typeof showToast === 'function') {
+          showToast('✅ บันทึกรูปภาพผังทัพสำเร็จแล้ว!', 'success');
+        }
+      } catch (err) {
+        console.error('Export image error:', err);
+        if (typeof showToast === 'function') {
+          showToast('❌ ไม่สามารถบันทึกภาพได้ กรุณาลองใหม่อีกครั้ง', 'danger');
+        }
+      }
+    }
+  </script>
+</body>
+</html>

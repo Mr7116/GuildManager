@@ -4,7 +4,7 @@
 // ============================================================================
 (function enforceGuildAuth() {
   const currentFile = (window.location.pathname.split('/').pop() || 'index.html').toLowerCase();
-  if (currentFile === 'login.html' || currentFile === 'public-leave.html') return;
+  if (currentFile === 'login.html' || currentFile === 'public-leave.html' || currentFile === 'public-teams.html') return;
 
   const isAuth = localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
                  sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
