@@ -203,7 +203,7 @@
   <!-- Page Specific Logic -->
   <script>
     let activeMode = 'gvg'; // 'gvg' | 'siege' | 'polarity'
-    let currentTeamFilter = 'all';
+    let publicTeamFilter = 'all';
     let searchedKeyword = '';
 
     // Initialize on window load
@@ -354,7 +354,7 @@
 
     function switchMode(newMode) {
       activeMode = newMode;
-      currentTeamFilter = 'all';
+      publicTeamFilter = 'all';
 
       // Update Tab Styles
       ['gvg', 'siege', 'polarity'].forEach(m => {
@@ -406,7 +406,7 @@
       }
 
       container.innerHTML = filterItems.map(item => {
-        const isActive = currentTeamFilter === item.id;
+        const isActive = publicTeamFilter === item.id;
         const activeClass = isActive
           ? 'bg-indigo-600 text-white font-bold border-indigo-500 shadow-sm'
           : 'bg-slate-900 text-slate-300 hover:text-white border-slate-800 hover:bg-slate-850';
@@ -422,7 +422,7 @@
     }
 
     function setTeamFilter(filterId) {
-      currentTeamFilter = filterId;
+      publicTeamFilter = filterId;
       renderCurrentBoard();
     }
 
@@ -433,12 +433,12 @@
       titleDisplay.textContent = '🛡️ ผังทัพ GVG (กิลด์วอร์)';
       
       let relevantTeams = [...teams];
-      if (currentTeamFilter === 'field_main') {
+      if (publicTeamFilter === 'field_main') {
         relevantTeams = relevantTeams.filter(t => t.field === 'main');
-      } else if (currentTeamFilter === 'field_sub') {
+      } else if (publicTeamFilter === 'field_sub') {
         relevantTeams = relevantTeams.filter(t => t.field === 'sub');
-      } else if (currentTeamFilter !== 'all') {
-        relevantTeams = relevantTeams.filter(t => t.id === currentTeamFilter);
+      } else if (publicTeamFilter !== 'all') {
+        relevantTeams = relevantTeams.filter(t => t.id === publicTeamFilter);
       }
 
       const gvgParties = parties.filter(p => p.category !== 'polarity' && p.category !== 'siege' && p.category !== 'preset' && p.category !== '__system__');
@@ -489,8 +489,8 @@
       const sParties = window.publicSiegeParties || (typeof rawSiegeParties !== 'undefined' ? rawSiegeParties : []);
 
       let relevantTeams = [...sTeams];
-      if (currentTeamFilter !== 'all') {
-        relevantTeams = relevantTeams.filter(t => t.id === currentTeamFilter);
+      if (publicTeamFilter !== 'all') {
+        relevantTeams = relevantTeams.filter(t => t.id === publicTeamFilter);
       }
 
       const totalAssigned = sParties.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
@@ -533,8 +533,8 @@
       const pParties = window.publicPolarityParties || (typeof rawPolarityParties !== 'undefined' ? rawPolarityParties : []);
 
       let relevantTeams = [...pTeams];
-      if (currentTeamFilter !== 'all') {
-        relevantTeams = relevantTeams.filter(t => t.id === currentTeamFilter);
+      if (publicTeamFilter !== 'all') {
+        relevantTeams = relevantTeams.filter(t => t.id === publicTeamFilter);
       }
 
       const totalAssigned = pParties.reduce((sum, p) => sum + (p.slots || []).filter(Boolean).length, 0);
@@ -765,6 +765,13 @@
         }
       }
     }
+
+    window.switchMode = switchMode;
+    window.setTeamFilter = setTeamFilter;
+    window.refreshData = refreshData;
+    window.exportBoardImage = exportBoardImage;
+    window.handleSearchMember = handleSearchMember;
   </script>
 </body>
 </html>
+
