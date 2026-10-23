@@ -34,7 +34,7 @@ let selectedSlot = null;
       document.getElementById('exportImageModal').classList.add('hidden');
     }
 
-    function renderExportTeamBlockHtml(team, showGear, showStatus) {
+    function renderExportTeamBlockHtml(team, showGear, showStatus, force8Cols = false) {
       const theme = getTeamTheme(team.color);
       const fZone = getFieldZone(team.field);
       const teamParties = parties.filter(p => p.teamId === team.id);
@@ -47,6 +47,9 @@ let selectedSlot = null;
       });
       const teamTotalGear = teamMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
+      const rowLayoutVal = document.getElementById('exportRowLayoutSelect')?.value || '8';
+      const is8Cols = force8Cols || (rowLayoutVal === '8' && teamParties.length >= 8);
+
       const partyCardsHtml = teamParties.map(p => {
         const presentMembers = p.slots.map(id => members.find(m => m.id === id)).filter(Boolean);
         const totalPartyGear = presentMembers.reduce((s, m) => s + (m.gear || 0), 0);
@@ -55,9 +58,9 @@ let selectedSlot = null;
           const m = members.find(x => x.id === mId);
           if (!m) {
             return `
-              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-12 rounded-xl px-3.5 flex items-center justify-between text-xs text-slate-500">
+              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-9 px-2 text-[10px]' : 'h-12 px-3.5 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
                 <span>ช่องว่างที่ ${sIdx + 1}</span>
-                <span class="text-[10px] opacity-60">-</span>
+                <span class="text-[9px] opacity-60">-</span>
               </div>
             `;
           }
@@ -68,27 +71,27 @@ let selectedSlot = null;
           let statusPill = '';
           if (showStatus) {
             if (isLeave) {
-              statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap">🏖️ ลา: ${m.leaveReason || 'วันนี้'}</span>`;
+              statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="${is8Cols ? 'px-1 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'} rounded font-semibold whitespace-nowrap">🏖️ ลา: ${m.leaveReason || 'วันนี้'}</span>`;
             } else {
-              statusPill = `<span style="color: #6ee7b7;" class="text-[10px] font-medium whitespace-nowrap">● พร้อมวอร์</span>`;
+              statusPill = `<span style="color: #6ee7b7;" class="${is8Cols ? 'text-[8.5px]' : 'text-[10px]'} font-medium whitespace-nowrap">● พร้อมวอร์</span>`;
             }
           }
 
           const gearPill = showGear
-            ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono px-2.5 py-1 rounded-lg text-xs font-bold shrink-0">${m.gear.toLocaleString()}</span>`
+            ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono ${is8Cols ? 'px-1 py-0.2 text-[9px]' : 'px-2.5 py-1 text-xs'} rounded-lg font-bold shrink-0">${m.gear.toLocaleString()}</span>`
             : '';
 
           return `
-            <div style="${meta.cardTintStyle}" class="py-2 px-3 rounded-xl border flex items-center justify-between gap-2.5">
-              <div class="flex items-center gap-2.5 min-w-0 flex-1">
-                ${renderJobEmblem(m.job, 34)}
-                <div class="min-w-0 flex-1 space-y-1">
-                  <div class="flex items-center justify-between gap-2">
-                    <span style="${meta.namePillStyle}" class="px-2.5 py-2 rounded-md border font-bold text-2xl truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
-                    <span class="mono text-[11px] text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
+            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-1.5' : 'py-2 px-3'} rounded-xl border flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                ${renderJobEmblem(m.job, is8Cols ? 24 : 34)}
+                <div class="min-w-0 flex-1 space-y-0.5">
+                  <div class="flex items-center justify-between gap-1">
+                    <span style="${meta.namePillStyle}" class="${is8Cols ? 'px-1 py-0.2 rounded text-xs' : 'px-2.5 py-1.5 rounded-md text-base'} border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                    <span class="mono ${is8Cols ? 'text-[9px]' : 'text-[11px]'} text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
                   </div>
-                  <div class="flex items-center justify-between gap-2">
-                    <span style="${meta.badgeStyle};align-content: center;align-items: center;align-self: center;" class="px-2 py-2 rounded text-[10px] font-medium border truncate">${m.job}</span>
+                  <div class="flex items-center justify-between gap-1">
+                    <span style="${meta.badgeStyle}" class="${is8Cols ? 'px-1 text-[8px]' : 'px-2 py-0.5 text-[10px]'} rounded font-medium border truncate">${m.job}</span>
                     <div class="shrink-0">${statusPill}</div>
                   </div>
                 </div>
@@ -99,28 +102,32 @@ let selectedSlot = null;
         }).join('');
 
         return `
-          <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-3.5 flex flex-col gap-2.5">
-            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-3.5 -mt-3.5 px-4 py-2.5 rounded-t-2xl flex items-center justify-between">
-              <div class="flex items-center gap-2">
-                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-2 py-0.5 rounded text-[11px] font-bold">${team.name}</span>
-                <span class="font-bold text-sm text-white">${p.name}</span>
+          <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl ${is8Cols ? 'p-2 gap-1.5' : 'p-3.5 gap-2.5'} flex flex-col shadow-md">
+            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2.5 py-1.5' : '-mx-3.5 -mt-3.5 px-4 py-2.5'} rounded-t-2xl flex items-center justify-between gap-1">
+              <div class="flex items-center gap-1 min-w-0">
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.2 rounded ${is8Cols ? 'text-[9px]' : 'text-[11px]'} font-bold truncate">${team.name}</span>
+                <span class="font-bold ${is8Cols ? 'text-[11px]' : 'text-sm'} text-white truncate">${p.name}</span>
               </div>
-              <div class="text-xs text-slate-200">
+              <div class="${is8Cols ? 'text-[9.5px]' : 'text-xs'} text-slate-200 shrink-0">
                 ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
               </div>
             </div>
-            <div class="space-y-2">
+            <div class="space-y-1.5">
               ${slotsRowsHtml}
             </div>
           </div>
         `;
       }).join('');
 
+      const gridColsStyle = is8Cols
+        ? 'display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px;'
+        : 'display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px;';
+
       return `
-        <div style="background: ${theme.hexBgSoft}; border: 2px solid ${theme.hexAccent}88;" class="rounded-3xl p-5 space-y-4">
-          <div style="background: ${theme.hexHeaderBg}; border: 1px solid ${theme.hexAccent}66;" class="px-5 py-3 rounded-2xl flex items-center justify-between">
+        <div style="background: ${theme.hexBgSoft}; border: 2px solid ${theme.hexAccent}88;" class="rounded-3xl p-5 space-y-4 shadow-xl">
+          <div style="background: ${theme.hexHeaderBg}; border: 1px solid ${theme.hexAccent}66;" class="px-5 py-3 rounded-2xl flex items-center justify-between flex-wrap gap-2">
             <div class="flex items-center gap-3">
-              <span style="background: ${theme.hexAccent};" class="w-4 h-4 rounded-full inline-block"></span>
+              <span style="background: ${theme.hexAccent};" class="w-4 h-4 rounded-full inline-block shadow"></span>
               <h3 class="text-lg font-bold text-white tracking-wide">${team.name} (สี${theme.name})</h3>
               <span style="background: rgba(15, 23, 42, 0.75); border: 1px solid ${fZone.hexAccent}88; color: #f8fafc;" class="px-2.5 py-0.5 rounded-lg text-xs font-semibold">
                 ${fZone.icon} ${fZone.name}
@@ -134,7 +141,101 @@ let selectedSlot = null;
             </div>
           </div>
 
-          <div class="grid grid-cols-4 gap-4">
+          <div style="${gridColsStyle}">
+            ${partyCardsHtml}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderUnifiedSubField8PartiesHtml(fTeams, fParties, showGear, showStatus) {
+      const partyCardsHtml = fParties.map(p => {
+        const team = fTeams.find(t => t.id === p.teamId) || { name: 'สนามรอง', color: 'purple' };
+        const theme = getTeamTheme(team.color || 'purple');
+        const presentMembers = p.slots.map(id => members.find(m => m.id === id)).filter(Boolean);
+        const totalPartyGear = presentMembers.reduce((s, m) => s + (m.gear || 0), 0);
+
+        const slotsRowsHtml = p.slots.map((mId, sIdx) => {
+          const m = members.find(x => x.id === mId);
+          if (!m) {
+            return `
+              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-9 px-2 text-[10px] rounded-xl flex items-center justify-between text-slate-500">
+                <span>ช่องว่าง #${sIdx + 1}</span>
+                <span class="text-[9px] opacity-60">-</span>
+              </div>
+            `;
+          }
+
+          const meta = getJobMeta(m.job);
+          const isLeave = m.status === 'leave';
+
+          let statusPill = '';
+          if (showStatus) {
+            if (isLeave) {
+              statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1 text-[8px] rounded font-semibold whitespace-nowrap">🏖️ ลา</span>`;
+            } else {
+              statusPill = `<span style="color: #6ee7b7;" class="text-[8.5px] font-medium whitespace-nowrap">● พร้อม</span>`;
+            }
+          }
+
+          const gearPill = showGear
+            ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono px-1 py-0.2 text-[9px] rounded-lg font-bold shrink-0">${m.gear.toLocaleString()}</span>`
+            : '';
+
+          return `
+            <div style="${meta.cardTintStyle}" class="py-1 px-1.5 rounded-xl border flex items-center justify-between gap-1.5">
+              <div class="flex items-center gap-1.5 min-w-0 flex-1">
+                ${renderJobEmblem(m.job, 24)}
+                <div class="min-w-0 flex-1 space-y-0.5">
+                  <div class="flex items-center justify-between gap-1">
+                    <span style="${meta.namePillStyle}" class="px-1 py-0.2 rounded text-xs border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                    <span class="mono text-[9px] text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
+                  </div>
+                  <div class="flex items-center justify-between gap-1">
+                    <span style="${meta.badgeStyle}" class="px-1 text-[8px] rounded font-medium border truncate">${m.job}</span>
+                    <div class="shrink-0">${statusPill}</div>
+                  </div>
+                </div>
+              </div>
+              ${gearPill}
+            </div>
+          `;
+        }).join('');
+
+        return `
+          <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-2 gap-1.5 flex flex-col shadow-md">
+            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-2 -mt-2 px-2.5 py-1.5 rounded-t-2xl flex items-center justify-between gap-1">
+              <div class="flex items-center gap-1 min-w-0">
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.2 rounded text-[9px] font-bold truncate">${team.name}</span>
+                <span class="font-bold text-[11px] text-white truncate">${p.name}</span>
+              </div>
+              <div class="text-[9.5px] text-slate-200 shrink-0">
+                ${showGear ? `<strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
+              </div>
+            </div>
+            <div class="space-y-1">
+              ${slotsRowsHtml}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      return `
+        <div style="background: rgba(15, 23, 42, 0.7); border: 2px solid rgba(168, 85, 247, 0.6);" class="rounded-3xl p-5 space-y-4 shadow-xl">
+          <div style="background: linear-gradient(135deg, rgba(168,85,247,0.3) 0%, rgba(30,41,59,0.95) 100%); border: 1px solid rgba(168, 85, 247, 0.5);" class="px-5 py-3 rounded-2xl flex items-center justify-between flex-wrap gap-2">
+            <div class="flex items-center gap-2.5">
+              <span class="w-3.5 h-3.5 rounded-full bg-purple-500 inline-block shadow"></span>
+              <h3 class="text-base sm:text-lg font-bold text-white tracking-wide">🚩 ผังทัพสนามรอง (Sub Field) — 1 แถว 8 ปาร์ตี้</h3>
+              <span class="px-2 py-0.5 rounded-full text-xs font-bold bg-purple-500/30 text-purple-200 border border-purple-500/40">
+                ${fTeams.map(t => t.name).join(' + ')} (${fParties.length} ปาร์ตี้)
+              </span>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-200 bg-slate-950/80 px-3 py-1 rounded-xl border border-slate-800">
+              <span>ปาร์ตี้: <strong class="text-white">${fParties.length} ตี้</strong></span>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 8px;">
             ${partyCardsHtml}
           </div>
         </div>
@@ -184,7 +285,14 @@ let selectedSlot = null;
         });
         const fTotalGear = fMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
-        const innerTeamsHtml = fTeams.map(t => renderExportTeamBlockHtml(t, showGear, showStatus)).join('');
+        const rowLayoutVal = document.getElementById('exportRowLayoutSelect')?.value || '8';
+        const is8Cols = rowLayoutVal === '8';
+        let innerTeamsHtml = '';
+        if (is8Cols && fZone.key === 'sub' && fTeams.length > 1 && fParties.length === 8) {
+          innerTeamsHtml = renderUnifiedSubField8PartiesHtml(fTeams, fParties, showGear, showStatus);
+        } else {
+          innerTeamsHtml = fTeams.map(t => renderExportTeamBlockHtml(t, showGear, showStatus)).join('');
+        }
 
         return `
           <div style="background: ${fZone.hexBgSoft}; border: 2px solid ${fZone.hexAccent}aa;" class="rounded-[28px] p-6 space-y-5 shadow-2xl">
