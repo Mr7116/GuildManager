@@ -76,7 +76,7 @@ const DEFAULT_GVG_PARTIES: Party[] = [
 const GuildContext = createContext<GuildState | null>(null);
 
 export function GuildProvider({ children }: { children: React.ReactNode }) {
-  const [guildName, setGuildName] = useState('Moonz');
+  const [guildName, setGuildName] = useState('TUMDOOD');
   const [fileTimestamp, setFileTimestamp] = useState('กำลังโหลด...');
   const [members, setMembers] = useState<Member[]>([]);
   const [gvgTeams, setGvgTeams] = useState<Team[]>(DEFAULT_GVG_TEAMS);
@@ -135,7 +135,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       const { data, error: fetchErr } = await supabase
         .from('guild_state')
         .select('*')
-        .eq('id', 1)
+        .eq('id', 2)
         .maybeSingle();
 
       if (fetchErr) throw fetchErr;
@@ -249,7 +249,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
-      const pin = typeof window !== 'undefined' ? localStorage.getItem('Moonz_guild_pin') || 'Moonz' : 'Moonz';
+      const pin = typeof window !== 'undefined' ? localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD' : 'TUMDOOD';
       const authEntry = {
         id: '__guild_auth_config__',
         category: '__system__',
@@ -266,7 +266,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       ];
 
       const { error: saveErr } = await supabase.from('guild_state').upsert({
-        id: 1,
+        id: 2,
         guild_name: state.guildName,
         file_timestamp: state.fileTimestamp,
         members: state.members,

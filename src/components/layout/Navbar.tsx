@@ -41,7 +41,7 @@ export default function Navbar() {
             </div>
             <div className="flex flex-col">
               <span className="text-base font-extrabold tracking-wide text-white">
-                Moonz
+                TUMDOOD
               </span>           
             </div>
           </Link>

@@ -86,7 +86,7 @@ function LoginForm() {
           </div>
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
-              Moonz <span className="text-indigo-400">Tactical</span>
+              TUMDOOD <span className="text-indigo-400">Tactical</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1">ระบบจัดผังทัพและยุทธศาสตร์กิลด์วอร์</p>
           </div>
@@ -199,7 +199,7 @@ function LoginForm() {
                   type="password"
                   value={oldPin}
                   onChange={(e) => setOldPin(e.target.value)}
-                  placeholder="รหัสผ่านปัจจุบัน (ค่าเริ่มต้น: Moonz)"
+                  placeholder="รหัสผ่านปัจจุบัน (ค่าเริ่มต้น: TUMDOOD)"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                   required
                 />

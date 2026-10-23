@@ -20,7 +20,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Moonz Tactical — ระบบจัดทัพกิลด์วอร์',
+  title: 'TUMDOOD Tactical — ระบบจัดทัพกิลด์วอร์',
   description: 'ระบบจัดผังทัพกิลด์วอร์ ROX (GVG / Siege / Polarity / Squads)',
 };
 
