@@ -58,7 +58,7 @@ let selectedSlot = null;
           const m = members.find(x => x.id === mId);
           if (!m) {
             return `
-              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-[52px] px-2 text-[10px]' : 'h-[58px] px-3.5 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
+              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-9 px-2 text-[10px]' : 'h-11 px-3 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
                 <span>ช่องว่างที่ ${sIdx + 1}</span>
                 <span class="text-[9px] opacity-60">-</span>
               </div>
@@ -70,23 +70,21 @@ let selectedSlot = null;
 
           let statusPill = '';
           if (showStatus && isLeave) {
-            statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap shrink-0 flex items-center justify-center leading-tight">🏖️ ลา</span>`;
+            statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
           }
 
           return `
-            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1.5 px-2 min-h-[52px]' : 'py-2 px-3 min-h-[58px]'} rounded-xl border flex items-center gap-2 overflow-hidden">
+            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-2' : 'py-1.5 px-3'} rounded-xl border flex items-center gap-2">
               <div class="shrink-0 flex items-center justify-center">
                 ${renderJobEmblem(m.job, is8Cols ? 28 : 34)}
               </div>
-              <div class="min-w-0 flex-1 flex flex-col justify-center space-y-1">
-                <div class="flex items-center gap-1 w-full">
-                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
-                    <span class="truncate block w-full text-center leading-tight">${m.name}</span>
-                  </div>
+              <div class="min-w-0 flex-1 space-y-0.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span style="${meta.namePillStyle}" class="px-2 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
                   ${statusPill}
                 </div>
-                <div class="flex justify-center w-full">
-                  <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9.5px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
+                <div>
+                  <span style="${meta.badgeStyle}" class="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
                 </div>
               </div>
             </div>
@@ -95,16 +93,16 @@ let selectedSlot = null;
 
         return `
           <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl ${is8Cols ? 'p-2 gap-1.5' : 'p-3.5 gap-2.5'} flex flex-col shadow-md">
-            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2.5 py-2 min-h-[38px]' : '-mx-3.5 -mt-3.5 px-4 py-2.5 min-h-[42px]'} rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded ${is8Cols ? 'text-[9.5px]' : 'text-xs'} font-bold truncate flex items-center justify-center leading-tight shrink-0">${team.name}</span>
-                <span class="font-bold ${is8Cols ? 'text-xs' : 'text-sm'} text-white truncate leading-tight">${p.name}</span>
+            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2.5 py-1.5' : '-mx-3.5 -mt-3.5 px-4 py-2.5'} rounded-t-2xl flex items-center justify-between gap-1">
+              <div class="flex items-center gap-1 min-w-0">
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded ${is8Cols ? 'text-[9px]' : 'text-[11px]'} font-bold truncate shrink-0">${team.name}</span>
+                <span class="font-bold ${is8Cols ? 'text-[11px]' : 'text-sm'} text-white truncate">${p.name}</span>
               </div>
-              <div class="${is8Cols ? 'text-[9.5px]' : 'text-xs'} text-slate-200 shrink-0 flex items-center leading-tight">
-                ${showGear ? `ผลรวม <strong class="mono text-amber-300 mx-1">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
+              <div class="${is8Cols ? 'text-[9.5px]' : 'text-xs'} text-slate-200 shrink-0">
+                ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
               </div>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
               ${slotsRowsHtml}
             </div>
           </div>
@@ -151,7 +149,7 @@ let selectedSlot = null;
           const m = members.find(x => x.id === mId);
           if (!m) {
             return `
-              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-[52px] px-2 text-[10px] rounded-xl flex items-center justify-between text-slate-500">
+              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-9 px-2 text-[10px] rounded-xl flex items-center justify-between text-slate-500">
                 <span>ช่องว่าง #${sIdx + 1}</span>
                 <span class="text-[9px] opacity-60">-</span>
               </div>
@@ -163,23 +161,21 @@ let selectedSlot = null;
 
           let statusPill = '';
           if (showStatus && isLeave) {
-            statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap shrink-0 flex items-center justify-center leading-tight">🏖️ ลา</span>`;
+            statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
           }
 
           return `
-            <div style="${meta.cardTintStyle}" class="py-1.5 px-2 min-h-[52px] rounded-xl border flex items-center gap-2 overflow-hidden">
+            <div style="${meta.cardTintStyle}" class="py-1 px-2 rounded-xl border flex items-center gap-2">
               <div class="shrink-0 flex items-center justify-center">
                 ${renderJobEmblem(m.job, 28)}
               </div>
-              <div class="min-w-0 flex-1 flex flex-col justify-center space-y-1">
-                <div class="flex items-center gap-1 w-full">
-                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded-md border font-bold text-xs flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
-                    <span class="truncate block w-full text-center leading-tight">${m.name}</span>
-                  </div>
+              <div class="min-w-0 flex-1 space-y-0.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span style="${meta.namePillStyle}" class="px-2 py-0.5 rounded-md border font-bold text-xs truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
                   ${statusPill}
                 </div>
-                <div class="flex justify-center w-full">
-                  <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9.5px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
+                <div>
+                  <span style="${meta.badgeStyle}" class="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
                 </div>
               </div>
             </div>
@@ -188,16 +184,16 @@ let selectedSlot = null;
 
         return `
           <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-2 gap-1.5 flex flex-col shadow-md">
-            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-2 -mt-2 px-2.5 py-2 min-h-[38px] rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
-              <div class="flex items-center gap-1.5 min-w-0">
-                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded text-[9.5px] font-bold truncate flex items-center justify-center leading-tight shrink-0">${team.name}</span>
-                <span class="font-bold text-xs text-white truncate leading-tight">${p.name}</span>
+            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-2 -mt-2 px-2.5 py-1.5 rounded-t-2xl flex items-center justify-between gap-1">
+              <div class="flex items-center gap-1 min-w-0">
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded text-[9px] font-bold truncate shrink-0">${team.name}</span>
+                <span class="font-bold text-[11px] text-white truncate">${p.name}</span>
               </div>
-              <div class="text-[9.5px] text-slate-200 shrink-0 flex items-center leading-tight">
-                ${showGear ? `ผลรวม <strong class="mono text-amber-300 mx-1">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
+              <div class="text-[9.5px] text-slate-200 shrink-0">
+                ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
               </div>
             </div>
-            <div class="space-y-1.5">
+            <div class="space-y-1">
               ${slotsRowsHtml}
             </div>
           </div>
@@ -280,11 +276,11 @@ let selectedSlot = null;
 
         return `
           <div style="background: ${fZone.hexBgSoft}; border: 2px solid ${fZone.hexAccent}aa;" class="rounded-[28px] p-6 space-y-5 shadow-2xl">
-            <div style="background: ${fZone.hexHeaderBg}; border: 1px solid ${fZone.hexAccent}88;" class="px-6 py-4 rounded-2xl flex items-center justify-between">
-              <div class="flex items-center gap-3.5">
+            <div style="background: ${fZone.hexHeaderBg}; border: 1px solid ${fZone.hexAccent}88;" class="px-6 py-4 rounded-2xl flex items-start justify-between">
+              <div class="flex items-start gap-3.5">
                 <span class="text-2xl">${fZone.icon}</span>
                 <div>
-                  <div class="flex items-center gap-2.5">
+                  <div class="flex items-start gap-2.5">
                     <h2 class="text-xl font-bold text-white tracking-wide">${fZone.fullName}</h2>
                     <span style="background: ${fZone.hexAccent}; color: #090d16;" class="px-2.5 py-0.5 rounded-full text-xs font-extrabold">
                       ครอบคลุม ${fTeams.length} ทีม (${fTeams.map(t => t.name).join(', ')})
@@ -293,7 +289,7 @@ let selectedSlot = null;
                   <p class="text-xs text-slate-300 mt-0.5">${fZone.subtitle}</p>
                 </div>
               </div>
-              <div class="flex items-center gap-3 text-xs text-slate-200 bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800">
+              <div class="flex items-start gap-3 text-xs text-slate-200 bg-slate-950/80 px-4 py-2 rounded-xl border border-slate-800">
                 <span>ทีมใน${fZone.name}: <strong class="text-white">${fTeams.length} ทีม</strong></span>
                 <span>•</span>
                 <span>ปาร์ตี้รวม: <strong class="text-white">${fParties.length} ตี้</strong></span>
@@ -315,7 +311,7 @@ let selectedSlot = null;
           const pInfo = findMemberPartyInfo(m.id);
           const teamTag = pInfo ? `[${pInfo.fieldZone.name}•${pInfo.team.name}-${pInfo.party.name}]` : '';
           return `
-            <span style="background: rgba(136, 19, 55, 0.35); border: 1px solid rgba(244, 63, 94, 0.45);" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs text-rose-200">
+            <span style="background: rgba(136, 19, 55, 0.35); border: 1px solid rgba(244, 63, 94, 0.45);" class="inline-flex items-start gap-1.5 px-3 py-1 rounded-xl text-xs text-rose-200">
               ${renderJobEmblem(m.job, 20)}
               <strong class="text-white">${m.name}</strong>
               <span class="text-rose-300 text-[11px]">${teamTag} (${m.leaveReason || 'แจ้งลา'})</span>
@@ -781,8 +777,8 @@ let selectedSlot = null;
           : 'bg-transparent border-transparent hover:bg-[#272c3a]';
 
         return `
-          <button onclick="selectJobBarFamily('${fam.familyKey}')" class="group relative flex flex-col items-center justify-center min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer ${activeClasses}" title="${fam.label} (${fam.jobs.join(' / ')}) — ${count} คน">
-            ${count > 0 ? `<span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-0.2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">${count}</span>` : ''}
+          <button onclick="selectJobBarFamily('${fam.familyKey}')" class="group relative flex flex-col items-start justify-start min-w-[74px] sm:min-w-[82px] px-2.5 py-2 rounded-xl border transition-all cursor-pointer ${activeClasses}" title="${fam.label} (${fam.jobs.join(' / ')}) — ${count} คน">
+            ${count > 0 ? `<span class="absolute top-1 right-1.5 mono text-[10px] font-bold px-1.5 py-2 rounded-full bg-slate-950/90 text-amber-300 border border-slate-700">${count}</span>` : ''}
             <div class="transform group-hover:scale-110 transition duration-200">
               ${renderJobEmblem(fam.jobs[0], 42)}
             </div>
@@ -817,10 +813,10 @@ let selectedSlot = null;
         <button onclick="setTeamFilter('all')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${allBtnClass}">
           ทุกสนาม (${teams.length} ทีม • ${parties.length} ตี้)
         </button>
-        <button onclick="setTeamFilter('field_main')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${mainBtnClass}">
+        <button onclick="setTeamFilter('field_main')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-start gap-1 ${mainBtnClass}">
           <span>🏟️ สนามหลัก (${mainTeams.length} ทีม • ${mainPartiesCount} ตี้)</span>
         </button>
-        <button onclick="setTeamFilter('field_sub')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-center gap-1 ${subBtnClass}">
+        <button onclick="setTeamFilter('field_sub')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition flex items-start gap-1 ${subBtnClass}">
           <span>🚩 สนามรอง (${subTeams.length} ทีม • ${subPartiesCount} ตี้)</span>
         </button>
         <span class="text-slate-700 hidden sm:inline">|</span>
@@ -836,10 +832,10 @@ let selectedSlot = null;
           : 'bg-slate-800/90 text-slate-300 hover:bg-slate-700 border border-slate-700';
 
         html += `
-          <button onclick="setTeamFilter('${t.id}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition ${btnClass}">
+          <button onclick="setTeamFilter('${t.id}')" class="px-2.5 py-1.5 rounded-xl text-xs font-semibold flex items-start gap-1.5 transition ${btnClass}">
             <span class="w-2.5 h-2.5 rounded-full ${theme.dotClass}"></span>
             <span>${t.name}</span>
-            <span class="px-1.5 py-0.2 rounded text-[10px] bg-slate-950/60 text-slate-300">${fz.shortName}•${tParties.length}ตี้</span>
+            <span class="px-1.5 py-2 rounded text-[10px] bg-slate-950/60 text-slate-300">${fz.shortName}•${tParties.length}ตี้</span>
           </button>
         `;
       });
@@ -880,7 +876,7 @@ let selectedSlot = null;
           const isSelected = selectedSource && selectedSource.partyId === p.id && selectedSource.slotIndex === sIdx;
           if (!m) {
             return `
-              <div onclick="handleSlotClick('${p.id}', ${sIdx})" class="h-11 rounded-xl border border-dashed border-slate-700/80 hover:border-amber-400/70 bg-slate-950/50 px-2.5 flex items-center justify-between text-[11px] text-slate-500 cursor-pointer transition ${isSelected ? 'slot-selected' : ''}">
+              <div onclick="handleSlotClick('${p.id}', ${sIdx})" class="h-11 rounded-xl border border-dashed border-slate-700/80 hover:border-amber-400/70 bg-slate-950/50 px-2.5 flex items-start justify-between text-[11px] text-slate-500 cursor-pointer transition ${isSelected ? 'slot-selected' : ''}">
                 <span class="truncate">+ ช่องว่างที่ ${sIdx + 1} (แตะวาง)</span>
                 <span class="text-[10px] opacity-60 shrink-0 ml-1">${team.name}</span>
               </div>
@@ -888,15 +884,15 @@ let selectedSlot = null;
           }
           const meta = getJobMeta(m.job);
           return `
-            <div onclick="handleSlotClick('${p.id}', ${sIdx})" style="${meta.cardTintStyle}" class="py-1.5 rounded-xl border px-2 flex items-center justify-between gap-1.5 cursor-pointer transition hover:brightness-110 ${isSelected ? 'slot-selected' : ''}">
-              <div class="flex items-center gap-1.5 min-w-0">
+            <div onclick="handleSlotClick('${p.id}', ${sIdx})" style="${meta.cardTintStyle}" class="py-1.5 rounded-xl border px-2 flex items-start justify-between gap-1.5 cursor-pointer transition hover:brightness-110 ${isSelected ? 'slot-selected' : ''}">
+              <div class="flex items-start gap-1.5 min-w-0">
                 ${renderJobEmblem(m.job, 28)}
                 <div class="min-w-0">
-                  <div class="flex items-center gap-1">
+                  <div class="flex items-start gap-1">
                     ${renderColoredMemberName(m, 'px-2 py-0 text-[11px]')}
                     <span class="mono text-[10px] text-slate-300 shrink-0">Lv.${m.lv}</span>
                   </div>
-                  <div class="flex items-center gap-1 mt-0.5 flex-wrap">
+                  <div class="flex items-start gap-1 mt-0.5 flex-wrap">
                     <span style="${meta.badgeStyle}" class="px-1.5 rounded text-[9px] border">${m.job}</span>
                     ${m.status === 'leave'
                       ? `<span class="px-1 rounded text-[9px] font-semibold bg-rose-500/30 text-rose-200 border border-rose-500/40 truncate max-w-[100px]">🏖️ ลา (${m.leaveReason || 'วันนี้'})</span>`
@@ -905,9 +901,9 @@ let selectedSlot = null;
                   </div>
                 </div>
               </div>
-              <div class="flex items-center gap-1 shrink-0">
+              <div class="flex items-start gap-1 shrink-0">
                 ${formatGearBadge(m.gear)}
-                <button onclick="event.stopPropagation(); removeMemberFromSlot('${p.id}', ${sIdx})" title="ถอดออกจากตี้" class="w-5 h-5 rounded hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 text-xs flex items-center justify-center">✕</button>
+                <button onclick="event.stopPropagation(); removeMemberFromSlot('${p.id}', ${sIdx})" title="ถอดออกจากตี้" class="w-5 h-5 rounded hover:bg-amber-500/20 text-slate-300 hover:text-amber-300 text-xs flex items-start justify-start">✕</button>
               </div>
             </div>
           `;
@@ -917,8 +913,8 @@ let selectedSlot = null;
           <div class="bg-slate-950/90 border ${theme.partyBorder} rounded-2xl p-3 flex flex-col gap-2.5 shadow-lg transition">
             <div class="flex flex-col gap-1.5 border-b border-slate-800/90 pb-2 ${theme.partyHeaderBg} -mx-3 -mt-3 px-3 pt-2.5 rounded-t-2xl">
               <!-- Row 1: Team & Party Name, Clean, Delete -->
-              <div class="flex items-center justify-between gap-1.5">
-                <div class="flex items-center gap-1.5 min-w-0 flex-1">
+              <div class="flex items-start justify-between gap-1.5">
+                <div class="flex items-start gap-1.5 min-w-0 flex-1">
                   <span class="px-1.5 py-0.5 rounded text-[10px] font-bold border shrink-0 ${theme.badgeClass}">
                     ${team.name}
                   </span>
@@ -926,32 +922,32 @@ let selectedSlot = null;
                   <button onclick="renameParty('${p.id}')" title="เปลี่ยนชื่อปาร์ตี้" class="text-slate-400 hover:text-white text-xs shrink-0">✏️</button>
                 </div>
 
-                <div class="flex items-center gap-1 shrink-0">
+                <div class="flex items-start gap-1 shrink-0">
                   ${presentMembers.length > 0 ? `<button onclick="clearSingleParty('${p.id}')" title="ถอดคนในตี้นี้ออกทั้งหมด" class="px-1.5 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] transition">ล้าง</button>` : ''}
                   <button onclick="deleteParty('${p.id}')" title="ลบปาร์ตี้นี้" class="px-1.5 py-0.5 rounded bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-[10px] transition">🗑️</button>
                 </div>
               </div>
 
               <!-- Row 2: 📥 ตี้ประจำ + ย้ายไป dropdown -->
-              <div class="flex items-center justify-between gap-1.5 pt-0.5">
-                <button onclick="openImportPresetModal('${p.id}', 'gvg')" title="ดึงสมาชิกจากตี้ประจำ" class="px-2 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition flex items-center gap-1">
+              <div class="flex items-start justify-between gap-1.5 pt-0.5">
+                <button onclick="openImportPresetModal('${p.id}', 'gvg')" title="ดึงสมาชิกจากตี้ประจำ" class="px-2 py-1 rounded-lg bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition flex items-start gap-1">
                   <span>📥 ตี้ประจำ</span>
                 </button>
-                <div class="flex items-center gap-1 min-w-0">
+                <div class="flex items-start gap-1 min-w-0">
                   <select onchange="movePartyToTeam('${p.id}', this.value)" class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-slate-300 focus:outline-none max-w-[130px] truncate">
                     ${moveOptionsHtml}
                   </select>
                 </div>
               </div>
 
-              <div class="flex items-center justify-between text-[11px] text-slate-400">
-                <div class="flex items-center gap-1.5">
+              <div class="flex items-start justify-between text-[11px] text-slate-400">
+                <div class="flex items-start gap-1.5">
                   <span>ผลรวม Gear: <strong class="mono text-indigo-300">${totalPartyGear.toLocaleString()}</strong></span>
                   <span>• ${presentMembers.length}/5 คน</span>
                 </div>
-                <div class="flex items-center gap-1">
-                  ${!hasHealer && presentMembers.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">⚠️ ขาดพระ</span>` : ''}
-                  ${leaveMembers.length > 0 ? `<span class="px-1.5 py-0.2 rounded-full text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40">🚨 ลา ${leaveMembers.length}</span>` : ''}
+                <div class="flex items-start gap-1">
+                  ${!hasHealer && presentMembers.length > 0 ? `<span class="px-1.5 py-2 rounded-full text-[9px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/40">⚠️ ขาดพระ</span>` : ''}
+                  ${leaveMembers.length > 0 ? `<span class="px-1.5 py-2 rounded-full text-[9px] font-semibold bg-rose-500/20 text-rose-300 border border-rose-500/40">🚨 ลา ${leaveMembers.length}</span>` : ''}
                 </div>
               </div>
             </div>
@@ -965,16 +961,16 @@ let selectedSlot = null;
 
       return `
         <div class="rounded-3xl border-2 ${theme.containerBorder} ${theme.containerBg} p-4 sm:p-5 space-y-4 shadow-xl">
-          <div class="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl border ${theme.headerBg}">
-            <div class="flex items-center gap-3 flex-wrap">
-              <div class="flex items-center gap-2">
+          <div class="flex flex-wrap items-start justify-between gap-3 p-3.5 rounded-2xl border ${theme.headerBg}">
+            <div class="flex items-start gap-3 flex-wrap">
+              <div class="flex items-start gap-2">
                 <span class="w-4 h-4 rounded-full ${theme.dotClass} shadow"></span>
                 <h3 class="text-base sm:text-lg font-bold text-white tracking-wide">${team.name}</h3>
                 <button onclick="renameTeam('${team.id}')" title="เปลี่ยนชื่อทีม" class="text-slate-300 hover:text-white text-xs px-1.5 py-0.5 rounded bg-slate-800/70">✏️ เปลี่ยนชื่อ</button>
               </div>
 
               <!-- ปุ่มสลับสนามประจำทีม (สนามหลัก / สนามรอง) -->
-              <div class="inline-flex items-center bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-[11px]">
+              <div class="inline-flex items-start bg-slate-950/90 p-1 rounded-xl border border-slate-800 text-[11px]">
                 <button onclick="setTeamField('${team.id}', 'main')" class="px-2.5 py-1 rounded-lg transition ${team.field === 'main' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'}" title="กำหนดให้ ${team.name} อยู่ในสนามหลัก">
                   🏟️ สนามหลัก
                 </button>
@@ -983,7 +979,7 @@ let selectedSlot = null;
                 </button>
               </div>
 
-              <div class="flex items-center gap-2 text-xs text-slate-300 bg-slate-950/60 px-3 py-1 rounded-xl border border-slate-800">
+              <div class="flex items-start gap-2 text-xs text-slate-300 bg-slate-950/60 px-3 py-1 rounded-xl border border-slate-800">
                 <span>ปาร์ตี้ในทีม: <strong class="text-white">${teamParties.length} ตี้</strong></span>
                 <span>•</span>
                 <span>สมาชิก: <strong class="text-emerald-400">${teamMembers.length}/${teamParties.length * 5} คน</strong></span>
@@ -992,13 +988,13 @@ let selectedSlot = null;
               </div>
             </div>
 
-            <div class="flex flex-wrap items-center gap-3">
-              <div class="flex items-center gap-1.5 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
+            <div class="flex flex-wrap items-start gap-3">
+              <div class="flex items-start gap-1.5 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800">
                 <span class="text-[11px] text-slate-400 mr-1">🎨 สีทีม:</span>
                 ${colorDotsHtml}
               </div>
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <button onclick="openExportImageModal('${team.id}')" class="px-2.5 py-1.5 rounded-xl bg-fuchsia-600/25 hover:bg-fuchsia-600/40 text-fuchsia-200 border border-fuchsia-500/40 text-xs font-semibold transition flex items-center gap-1" title="ส่งออกรูปภาพเฉพาะ ${team.name}">
+              <div class="flex items-start gap-1.5 flex-wrap">
+                <button onclick="openExportImageModal('${team.id}')" class="px-2.5 py-1.5 rounded-xl bg-fuchsia-600/25 hover:bg-fuchsia-600/40 text-fuchsia-200 border border-fuchsia-500/40 text-xs font-semibold transition flex items-start gap-1" title="ส่งออกรูปภาพเฉพาะ ${team.name}">
                   📸 รูป${team.name}
                 </button>
                 <button onclick="addPartyToTeam('${team.id}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold transition ${theme.buttonClass} shadow">
@@ -1016,7 +1012,7 @@ let selectedSlot = null;
 
           <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3.5">
             ${partiesCardsHtml || `
-              <div class="col-span-full py-8 text-center text-xs text-slate-400 border border-dashed border-slate-800 rounded-2xl">
+              <div class="col-span-full py-8 text-start text-xs text-slate-400 border border-dashed border-slate-800 rounded-2xl">
                 ยังไม่มีปาร์ตี้ใน ${team.name} — กดปุ่ม <strong>"+ เพิ่มปาร์ตี้ใน ${team.name}"</strong> ด้านบนได้เลยครับ
               </div>
             `}
@@ -1050,30 +1046,30 @@ let selectedSlot = null;
         const meta = getJobMeta(m.job);
         const isSelected = selectedSource && selectedSource.memberId === m.id;
         return `
-          <div onclick="handlePoolClick('${m.id}')" style="${meta.cardTintStyle}" class="p-2.5 rounded-xl border cursor-pointer transition flex items-center justify-between gap-2 group hover:brightness-110 ${isSelected ? 'slot-selected' : ''}">
-            <div class="flex items-center gap-2.5 min-w-0">
+          <div onclick="handlePoolClick('${m.id}')" style="${meta.cardTintStyle}" class="p-2.5 rounded-xl border cursor-pointer transition flex items-start justify-between gap-2 group hover:brightness-110 ${isSelected ? 'slot-selected' : ''}">
+            <div class="flex items-start gap-2.5 min-w-0">
               ${renderJobEmblem(m.job, 34)}
               <div class="min-w-0">
-                <div class="flex items-center gap-1.5">
+                <div class="flex items-start gap-1.5">
                   ${renderColoredMemberName(m)}
                   <span class="mono text-[10px] text-slate-300 font-semibold">Lv.${m.lv}</span>
                 </div>
-                <div class="flex items-center gap-1.5 mt-1 flex-wrap">
-                  <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[10px] font-medium border">${m.job}</span>
+                <div class="flex items-start gap-1.5 mt-1 flex-wrap">
+                  <span style="${meta.badgeStyle}" class="px-1.5 py-2 rounded text-[10px] font-medium border">${m.job}</span>
                   ${m.status === 'leave'
-                    ? `<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-rose-500/25 text-rose-300 border border-rose-500/40">🏖️ ${m.leaveReason || 'ลาวันนี้'}</span>`
+                    ? `<span class="px-1.5 py-2 rounded text-[10px] font-semibold bg-rose-500/25 text-rose-300 border border-rose-500/40">🏖️ ${m.leaveReason || 'ลาวันนี้'}</span>`
                     : `<span class="text-[10px] ${m.onlineStatus === '[ออนไลน์]' ? 'text-emerald-300' : 'text-slate-400'}">${m.onlineStatus}</span>`
                   }
                 </div>
               </div>
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
+            <div class="flex items-start gap-1.5 shrink-0">
               ${formatGearBadge(m.gear)}
             </div>
           </div>
         `;
       }).join('') || `
-        <div class="text-center text-xs text-slate-500 py-8 space-y-2">
+        <div class="text-start text-xs text-slate-500 py-8 space-y-2">
           <div>${members.length === 0 ? 'ยังไม่มีรายชื่อสมาชิกในระบบ' : 'ไม่มีสมาชิกที่ตรงกับเงื่อนไข'}</div>
           ${members.length === 0 ? `<div class="text-[11px] text-slate-400">กดปุ่ม <strong>"➕ เพิ่มสมาชิก"</strong> หรือ <strong>"📂 นำเข้า .CSV"</strong> ด้านบนเพื่อเริ่มต้น</div>` : ''}
         </div>
@@ -1114,7 +1110,7 @@ let selectedSlot = null;
         const teamsCardsHtml = fieldTeams.length > 0
           ? fieldTeams.map(team => renderTeamCardHtml(team)).join('')
           : `
-            <div class="py-10 px-4 text-center border-2 border-dashed border-slate-800 rounded-2xl bg-slate-950/50 space-y-2.5">
+            <div class="py-10 px-4 text-start border-2 border-dashed border-slate-800 rounded-2xl bg-slate-950/50 space-y-2.5">
               <div class="text-2xl">${fZone.icon}</div>
               <div class="text-sm font-bold text-slate-300">ยังไม่มีทีมใน ${fZone.name}</div>
               <p class="text-xs text-slate-400">คุณสามารถกดปุ่ม <strong>"➕ สร้างทีมใน${fZone.name}"</strong> ด้านบน หรือกดสลับปุ่ม <strong>"${fZone.icon} ${fZone.name}"</strong> บนหัวการ์ดของทีมที่มีอยู่เพื่อย้ายทีมเข้ามาในสนามนี้ได้ทันที</p>
@@ -1127,13 +1123,13 @@ let selectedSlot = null;
         return `
           <div class="rounded-[32px] border-2 ${fZone.wrapperBorder} ${fZone.wrapperBg} p-4 sm:p-6 space-y-5 shadow-2xl">
             <!-- Outer Field Header (สนามหลัก / สนามรอง ครอบคลุมทีม) -->
-            <div class="flex flex-wrap items-center justify-between gap-3 p-4 rounded-2xl border ${fZone.headerClass} shadow-lg">
-              <div class="flex items-center gap-3.5 flex-wrap">
-                <div class="w-11 h-11 rounded-2xl bg-slate-950/80 border border-slate-700/80 flex items-center justify-center text-2xl shadow-inner">
+            <div class="flex flex-wrap items-start justify-between gap-3 p-4 rounded-2xl border ${fZone.headerClass} shadow-lg">
+              <div class="flex items-start gap-3.5 flex-wrap">
+                <div class="w-11 h-11 rounded-2xl bg-slate-950/80 border border-slate-700/80 flex items-start justify-start text-2xl shadow-inner">
                   ${fZone.icon}
                 </div>
                 <div>
-                  <div class="flex items-center gap-2 flex-wrap">
+                  <div class="flex items-start gap-2 flex-wrap">
                     <h2 class="text-lg sm:text-xl font-extrabold text-white tracking-wide">${fZone.fullName}</h2>
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-bold border ${fZone.badgeClass}">
                       ครอบคลุม ${fieldTeams.length} ทีม ${fieldTeams.length ? `(${fieldTeams.map(t => t.name).join(', ')})` : ''}
@@ -1144,8 +1140,8 @@ let selectedSlot = null;
               </div>
 
               <!-- Field KPIs & Quick Actions -->
-              <div class="flex flex-wrap items-center gap-2.5">
-                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-200 bg-slate-950/85 px-3.5 py-2 rounded-xl border border-slate-800">
+              <div class="flex flex-wrap items-start gap-2.5">
+                <div class="flex flex-wrap items-start gap-2 text-xs text-slate-200 bg-slate-950/85 px-3.5 py-2 rounded-xl border border-slate-800">
                   <span>ทีม: <strong class="text-white">${fieldTeams.length}</strong></span>
                   <span>•</span>
                   <span>ปาร์ตี้รวม: <strong class="text-white">${allFieldParties.length} ตี้</strong></span>
@@ -1155,11 +1151,11 @@ let selectedSlot = null;
                   <span>ผลรวม Gear ${fZone.name}: <strong class="mono text-amber-300">${fieldTotalGear.toLocaleString()}</strong></span>
                 </div>
 
-                <div class="flex items-center gap-1.5">
-                  <button onclick="openExportImageModal('field_${fZone.key}')" class="px-3 py-2 rounded-xl bg-fuchsia-600/25 hover:bg-fuchsia-600/40 text-fuchsia-200 border border-fuchsia-500/40 text-xs font-semibold transition flex items-center gap-1" title="ส่งออกรูปภาพเฉพาะ ${fZone.name}">
+                <div class="flex items-start gap-1.5">
+                  <button onclick="openExportImageModal('field_${fZone.key}')" class="px-3 py-2 rounded-xl bg-fuchsia-600/25 hover:bg-fuchsia-600/40 text-fuchsia-200 border border-fuchsia-500/40 text-xs font-semibold transition flex items-start gap-1" title="ส่งออกรูปภาพเฉพาะ ${fZone.name}">
                     <span>📸 รูป${fZone.name}</span>
                   </button>
-                  <button onclick="openCreateTeamModal('${fZone.key}')" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition flex items-center gap-1">
+                  <button onclick="openCreateTeamModal('${fZone.key}')" class="px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold shadow transition flex items-start gap-1">
                     <span>➕ สร้างทีมใน${fZone.name}</span>
                   </button>
                 </div>
