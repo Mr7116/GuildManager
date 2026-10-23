@@ -1,0 +1,449 @@
+'use client';
+
+import React, { useState, useMemo } from 'react';
+import { useGuildStore } from '@/lib/guildStore';
+import { Member } from '@/types/member';
+import JobEmblem from '@/components/tactical/JobEmblem';
+import JobEmblemBar from '@/components/tactical/JobEmblemBar';
+import AutoSaveBadge from '@/components/common/AutoSaveBadge';
+import { JOB_FAMILIES, JOB_LOOKUP, getJobMeta } from '@/constants/jobs';
+
+export default function RosterPage() {
+  const { members, setMembers, saveToCloud, isSaving, lastSavedAt } = useGuildStore();
+
+  const [search, setSearch] = useState('');
+  const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  // Modal State for Add / Edit
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editingMember, setEditingMember] = useState<Member | null>(null);
+  const [formName, setFormName] = useState('');
+  const [formJob, setFormJob] = useState('Lord Knight');
+  const [formGear, setFormGear] = useState('');
+  const [formLevel, setFormLevel] = useState('');
+  const [formStatus, setFormStatus] = useState<'ready' | 'leave'>('ready');
+
+  // Count by family for top bar
+  const countsByFamily = useMemo(() => {
+    const counts: Record<string, number> = {};
+    members.forEach((m) => {
+      const meta = JOB_LOOKUP[m.job?.trim().toLowerCase()];
+      if (meta) {
+        counts[meta.familyKey] = (counts[meta.familyKey] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [members]);
+
+  // Filtered members
+  const filteredMembers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return members.filter((m) => {
+      const nameMatch = m.name?.toLowerCase().includes(query);
+      const jobMatch = m.job?.toLowerCase().includes(query);
+      if (query && !nameMatch && !jobMatch) return false;
+
+      if (selectedFamily) {
+        const meta = JOB_LOOKUP[m.job?.trim().toLowerCase()];
+        if (!meta || meta.familyKey !== selectedFamily) return false;
+      }
+      return true;
+    });
+  }, [members, search, selectedFamily]);
+
+  // Bulk selection
+  const handleToggleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(filteredMembers.map((m) => m.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleToggleSelectOne = (id: string, checked: boolean) => {
+    const next = new Set(selectedIds);
+    if (checked) next.add(id);
+    else next.delete(id);
+    setSelectedIds(next);
+  };
+
+  // Delete handlers
+  const handleDeleteSelected = () => {
+    if (selectedIds.size === 0) return;
+    if (!confirm(`คุณต้องการลบสมาชิกที่เลือกจำนวน ${selectedIds.size} คน ใช่หรือไม่?`)) return;
+
+    setMembers((prev) => prev.filter((m) => !selectedIds.has(m.id)));
+    setSelectedIds(new Set());
+  };
+
+  const handleDeleteOne = (id: string, name: string) => {
+    if (!confirm(`คุณต้องการลบ "${name}" ออกจากกิลด์ใช่หรือไม่?`)) return;
+    setMembers((prev) => prev.filter((m) => m.id !== id));
+  };
+
+  // Open modal
+  const openAddModal = () => {
+    setEditingMember(null);
+    setFormName('');
+    setFormJob('Lord Knight');
+    setFormGear('');
+    setFormLevel('90');
+    setFormStatus('ready');
+    setModalOpen(true);
+  };
+
+  const openEditModal = (m: Member) => {
+    setEditingMember(m);
+    setFormName(m.name);
+    setFormJob(m.job);
+    setFormGear(m.gear ? String(m.gear) : '');
+    setFormLevel(m.lv ? String(m.lv) : '90');
+    setFormStatus(m.status);
+    setModalOpen(true);
+  };
+
+  // Save Modal
+  const handleSaveMember = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formName.trim()) return;
+
+    if (editingMember) {
+      setMembers((prev) =>
+        prev.map((m) => {
+          if (m.id !== editingMember.id) return m;
+          return {
+            ...m,
+            name: formName.trim(),
+            job: formJob,
+            gear: formGear ? parseInt(formGear, 10) : undefined,
+            lv: formLevel ? parseInt(formLevel, 10) : undefined,
+            status: formStatus,
+            updatedAt: new Date().toISOString(),
+          };
+        })
+      );
+    } else {
+      const newMember: Member = {
+        id: `mem_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        name: formName.trim(),
+        job: formJob,
+        gear: formGear ? parseInt(formGear, 10) : undefined,
+        lv: formLevel ? parseInt(formLevel, 10) : undefined,
+        status: formStatus,
+        updatedAt: new Date().toISOString(),
+      };
+      setMembers((prev) => [newMember, ...prev]);
+    }
+
+    setModalOpen(false);
+  };
+
+  // All jobs options
+  const allJobOptions = useMemo(() => {
+    const list: string[] = [];
+    JOB_FAMILIES.forEach((f) => {
+      f.jobs.forEach((j) => {
+        if (!list.includes(j)) list.push(j);
+      });
+    });
+    return list;
+  }, []);
+
+  return (
+    <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-6 space-y-6">
+      {/* Top Banner */}
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-800/80 bg-[#0d121f]/95 p-4 sm:p-5 shadow-2xl lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-500/20 text-xl border border-indigo-500/30">
+            🛡️
+          </span>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide">
+              จัดการรายชื่อสมาชิกกิลด์ (Roster)
+            </h1>
+            <p className="text-xs text-slate-400">
+              สมาชิกทั้งหมด {members.length} คน • พร้อมลงสนาม {members.filter((m) => m.status !== 'leave').length} คน
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <AutoSaveBadge />
+
+          {selectedIds.size > 0 && (
+            <button
+              type="button"
+              onClick={handleDeleteSelected}
+              className="flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-600/30 px-3.5 py-1.5 text-xs font-bold text-rose-200 hover:bg-rose-600/50 transition shadow-sm cursor-pointer"
+            >
+              <span>🗑️</span>
+              <span>ลบที่เลือก ({selectedIds.size} คน)</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={openAddModal}
+            className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-600/25 px-3.5 py-1.5 text-xs font-semibold text-emerald-200 hover:bg-emerald-600/40 hover:text-white transition cursor-pointer"
+          >
+            <span>➕</span>
+            <span>เพิ่มสมาชิกใหม่</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={saveToCloud}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-600/30 px-4 py-1.5 text-xs font-bold text-indigo-100 hover:bg-indigo-600/50 hover:text-white transition shadow-sm cursor-pointer"
+          >
+            <span>💾</span>
+            <span>{isSaving ? 'กำลังบันทึก...' : lastSavedAt ? `บันทึกล่าสุด ${lastSavedAt}` : 'บันทึกขึ้น Cloud'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 15 Job Class Emblem Bar */}
+      <JobEmblemBar
+        selectedJob={selectedFamily}
+        onSelectJob={setSelectedFamily}
+        counts={countsByFamily}
+        totalCount={members.length}
+      />
+
+      {/* Search & Action Bar */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#0d121f]/90 border border-slate-800 p-3 rounded-2xl">
+        <div className="w-full sm:w-80 relative">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="ค้นหาชื่อ หรือ คลาส..."
+            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+
+        <div className="text-xs text-slate-400">
+          แสดงผล <strong className="text-white">{filteredMembers.length}</strong> จากทั้งหมด {members.length} คน
+        </div>
+      </div>
+
+      {/* Members Table */}
+      <div className="rounded-3xl border border-slate-800 bg-[#0d121f]/95 overflow-hidden shadow-xl">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-slate-900/90 text-slate-400 uppercase text-[11px] border-b border-slate-800 select-none">
+              <tr>
+                <th className="py-3 px-4 w-10">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === filteredMembers.length && filteredMembers.length > 0}
+                    onChange={(e) => handleToggleSelectAll(e.target.checked)}
+                    className="rounded border-slate-700 bg-slate-950 text-indigo-600"
+                  />
+                </th>
+                <th className="py-3 px-3">สมาชิก</th>
+                <th className="py-3 px-3">สายอาชีพ</th>
+                <th className="py-3 px-3">สถานะ</th>
+                <th className="py-3 px-3">Gear Score</th>
+                <th className="py-3 px-3 text-right">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/80">
+              {filteredMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-12 text-center text-slate-500">
+                    ไม่พบสมาชิกตามเงื่อนไขที่ค้นหา
+                  </td>
+                </tr>
+              ) : (
+                filteredMembers.map((m) => {
+                  const meta = getJobMeta(m.job);
+                  const isChecked = selectedIds.has(m.id);
+
+                  return (
+                    <tr
+                      key={m.id}
+                      className={`hover:bg-slate-800/40 transition ${
+                        isChecked ? 'bg-indigo-950/20' : ''
+                      }`}
+                    >
+                      <td className="py-3 px-4">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => handleToggleSelectOne(m.id, e.target.checked)}
+                          className="rounded border-slate-700 bg-slate-950 text-indigo-600"
+                        />
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <div className="flex items-center gap-2.5">
+                          <JobEmblem jobName={m.job} size={30} />
+                          <div>
+                            <span className="font-extrabold text-sm text-white block">
+                              {m.name}
+                            </span>
+                            {m.lv && (
+                              <span className="text-[10px] text-slate-500 font-mono">
+                                Lv.{m.lv}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        <span style={{ color: meta.hexMain }} className="font-semibold text-xs">
+                          {m.job}
+                        </span>
+                      </td>
+
+                      <td className="py-3 px-3">
+                        {m.status === 'leave' ? (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-rose-950/40 border border-rose-500/30 px-2 py-0.5 text-[10px] font-bold text-rose-300">
+                            🔴 ลาวอร์ ({m.leaveReason || 'วันนี้'})
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 text-[10px] font-bold text-emerald-300">
+                            🟢 พร้อมวอร์
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3 px-3 font-mono font-semibold text-slate-300">
+                        {m.gear ? m.gear.toLocaleString() : '-'}
+                      </td>
+
+                      <td className="py-3 px-3 text-right">
+                        <div className="inline-flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => openEditModal(m)}
+                            className="rounded-lg bg-slate-800 hover:bg-slate-700 px-2.5 py-1 text-slate-300 hover:text-white transition"
+                          >
+                            ✏️ แก้ไข
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteOne(m.id, m.name)}
+                            className="rounded-lg bg-rose-950/40 hover:bg-rose-900/40 border border-rose-800/40 px-2.5 py-1 text-rose-300 transition"
+                          >
+                            🗑️
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Add / Edit Member Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0e1422] border border-slate-800 rounded-3xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 className="font-extrabold text-white text-base">
+                {editingMember ? '✏️ แก้ไขข้อมูลสมาชิก' : '➕ เพิ่มสมาชิกใหม่'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setModalOpen(false)}
+                className="text-slate-400 hover:text-white text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveMember} className="space-y-3 text-xs">
+              <div>
+                <label className="block text-slate-400 mb-1">ชื่อสมาชิกกิลด์ *</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="เช่น นิพพาน, SeasmoKe, Legend"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500 font-bold"
+                  required
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1">สายอาชีพ (คลาส) *</label>
+                <select
+                  value={formJob}
+                  onChange={(e) => setFormJob(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                >
+                  {allJobOptions.map((j) => (
+                    <option key={j} value={j}>
+                      {j}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-400 mb-1">Gear Score (ตัวเลข)</label>
+                  <input
+                    type="number"
+                    value={formGear}
+                    onChange={(e) => setFormGear(e.target.value)}
+                    placeholder="เช่น 313868"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-400 mb-1">เลเวล (Level)</label>
+                  <input
+                    type="number"
+                    value={formLevel}
+                    onChange={(e) => setFormLevel(e.target.value)}
+                    placeholder="เช่น 91"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-400 mb-1">สถานะความพร้อม</label>
+                <select
+                  value={formStatus}
+                  onChange={(e) => setFormStatus(e.target.value as 'ready' | 'leave')}
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="ready">🟢 พร้อมลงวอร์ (Ready)</option>
+                  <option value="leave">🔴 แจ้งลากิลด์วอร์ (Leave)</option>
+                </select>
+              </div>
+
+              <div className="flex gap-2 pt-3 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="flex-1 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold"
+                >
+                  ยกเลิก
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
+                >
+                  {editingMember ? 'บันทึกการแก้ไข' : 'เพิ่มสมาชิก'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+

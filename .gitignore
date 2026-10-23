@@ -1,6 +1,14 @@
+node_modules/
+.next/
+out/
+build/
+dist/
 *.backup
 *.bak
 *.tmp
 .DS_Store
 Thumbs.db
+*.local
+.env*.local
+tsconfig.tsbuildinfo
 
