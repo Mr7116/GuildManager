@@ -913,11 +913,11 @@ function renderSiegeExportTeamBlockHtml(team, showGear, showStatus) {
           </div>
           <div class="min-w-0 flex-1 space-y-0.5">
             <div class="flex items-center gap-1 w-full">
-              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded font-bold text-sm text-center truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
               ${statusPill}
             </div>
-            <div>
-              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
+            <div class="flex justify-center">
+              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full text-center">${m.job}</span>
             </div>
           </div>
         </div>
@@ -1009,11 +1009,11 @@ function renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus) {
           </div>
           <div class="min-w-0 flex-1 space-y-0.5">
             <div class="flex items-center gap-1 w-full">
-              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 ${is8Cols ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-0.5 text-sm'} rounded font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 ${is8Cols ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-0.5 text-sm'} rounded font-bold text-center truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
               ${statusPill}
             </div>
-            <div>
-              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
+            <div class="flex justify-center">
+              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full text-center">${m.job}</span>
             </div>
           </div>
         </div>
