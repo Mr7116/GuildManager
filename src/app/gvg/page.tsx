@@ -8,6 +8,7 @@ import JobEmblemBar from '@/components/tactical/JobEmblemBar';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import CreateTeamModal from '@/components/modals/CreateTeamModal';
 import ExportImageModal from '@/components/modals/ExportImageModal';
+import { ImportPresetModal } from '@/components/modals/ImportPresetModal';
 import { Party, LaneKey, FieldZoneKey } from '@/types/party';
 import { JOB_LOOKUP } from '@/constants/jobs';
 
@@ -40,6 +41,8 @@ export default function GvgPage() {
     removeMemberFromSlot,
     placeMemberInSlot,
     swapSlots,
+    presetParties,
+    applyPresetToParty,
   } = useGuildStore();
 
   // Selection state for drag/click-to-swap
@@ -48,6 +51,7 @@ export default function GvgPage() {
   const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
   const [isExportImageModalOpen, setIsExportImageModalOpen] = useState(false);
+  const [importPresetPartyId, setImportPresetPartyId] = useState<string | null>(null);
 
   // Set of assigned member IDs in GVG
   const assignedMemberIds = useMemo(() => {
@@ -334,6 +338,7 @@ export default function GvgPage() {
                     }}
                     onChangeLane={(partyId, lane: LaneKey) => setPartyLane(partyId, lane)}
                     onChangeTeam={(partyId, targetTeamId) => setPartyTeam(partyId, targetTeamId)}
+                    onImportPreset={(partyId) => setImportPresetPartyId(partyId)}
                     onRenameTeam={(teamId) => {
                       const cur = gvgTeams.find((t) => t.id === teamId);
                       const name = prompt('เปลี่ยนชื่อทีม:', cur?.name);
@@ -392,6 +397,7 @@ export default function GvgPage() {
                     }}
                     onChangeLane={(partyId, lane: LaneKey) => setPartyLane(partyId, lane)}
                     onChangeTeam={(partyId, targetTeamId) => setPartyTeam(partyId, targetTeamId)}
+                    onImportPreset={(partyId) => setImportPresetPartyId(partyId)}
                     onRenameTeam={(teamId) => {
                       const cur = gvgTeams.find((t) => t.id === teamId);
                       const name = prompt('เปลี่ยนชื่อทีม:', cur?.name);
@@ -422,6 +428,20 @@ export default function GvgPage() {
       <ExportImageModal
         isOpen={isExportImageModalOpen}
         onClose={() => setIsExportImageModalOpen(false)}
+      />
+
+      {/* Import Preset Squad Modal */}
+      <ImportPresetModal
+        isOpen={!!importPresetPartyId}
+        onClose={() => setImportPresetPartyId(null)}
+        targetParty={gvgParties.find((p) => p.id === importPresetPartyId) || null}
+        presetParties={presetParties}
+        members={members}
+        onConfirm={(presetPartyId) => {
+          if (importPresetPartyId) {
+            applyPresetToParty('gvg', importPresetPartyId, presetPartyId);
+          }
+        }}
       />
     </div>
   );

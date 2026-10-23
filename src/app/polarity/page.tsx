@@ -7,6 +7,7 @@ import JobEmblemBar from '@/components/tactical/JobEmblemBar';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import { PartyCard } from '@/components/tactical/PartyCard';
 import ExportImageModal from '@/components/modals/ExportImageModal';
+import { ImportPresetModal } from '@/components/modals/ImportPresetModal';
 import { Party } from '@/types/party';
 import { JOB_LOOKUP } from '@/constants/jobs';
 
@@ -16,6 +17,8 @@ export default function PolarityPage() {
     members,
     polarityParties,
     setPolarityParties,
+    presetParties,
+    applyPresetToParty,
     selectedDate,
     setSelectedDate,
     isLoading,
@@ -28,6 +31,7 @@ export default function PolarityPage() {
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
   const [isExportImageModalOpen, setIsExportImageModalOpen] = useState(false);
+  const [importPresetPartyId, setImportPresetPartyId] = useState<string | null>(null);
 
   // Assigned members in Polarity
   const assignedMemberIds = useMemo(() => {
@@ -288,6 +292,7 @@ export default function PolarityPage() {
                 onClearParty={() => handleClearParty(party.id)}
                 onDeleteParty={() => handleDeleteParty(party.id)}
                 onRenameParty={() => handleRenameParty(party.id)}
+                onImportPreset={() => setImportPresetPartyId(party.id)}
                 onDropMemberToSlot={(slotIdx, payload) => {
                   if (payload.fromPartyId !== undefined && payload.fromSlotIndex !== undefined) {
                     const fromPartyId = payload.fromPartyId;
@@ -345,6 +350,20 @@ export default function PolarityPage() {
         isOpen={isExportImageModalOpen}
         onClose={() => setIsExportImageModalOpen(false)}
         mode="polarity"
+      />
+
+      {/* Import Preset Squad Modal */}
+      <ImportPresetModal
+        isOpen={!!importPresetPartyId}
+        onClose={() => setImportPresetPartyId(null)}
+        targetParty={polarityParties.find((p) => p.id === importPresetPartyId) || null}
+        presetParties={presetParties}
+        members={members}
+        onConfirm={(presetPartyId) => {
+          if (importPresetPartyId) {
+            applyPresetToParty('polarity', importPresetPartyId, presetPartyId);
+          }
+        }}
       />
     </div>
   );

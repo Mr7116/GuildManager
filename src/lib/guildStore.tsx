@@ -54,6 +54,7 @@ export interface GuildState {
   removeMemberFromSlot: (partyId: string, slotIndex: number) => void;
   placeMemberInSlot: (partyId: string, slotIndex: number, memberId: string) => void;
   swapSlots: (fromPartyId: string, fromSlotIdx: number, toPartyId: string, toSlotIdx: number) => void;
+  applyPresetToParty: (mode: 'gvg' | 'siege' | 'polarity', targetPartyId: string, presetPartyId: string) => void;
 }
 
 const DEFAULT_GVG_TEAMS: Team[] = [
@@ -442,6 +443,63 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     });
   };
 
+  const applyPresetToParty = (
+    mode: 'gvg' | 'siege' | 'polarity',
+    targetPartyId: string,
+    presetPartyId: string
+  ) => {
+    const preset = presetParties.find((p) => p.id === presetPartyId);
+    if (!preset) return;
+
+    const presetSlots = [...(preset.slots || [null, null, null, null, null])];
+    while (presetSlots.length < 5) presetSlots.push(null);
+    const newMemberIds = new Set(presetSlots.filter(Boolean) as string[]);
+
+    if (mode === 'gvg') {
+      setGvgParties((prev) => {
+        const cleaned = prev.map((p) => {
+          if (p.id === targetPartyId) return p;
+          const slots = (p.slots || [null, null, null, null, null]).map((id) =>
+            id && newMemberIds.has(id) ? null : id
+          );
+          return { ...p, slots };
+        });
+        return cleaned.map((p) => {
+          if (p.id !== targetPartyId) return p;
+          return { ...p, slots: presetSlots };
+        });
+      });
+    } else if (mode === 'siege') {
+      setSiegeParties((prev) => {
+        const cleaned = prev.map((p) => {
+          if (p.id === targetPartyId) return p;
+          const slots = (p.slots || [null, null, null, null, null]).map((id) =>
+            id && newMemberIds.has(id) ? null : id
+          );
+          return { ...p, slots };
+        });
+        return cleaned.map((p) => {
+          if (p.id !== targetPartyId) return p;
+          return { ...p, slots: presetSlots };
+        });
+      });
+    } else if (mode === 'polarity') {
+      setPolarityParties((prev) => {
+        const cleaned = prev.map((p) => {
+          if (p.id === targetPartyId) return p;
+          const slots = (p.slots || [null, null, null, null, null]).map((id) =>
+            id && newMemberIds.has(id) ? null : id
+          );
+          return { ...p, slots };
+        });
+        return cleaned.map((p) => {
+          if (p.id !== targetPartyId) return p;
+          return { ...p, slots: presetSlots };
+        });
+      });
+    }
+  };
+
   return (
     <GuildContext.Provider
       value={{
@@ -488,6 +546,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         removeMemberFromSlot,
         placeMemberInSlot,
         swapSlots,
+        applyPresetToParty,
       }}
     >
       {children}

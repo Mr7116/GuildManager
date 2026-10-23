@@ -19,6 +19,7 @@ interface TeamSectionProps {
   onRenameParty?: (partyId: string) => void;
   onChangeLane?: (partyId: string, lane: LaneKey) => void;
   onChangeTeam?: (partyId: string, targetTeamId: string) => void;
+  onImportPreset?: (partyId: string) => void;
   onRenameTeam?: (teamId: string) => void;
   onChangeTeamField?: (teamId: string, field: FieldZoneKey) => void;
   onAddParty?: (teamId: string) => void;
@@ -42,6 +43,7 @@ export default function TeamSection({
   onRenameParty,
   onChangeLane,
   onChangeTeam,
+  onImportPreset,
   onRenameTeam,
   onChangeTeamField,
   onAddParty,
@@ -226,6 +228,7 @@ export default function TeamSection({
               onChangeTeam={(targetTeamId) =>
                 onChangeTeam && onChangeTeam(party.id, targetTeamId)
               }
+              onImportPreset={() => onImportPreset && onImportPreset(party.id)}
               onDropMemberToSlot={(slotIdx, payload) =>
                 onDropMemberToSlot && onDropMemberToSlot(party.id, slotIdx, payload)
               }

@@ -19,6 +19,7 @@ interface PartyCardProps {
   onRenameParty?: () => void;
   onChangeLane?: (lane: LaneKey) => void;
   onChangeTeam?: (teamId: string) => void;
+  onImportPreset?: () => void;
   onDropMemberToSlot?: (targetSlotIndex: number, payload: { memberId: string; fromPartyId?: string; fromSlotIndex?: number }) => void;
 }
 
@@ -37,6 +38,7 @@ export const PartyCard: React.FC<PartyCardProps> = ({
   onRenameParty,
   onChangeLane,
   onChangeTeam,
+  onImportPreset,
   onDropMemberToSlot
 }) => {
   const partySlots = party.slots || [null, null, null, null, null];
@@ -47,11 +49,23 @@ export const PartyCard: React.FC<PartyCardProps> = ({
     <div className="bg-slate-950/90 border border-slate-800/80 rounded-2xl p-3 flex flex-col gap-2.5 shadow-lg">
       {/* Party Card Header */}
       <div className="flex flex-col gap-1.5 border-b border-slate-800/90 pb-2 bg-slate-900/60 -mx-3 -mt-3 px-3 pt-2.5 rounded-t-2xl">
-        {/* Line 1: Team & Stats */}
+        {/* Line 1: Team & Preset Squad & Stats */}
         <div className="flex items-center justify-between gap-1 text-xs">
-          <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
-            {teamName}
-          </span>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
+              {teamName}
+            </span>
+            {!isReadOnly && onImportPreset && (
+              <button
+                type="button"
+                onClick={onImportPreset}
+                title="ดึงสมาชิกจากตี้ประจำ"
+                className="px-2 py-0.5 rounded-md bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <span>📥 ตี้ประจำ</span>
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1 shrink-0">
             <span className="text-emerald-400 font-extrabold text-xs mr-1">{filledMembers.length}/5 คน</span>
             {!isReadOnly && filledMembers.length > 0 && onClearParty && (
