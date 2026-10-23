@@ -907,17 +907,19 @@ function renderSiegeExportTeamBlockHtml(team, showGear, showStatus) {
       }
 
       return `
-        <div style="${meta.cardTintStyle}" class="py-1.5 px-2.5 rounded-xl border flex items-center gap-2">
-          <div class="shrink-0 flex items-center justify-center">
+        <div style="${meta.cardTintStyle}" class="pt-2 pb-1.5 px-3 rounded-xl border flex items-start gap-2">
+          <div class="shrink-0 flex items-center justify-center pt-0.5">
             ${renderJobEmblem(m.job, 32)}
           </div>
           <div class="min-w-0 flex-1 space-y-0.5">
-            <div class="flex items-center justify-between gap-1">
-              <span style="${meta.namePillStyle}" class="px-2 py-0.5 rounded-md border font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+            <div class="flex items-center gap-1 w-full">
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-0.5 rounded-md border font-bold text-sm flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
+                <span class="truncate block w-full text-center leading-tight">${m.name}</span>
+              </div>
               ${statusPill}
             </div>
-            <div>
-              <span style="${meta.badgeStyle}" class="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
+            <div class="flex justify-center w-full">
+              <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
             </div>
           </div>
         </div>
@@ -1003,17 +1005,19 @@ function renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus) {
       }
 
       return `
-        <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-2' : 'py-1.5 px-3'} rounded-xl border flex items-center gap-2">
-          <div class="shrink-0 flex items-center justify-center">
+        <div style="${meta.cardTintStyle}" class="${is8Cols ? 'pt-1.5 pb-1 px-2' : 'pt-2 pb-1.5 px-3'} rounded-xl border flex items-start gap-2">
+          <div class="shrink-0 flex items-center justify-center pt-0.5">
             ${renderJobEmblem(m.job, is8Cols ? 26 : 32)}
           </div>
           <div class="min-w-0 flex-1 space-y-0.5">
-            <div class="flex items-center justify-between gap-1">
-              <span style="${meta.namePillStyle}" class="${is8Cols ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-0.5 text-sm'} rounded-md border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+            <div class="flex items-center gap-1 w-full">
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-1.5 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
+                <span class="truncate block w-full text-center leading-tight">${m.name}</span>
+              </div>
               ${statusPill}
             </div>
-            <div>
-              <span style="${meta.badgeStyle}" class="px-1.5 py-0.5 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
+            <div class="flex justify-center w-full">
+              <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
             </div>
           </div>
         </div>
