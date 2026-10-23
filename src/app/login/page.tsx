@@ -199,7 +199,7 @@ function LoginForm() {
                   type="password"
                   value={oldPin}
                   onChange={(e) => setOldPin(e.target.value)}
-                  placeholder="รหัสผ่านปัจจุบัน (ค่าเริ่มต้น: TUMDOOD)"
+                  placeholder="รหัสผ่านปัจจุบัน"
                   className="w-full bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-indigo-500"
                   required
                 />
