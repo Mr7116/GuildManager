@@ -1011,8 +1011,9 @@ let selectedSlot = null;
         });
         const readyInField = allFieldMembers.filter(m => m.status === 'ready').length;
         const leaveInField = allFieldMembers.filter(m => m.status === 'leave').length;
+        const fieldTotalGear = allFieldMembers.reduce((s, m) => s + (m.gear || 0), 0);
         const fieldAvgGear = allFieldMembers.length
-          ? Math.round(allFieldMembers.reduce((s, m) => s + m.gear, 0) / allFieldMembers.length)
+          ? Math.round(fieldTotalGear / allFieldMembers.length)
           : 0;
 
         const teamsCardsHtml = fieldTeams.length > 0
