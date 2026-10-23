@@ -58,7 +58,7 @@ let selectedSlot = null;
           const m = members.find(x => x.id === mId);
           if (!m) {
             return `
-              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-9 px-2 text-[10px]' : 'h-11 px-3 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
+              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-11 px-2 text-[10px]' : 'h-11 px-2.5 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
                 <span>ช่องว่างที่ ${sIdx + 1}</span>
                 <span class="text-[9px] opacity-60">-</span>
               </div>
@@ -74,19 +74,19 @@ let selectedSlot = null;
           }
 
           return `
-            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'pt-1.5 pb-1 px-2' : 'pt-2 pb-1.5 px-3'} rounded-xl border flex items-start gap-2">
+            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'pt-2 pb-1.5 px-2' : 'pt-2 pb-1.5 px-2.5'} rounded-xl border flex items-start gap-2">
               <div class="shrink-0 flex items-center justify-center pt-0.5">
                 ${renderJobEmblem(m.job, is8Cols ? 28 : 34)}
               </div>
-              <div class="min-w-0 flex-1 space-y-0.5">
-                <div class="flex items-center gap-1 w-full">
-                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
-                    <span class="truncate block w-full text-center leading-tight">${m.name}</span>
+              <div class="min-w-0 flex-1 w-full space-y-1">
+                <div class="w-full flex items-center gap-1">
+                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} text-center ${isLeave ? 'line-through opacity-75' : ''}">
+                    <span class="truncate block w-full text-center" style="line-height: 1.3;">${m.name}</span>
                   </div>
                   ${statusPill}
                 </div>
-                <div class="flex justify-center w-full">
-                  <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
+                <div class="w-full text-center">
+                  <span style="${meta.badgeStyle}; line-height: 1.35;" class="px-2 pt-0.5 pb-1 rounded text-[9.5px] font-medium border inline-block max-w-full text-center">${m.job}</span>
                 </div>
               </div>
             </div>
@@ -95,13 +95,13 @@ let selectedSlot = null;
 
         return `
           <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl ${is8Cols ? 'p-2 gap-1.5' : 'p-3.5 gap-2.5'} flex flex-col shadow-md">
-            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2.5 py-1.5' : '-mx-3.5 -mt-3.5 px-4 py-2.5'} rounded-t-2xl flex items-center justify-between gap-1">
-              <div class="flex items-center gap-1 min-w-0">
-                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded ${is8Cols ? 'text-[9px]' : 'text-[11px]'} font-bold truncate shrink-0">${team.name}</span>
-                <span class="font-bold ${is8Cols ? 'text-[11px]' : 'text-sm'} text-white truncate">${p.name}</span>
+            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2 py-1.5' : '-mx-3.5 -mt-3.5 px-3.5 py-2.5'} rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
+              <div class="flex items-center gap-1 min-w-0 flex-1 truncate">
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded ${is8Cols ? 'text-[9px]' : 'text-[11px]'} font-bold truncate shrink-0 max-w-[65px]">${team.name}</span>
+                <span class="font-bold ${is8Cols ? 'text-[10.5px]' : 'text-sm'} text-white truncate">${p.name}</span>
               </div>
-              <div class="${is8Cols ? 'text-[9.5px]' : 'text-xs'} text-slate-200 shrink-0">
-                ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
+              <div class="${is8Cols ? 'text-[9.5px]' : 'text-xs'} text-slate-200 shrink-0 whitespace-nowrap">
+                ${showGear ? `<strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
               </div>
             </div>
             <div class="space-y-1">
@@ -151,7 +151,7 @@ let selectedSlot = null;
           const m = members.find(x => x.id === mId);
           if (!m) {
             return `
-              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-9 px-2 text-[10px] rounded-xl flex items-center justify-between text-slate-500">
+              <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-11 px-2 text-[10px] rounded-xl flex items-center justify-between text-slate-500">
                 <span>ช่องว่าง #${sIdx + 1}</span>
                 <span class="text-[9px] opacity-60">-</span>
               </div>
@@ -167,19 +167,19 @@ let selectedSlot = null;
           }
 
           return `
-            <div style="${meta.cardTintStyle}" class="pt-1.5 pb-1 px-2 rounded-xl border flex items-start gap-2">
+            <div style="${meta.cardTintStyle}" class="pt-2 pb-1.5 px-2 rounded-xl border flex items-start gap-2">
               <div class="shrink-0 flex items-center justify-center pt-0.5">
                 ${renderJobEmblem(m.job, 28)}
               </div>
-              <div class="min-w-0 flex-1 space-y-0.5">
-                <div class="flex items-center gap-1 w-full">
-                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-0.5 rounded-md border font-bold text-xs flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
-                    <span class="truncate block w-full text-center leading-tight">${m.name}</span>
+              <div class="min-w-0 flex-1 w-full space-y-1">
+                <div class="w-full flex items-center gap-1">
+                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold text-xs text-center ${isLeave ? 'line-through opacity-75' : ''}">
+                    <span class="truncate block w-full text-center" style="line-height: 1.3;">${m.name}</span>
                   </div>
                   ${statusPill}
                 </div>
-                <div class="flex justify-center w-full">
-                  <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
+                <div class="w-full text-center">
+                  <span style="${meta.badgeStyle}; line-height: 1.35;" class="px-2 pt-0.5 pb-1 rounded text-[9.5px] font-medium border inline-block max-w-full text-center">${m.job}</span>
                 </div>
               </div>
             </div>
@@ -188,13 +188,13 @@ let selectedSlot = null;
 
         return `
           <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-2 gap-1.5 flex flex-col shadow-md">
-            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-2 -mt-2 px-2.5 py-1.5 rounded-t-2xl flex items-center justify-between gap-1">
-              <div class="flex items-center gap-1 min-w-0">
-                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded text-[9px] font-bold truncate shrink-0">${team.name}</span>
-                <span class="font-bold text-[11px] text-white truncate">${p.name}</span>
+            <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-2 -mt-2 px-2 py-1.5 rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
+              <div class="flex items-center gap-1 min-w-0 flex-1 truncate">
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded text-[9px] font-bold truncate shrink-0 max-w-[65px]">${team.name}</span>
+                <span class="font-bold text-[10.5px] text-white truncate">${p.name}</span>
               </div>
-              <div class="text-[9.5px] text-slate-200 shrink-0">
-                ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
+              <div class="text-[9.5px] text-slate-200 shrink-0 whitespace-nowrap">
+                ${showGear ? `<strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
               </div>
             </div>
             <div class="space-y-1">
