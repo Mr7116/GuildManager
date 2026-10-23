@@ -81,9 +81,7 @@ function LoginForm() {
       <div className="bg-[#0e1422]/95 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl">
         {/* Header */}
         <div className="text-center space-y-3 mb-6">
-          <div className="inline-flex items-center justify-center w-18 h-18 rounded-2xl bg-gradient-to-tr from-indigo-700 via-indigo-600 to-indigo-500 font-extrabold text-white text-3xl shadow-xl shadow-indigo-950/50">
-            M
-          </div>
+          
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
               TUMDOOD <span className="text-indigo-400">Tactical</span>
