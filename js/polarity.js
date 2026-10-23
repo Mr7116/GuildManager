@@ -846,7 +846,7 @@ function renderPolarityExportTeamBlockHtml(team, showGear, showStatus) {
       const m = members.find(x => x.id === mId);
       if (!m) {
         return `
-          <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-11 rounded-xl px-3 flex items-center justify-between text-xs text-slate-500">
+          <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-[58px] px-3.5 text-xs rounded-xl flex items-center justify-between text-slate-500">
             <span>ช่องว่างที่ ${sIdx + 1}</span>
             <span class="text-[10px] opacity-60">-</span>
           </div>
@@ -858,21 +858,23 @@ function renderPolarityExportTeamBlockHtml(team, showGear, showStatus) {
 
       let statusPill = '';
       if (showStatus && isLeave) {
-        statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.2 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
+        statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap shrink-0 flex items-center justify-center leading-tight">🏖️ ลา</span>`;
       }
 
       return `
-        <div style="${meta.cardTintStyle}" class="py-1.5 px-2.5 rounded-xl border flex items-center gap-2">
-          <div class="shrink-0">
-            ${renderJobEmblem(m.job, 32)}
+        <div style="${meta.cardTintStyle}" class="py-2 px-3 min-h-[58px] rounded-xl border flex items-center gap-2 overflow-hidden">
+          <div class="shrink-0 flex items-center justify-center">
+            ${renderJobEmblem(m.job, 34)}
           </div>
-          <div class="min-w-0 flex-1 space-y-0.5">
+          <div class="min-w-0 flex-1 flex flex-col justify-center space-y-1">
             <div class="flex items-center gap-1 w-full">
-              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded font-bold text-sm text-center truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded-md border font-bold text-sm flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
+                <span class="truncate block w-full text-center leading-tight">${m.name}</span>
+              </div>
               ${statusPill}
             </div>
-            <div class="flex justify-center">
-              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full text-center">${m.job}</span>
+            <div class="flex justify-center w-full">
+              <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9.5px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
             </div>
           </div>
         </div>
@@ -881,13 +883,13 @@ function renderPolarityExportTeamBlockHtml(team, showGear, showStatus) {
 
     return `
       <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-3 flex flex-col gap-2">
-        <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-3 -mt-3 px-3.5 py-2 rounded-t-2xl flex items-center justify-between">
-          <div class="flex items-center gap-1.5">
-            <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-2 py-0.5 rounded text-[10px] font-bold">${team.name}</span>
-            <span class="font-bold text-xs sm:text-sm text-white">${p.name}</span>
+        <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-3 -mt-3 px-3.5 py-2 min-h-[42px] rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-2 py-0.5 rounded text-[10px] font-bold truncate flex items-center justify-center leading-tight shrink-0">${team.name}</span>
+            <span class="font-bold text-xs sm:text-sm text-white truncate leading-tight">${p.name}</span>
           </div>
-          <div class="text-[11px] text-slate-200">
-            ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
+          <div class="text-[11px] text-slate-200 shrink-0 flex items-center leading-tight">
+            ${showGear ? `ผลรวม <strong class="mono text-amber-300 mx-1">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
           </div>
         </div>
         <div class="space-y-1.5">
@@ -942,7 +944,7 @@ function renderPolarityExportUnified8PartiesBlockHtml(showGear, showStatus) {
       const m = members.find(x => x.id === mId);
       if (!m) {
         return `
-          <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-9 px-2 text-[10px]' : 'h-11 px-3 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
+          <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="${is8Cols ? 'h-[52px] px-2 text-[10px]' : 'h-[58px] px-3 text-xs'} rounded-xl flex items-center justify-between text-slate-500">
             <span>ช่องว่าง #${sIdx + 1}</span>
             <span class="text-[9px] opacity-60">-</span>
           </div>
@@ -954,21 +956,23 @@ function renderPolarityExportUnified8PartiesBlockHtml(showGear, showStatus) {
 
       let statusPill = '';
       if (showStatus && isLeave) {
-        statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.2 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
+        statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[9px] font-semibold whitespace-nowrap shrink-0 flex items-center justify-center leading-tight">🏖️ ลา</span>`;
       }
 
       return `
-        <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-2' : 'py-1.5 px-3'} rounded-xl border flex items-center gap-2">
-          <div class="shrink-0">
-            ${renderJobEmblem(m.job, is8Cols ? 26 : 32)}
+        <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1.5 px-2 min-h-[52px]' : 'py-2 px-3 min-h-[58px]'} rounded-xl border flex items-center gap-2 overflow-hidden">
+          <div class="shrink-0 flex items-center justify-center">
+            ${renderJobEmblem(m.job, is8Cols ? 28 : 34)}
           </div>
-          <div class="min-w-0 flex-1 space-y-0.5">
+          <div class="min-w-0 flex-1 flex flex-col justify-center space-y-1">
             <div class="flex items-center gap-1 w-full">
-              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 ${is8Cols ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-0.5 text-sm'} rounded font-bold text-center truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} flex items-center justify-center text-center leading-tight truncate ${isLeave ? 'line-through opacity-75' : ''}">
+                <span class="truncate block w-full text-center leading-tight">${m.name}</span>
+              </div>
               ${statusPill}
             </div>
-            <div class="flex justify-center">
-              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full text-center">${m.job}</span>
+            <div class="flex justify-center w-full">
+              <span style="${meta.badgeStyle}" class="px-2 py-0.5 rounded text-[9.5px] font-medium border truncate inline-flex items-center justify-center leading-tight max-w-full text-center">${m.job}</span>
             </div>
           </div>
         </div>
@@ -979,16 +983,16 @@ function renderPolarityExportUnified8PartiesBlockHtml(showGear, showStatus) {
 
     return `
       <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl ${is8Cols ? 'p-2 gap-1.5' : 'p-3 gap-2'} flex flex-col shadow-md">
-        <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2.5 py-1.5' : '-mx-3 -mt-3 px-3.5 py-2'} rounded-t-2xl flex items-center justify-between gap-1">
+        <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2.5 py-2 min-h-[38px]' : '-mx-3 -mt-3 px-3.5 py-2 min-h-[42px]'} rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
           <div class="flex items-center gap-1 min-w-0">
-            <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.2 rounded text-[9px] font-bold truncate max-w-[95px]" title="${parentTeam.name}">${shortRole || parentTeam.name}</span>
-            <span class="font-bold ${is8Cols ? 'text-[11px]' : 'text-xs sm:text-sm'} text-white truncate">${p.name || `ปาร์ตี้ ${pIdx + 1}`}</span>
+            <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded text-[9.5px] font-bold truncate max-w-[95px] flex items-center justify-center leading-tight shrink-0" title="${parentTeam.name}">${shortRole || parentTeam.name}</span>
+            <span class="font-bold ${is8Cols ? 'text-xs' : 'text-xs sm:text-sm'} text-white truncate leading-tight">${p.name || `ปาร์ตี้ ${pIdx + 1}`}</span>
           </div>
-          <div class="${is8Cols ? 'text-[9.5px]' : 'text-[11px]'} text-slate-200 shrink-0">
-            ${showGear ? `<strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
+          <div class="${is8Cols ? 'text-[9.5px]' : 'text-[11px]'} text-slate-200 shrink-0 flex items-center leading-tight">
+            ${showGear ? `ผลรวม <strong class="mono text-amber-300 mx-1">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
           </div>
         </div>
-        <div class="space-y-1">
+        <div class="space-y-1.5">
           ${slotsRowsHtml}
         </div>
       </div>
@@ -1123,6 +1127,9 @@ async function generatePosterCanvas() {
   const boardEl = document.getElementById('exportPosterBoard');
   if (!boardEl || typeof html2canvas === 'undefined') {
     throw new Error('ไม่พบไลบรารีสร้างรูปภาพ');
+  }
+  if (document.fonts && typeof document.fonts.ready !== 'undefined') {
+    await document.fonts.ready;
   }
   const posterWidth = parseInt(document.getElementById('exportWidthSelect')?.value || '1680', 10);
   return await html2canvas(boardEl, {
