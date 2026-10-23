@@ -188,9 +188,7 @@ function renderPresetPartyCardHtml(p, pIdx) {
   const theme = getTeamTheme(p.color || 'indigo');
   const presentMembers = (p.slots || []).map(id => members.find(m => m.id === id) || null).filter(Boolean);
   const hasHealer = presentMembers.some(m => getJobMeta(m.job).role === 'healer');
-  const avgPartyGear = presentMembers.length
-    ? Math.round(presentMembers.reduce((sum, m) => sum + m.gear, 0) / presentMembers.length)
-    : 0;
+  const totalPartyGear = presentMembers.reduce((sum, m) => sum + (m.gear || 0), 0);
 
   const colorDotsHtml = Object.values(TEAM_COLORS).map(c => `
     <button onclick="setPresetPartyColor('${p.id}', '${c.key}')" title="เปลี่ยนสีเป็น ${c.name}" class="w-3.5 h-3.5 rounded-full ${c.dotClass} transition transform hover:scale-125 ${(p.color || 'indigo') === c.key ? 'ring-2 ring-white scale-110' : 'opacity-60 hover:opacity-100'}"></button>
@@ -265,7 +263,7 @@ function renderPresetPartyCardHtml(p, pIdx) {
 
         <div class="flex items-center justify-between text-[11px] text-slate-400">
           <div class="flex items-center gap-1.5">
-            <span>เฉลี่ย Gear: <strong class="mono text-amber-300">${avgPartyGear.toLocaleString()}</strong></span>
+            <span>ผลรวม Gear: <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong></span>
             <span>• ${presentMembers.length}/5 คน</span>
           </div>
           <div>

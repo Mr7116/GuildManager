@@ -1319,9 +1319,10 @@ if (typeof window.updateBulkDeleteButton !== 'function') {
       const readyList = members.filter(m => m.status === 'ready');
       const leaveList = members.filter(m => m.status === 'leave');
       const assignedSet = getAssignedSet();
-      // คำนวณ Gear เฉลี่ยจากสมาชิกทั้งหมดในกิลด์ โดยไม่ต้องคำนึงว่าพร้อมหรือลา
+      // คำนวณผลรวม Gear จากสมาชิกทั้งหมดในกิลด์
+      const totalGuildGear = members.reduce((acc, m) => acc + (m.gear || 0), 0);
       const avgGear = members.length
-        ? Math.round(members.reduce((acc, m) => acc + (m.gear || 0), 0) / members.length)
+        ? Math.round(totalGuildGear / members.length)
         : 0;
 
       const elTotal = document.getElementById('statTotal');
@@ -1333,7 +1334,12 @@ if (typeof window.updateBulkDeleteButton !== 'function') {
       const elAssigned = document.getElementById('statAssigned');
       if (elAssigned) elAssigned.textContent = `${assignedSet.size} / ${parties.length * 5}`;
       const elAvgGear = document.getElementById('statAvgGear');
-      if (elAvgGear) elAvgGear.textContent = avgGear.toLocaleString();
+      if (elAvgGear) {
+        elAvgGear.textContent = totalGuildGear.toLocaleString();
+        if (elAvgGear.parentElement) {
+          elAvgGear.parentElement.title = `ผลรวม Gear ทั้งหมด: ${totalGuildGear.toLocaleString()} (เฉลี่ย ${avgGear.toLocaleString()} / คน)`;
+        }
+      }
 
       const elBtnRoster = document.getElementById('tabBtn-roster');
       if (elBtnRoster) elBtnRoster.textContent = `📋 ตารางสมาชิก (${members.length} คน)`;

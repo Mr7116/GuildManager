@@ -260,9 +260,7 @@ function renderPolarityTeamCardHtml(team) {
     });
   });
 
-  const teamAvgGear = teamMembers.length
-    ? Math.round(teamMembers.reduce((sum, m) => sum + m.gear, 0) / teamMembers.length)
-    : 0;
+  const teamTotalGear = teamMembers.reduce((sum, m) => sum + (m.gear || 0), 0);
 
   const colorDotsHtml = Object.values(TEAM_COLORS).map(c => `
     <button onclick="setPolarityTeamColor('${team.id}', '${c.key}')" title="เปลี่ยนสีทีมเป็น ${c.name}" class="w-4 h-4 rounded-full ${c.dotClass} transition transform hover:scale-125 ${team.color === c.key ? 'ring-2 ring-white scale-110' : 'opacity-65 hover:opacity-100'}"></button>
@@ -271,9 +269,7 @@ function renderPolarityTeamCardHtml(team) {
   const partiesCardsHtml = teamParties.map(p => {
     const presentMembers = p.slots.map(id => members.find(m => m.id === id) || null).filter(Boolean);
     const hasHealer = presentMembers.some(m => getJobMeta(m.job).role === 'healer');
-    const avgPartyGear = presentMembers.length
-      ? Math.round(presentMembers.reduce((sum, m) => sum + m.gear, 0) / presentMembers.length)
-      : 0;
+    const totalPartyGear = presentMembers.reduce((sum, m) => sum + (m.gear || 0), 0);
 
     const moveOptionsHtml = polarityTeams.map(tOpt => `
       <option value="${tOpt.id}" ${tOpt.id === team.id ? 'selected' : ''}>ย้ายไป: ${tOpt.name}</option>
@@ -360,7 +356,7 @@ function renderPolarityTeamCardHtml(team) {
 
           <div class="flex items-center justify-between text-[11px] text-slate-400">
             <div class="flex items-center gap-1.5">
-              <span>เฉลี่ย Gear: <strong class="mono text-amber-300">${avgPartyGear.toLocaleString()}</strong></span>
+              <span>ผลรวม Gear: <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong></span>
               <span>• ${presentMembers.length}/5 คน</span>
             </div>
             <div class="flex items-center gap-1">
@@ -393,7 +389,7 @@ function renderPolarityTeamCardHtml(team) {
             <span>•</span>
             <span>สมาชิก: <strong class="text-emerald-400">${teamMembers.length}/${teamParties.length * 5} คน</strong></span>
             <span>•</span>
-            <span>เฉลี่ย Gear: <strong class="mono text-amber-300">${teamAvgGear.toLocaleString()}</strong></span>
+            <span>ผลรวม Gear: <strong class="mono text-amber-300">${teamTotalGear.toLocaleString()}</strong></span>
           </div>
         </div>
 
@@ -839,15 +835,11 @@ function renderPolarityExportTeamBlockHtml(team, showGear, showStatus) {
       if (m) teamMembers.push(m);
     });
   });
-  const teamAvgGear = teamMembers.length
-    ? Math.round(teamMembers.reduce((s, m) => s + m.gear, 0) / teamMembers.length)
-    : 0;
+  const teamTotalGear = teamMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
   const partyCardsHtml = teamParties.map(p => {
     const presentMembers = (p.slots || []).map(id => members.find(m => m.id === id)).filter(Boolean);
-    const avgPartyGear = presentMembers.length
-      ? Math.round(presentMembers.reduce((s, m) => s + m.gear, 0) / presentMembers.length)
-      : 0;
+    const totalPartyGear = presentMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
     const slotsRowsHtml = (p.slots || []).map((mId, sIdx) => {
       const m = members.find(x => x.id === mId);
@@ -925,7 +917,7 @@ function renderPolarityExportTeamBlockHtml(team, showGear, showStatus) {
           <span>ปาร์ตี้: <strong class="text-white">${teamParties.length} ตี้</strong></span>
           <span>•</span>
           <span>สมาชิก: <strong class="text-amber-400">${teamMembers.length}/${teamParties.length * 5} คน</strong></span>
-          ${showGear ? `<span>•</span><span>เฉลี่ย Gear: <strong class="mono text-amber-300">${teamAvgGear.toLocaleString()}</strong></span>` : ''}
+          ${showGear ? `<span>•</span><span>ผลรวม Gear: <strong class="mono text-amber-300">${teamTotalGear.toLocaleString()}</strong></span>` : ''}
         </div>
       </div>
 

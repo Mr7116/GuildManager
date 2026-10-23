@@ -45,15 +45,11 @@ let selectedSlot = null;
           if (m) teamMembers.push(m);
         });
       });
-      const teamAvgGear = teamMembers.length
-        ? Math.round(teamMembers.reduce((s, m) => s + m.gear, 0) / teamMembers.length)
-        : 0;
+      const teamTotalGear = teamMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
       const partyCardsHtml = teamParties.map(p => {
         const presentMembers = p.slots.map(id => members.find(m => m.id === id)).filter(Boolean);
-        const avgPartyGear = presentMembers.length
-          ? Math.round(presentMembers.reduce((s, m) => s + m.gear, 0) / presentMembers.length)
-          : 0;
+        const totalPartyGear = presentMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
         const slotsRowsHtml = p.slots.map((mId, sIdx) => {
           const m = members.find(x => x.id === mId);
@@ -134,7 +130,7 @@ let selectedSlot = null;
               <span>จำนวนปาร์ตี้: <strong class="text-white">${teamParties.length} ตี้</strong></span>
               <span>•</span>
               <span>สมาชิกในทีม: <strong class="text-emerald-400">${teamMembers.length}/${teamParties.length * 5} คน</strong></span>
-              ${showGear ? `<span>•</span><span>เฉลี่ย Gear ทีม: <strong class="mono text-amber-300">${teamAvgGear.toLocaleString()}</strong></span>` : ''}
+              ${showGear ? `<span>•</span><span>ผลรวม Gear ทีม: <strong class="mono text-amber-300">${teamTotalGear.toLocaleString()}</strong></span>` : ''}
             </div>
           </div>
 
@@ -186,9 +182,7 @@ let selectedSlot = null;
             if (m) fMembers.push(m);
           });
         });
-        const fAvgGear = fMembers.length
-          ? Math.round(fMembers.reduce((s, m) => s + m.gear, 0) / fMembers.length)
-          : 0;
+        const fTotalGear = fMembers.reduce((s, m) => s + (m.gear || 0), 0);
 
         const innerTeamsHtml = fTeams.map(t => renderExportTeamBlockHtml(t, showGear, showStatus)).join('');
 
@@ -213,7 +207,7 @@ let selectedSlot = null;
                 <span>ปาร์ตี้รวม: <strong class="text-white">${fParties.length} ตี้</strong></span>
                 <span>•</span>
                 <span>สมาชิกใน${fZone.name}: <strong class="text-emerald-400">${fMembers.length}/${fParties.length * 5} คน</strong></span>
-                ${showGear ? `<span>•</span><span>เฉลี่ย Gear ${fZone.name}: <strong class="mono text-amber-300">${fAvgGear.toLocaleString()}</strong></span>` : ''}
+                ${showGear ? `<span>•</span><span>ผลรวม Gear ${fZone.name}: <strong class="mono text-amber-300">${fTotalGear.toLocaleString()}</strong></span>` : ''}
               </div>
             </div>
             <div class="space-y-5">
@@ -769,9 +763,7 @@ let selectedSlot = null;
           if (m) teamMembers.push(m);
         });
       });
-      const teamAvgGear = teamMembers.length
-        ? Math.round(teamMembers.reduce((sum, m) => sum + m.gear, 0) / teamMembers.length)
-        : 0;
+      const teamTotalGear = teamMembers.reduce((sum, m) => sum + (m.gear || 0), 0);
 
       const colorDotsHtml = Object.values(TEAM_COLORS).map(c => `
         <button onclick="setTeamColor('${team.id}', '${c.key}')" title="เปลี่ยนสีทีมเป็น ${c.name}" class="w-4 h-4 rounded-full ${c.dotClass} transition transform hover:scale-125 ${team.color === c.key ? 'ring-2 ring-white scale-110' : 'opacity-65 hover:opacity-100'}"></button>
@@ -782,9 +774,7 @@ let selectedSlot = null;
         const presentMembers = partyMembers.filter(Boolean);
         const hasHealer = presentMembers.some(m => getJobMeta(m.job).role === 'healer' && m.status === 'ready');
         const leaveMembers = presentMembers.filter(m => m.status === 'leave');
-        const avgPartyGear = presentMembers.length
-          ? Math.round(presentMembers.reduce((sum, m) => sum + m.gear, 0) / presentMembers.length)
-          : 0;
+        const totalPartyGear = presentMembers.reduce((sum, m) => sum + (m.gear || 0), 0);
 
         const moveOptionsHtml = teams.map(tOpt => `
           <option value="${tOpt.id}" ${tOpt.id === team.id ? 'selected' : ''}>ย้ายไป: ${tOpt.name} (${getFieldZone(tOpt.field).shortName})</option>
@@ -861,7 +851,7 @@ let selectedSlot = null;
 
               <div class="flex items-center justify-between text-[11px] text-slate-400">
                 <div class="flex items-center gap-1.5">
-                  <span>เฉลี่ย Gear: <strong class="mono text-indigo-300">${avgPartyGear.toLocaleString()}</strong></span>
+                  <span>ผลรวม Gear: <strong class="mono text-indigo-300">${totalPartyGear.toLocaleString()}</strong></span>
                   <span>• ${presentMembers.length}/5 คน</span>
                 </div>
                 <div class="flex items-center gap-1">
@@ -903,7 +893,7 @@ let selectedSlot = null;
                 <span>•</span>
                 <span>สมาชิก: <strong class="text-emerald-400">${teamMembers.length}/${teamParties.length * 5} คน</strong></span>
                 <span>•</span>
-                <span>เฉลี่ย Gear: <strong class="mono text-amber-300">${teamAvgGear.toLocaleString()}</strong></span>
+                <span>ผลรวม Gear: <strong class="mono text-amber-300">${teamTotalGear.toLocaleString()}</strong></span>
               </div>
             </div>
 
@@ -1066,7 +1056,7 @@ let selectedSlot = null;
                   <span>•</span>
                   <span>สมาชิก: <strong class="text-emerald-400">${allFieldMembers.length}/${allFieldParties.length * 5} คน</strong> <span class="text-[10px] text-slate-400">(พร้อม ${readyInField} / ลา ${leaveInField})</span></span>
                   <span>•</span>
-                  <span>เฉลี่ย Gear ${fZone.name}: <strong class="mono text-amber-300">${fieldAvgGear.toLocaleString()}</strong></span>
+                  <span>ผลรวม Gear ${fZone.name}: <strong class="mono text-amber-300">${fieldTotalGear.toLocaleString()}</strong></span>
                 </div>
 
                 <div class="flex items-center gap-1.5">

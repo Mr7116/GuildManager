@@ -70,7 +70,7 @@
         </a>
         <a href="login.html" class="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 hover:border-slate-700 text-xs font-medium transition flex items-center gap-1.5">
           <span>🔐</span>
-          <span>หัวกิลด์ (Login)</span>
+          <span>ล็อกอิน (Login)</span>
         </a>
       </div>
 
@@ -571,7 +571,6 @@
       const filledCount = filledMembers.filter(Boolean).length;
       
       const totalGear = filledMembers.reduce((sum, m) => sum + (m ? m.gear || 0 : 0), 0);
-      const avgGear = filledCount ? Math.round(totalGear / filledCount) : 0;
 
       const slotsHtml = slots.map((id, sIdx) => {
         const m = id ? members.find(x => String(x.id) === String(id)) : null;
