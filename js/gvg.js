@@ -69,34 +69,24 @@ let selectedSlot = null;
           const isLeave = m.status === 'leave';
 
           let statusPill = '';
-          if (showStatus) {
-            if (isLeave) {
-              statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="${is8Cols ? 'px-1 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'} rounded font-semibold whitespace-nowrap">🏖️ ลา: ${m.leaveReason || 'วันนี้'}</span>`;
-            } else {
-              statusPill = `<span style="color: #6ee7b7;" class="${is8Cols ? 'text-[8.5px]' : 'text-[10px]'} font-medium whitespace-nowrap">● พร้อมวอร์</span>`;
-            }
+          if (showStatus && isLeave) {
+            statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.2 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
           }
 
-          const gearPill = showGear
-            ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono ${is8Cols ? 'px-1 py-0.2 text-[9px]' : 'px-2.5 py-1 text-xs'} rounded-lg font-bold shrink-0">${m.gear.toLocaleString()}</span>`
-            : '';
-
           return `
-            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-1.5' : 'py-2 px-3'} rounded-xl border flex items-center justify-between gap-1.5">
-              <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                ${renderJobEmblem(m.job, is8Cols ? 24 : 34)}
-                <div class="min-w-0 flex-1 space-y-0.5">
-                  <div class="flex items-center justify-between gap-1">
-                    <span style="${meta.namePillStyle}" class="${is8Cols ? 'px-1 py-0.2 rounded text-xs' : 'px-2.5 py-1.5 rounded-md text-base'} border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
-                    <span class="mono ${is8Cols ? 'text-[9px]' : 'text-[11px]'} text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
-                  </div>
-                  <div class="flex items-center justify-between gap-1">
-                    <span style="${meta.badgeStyle}" class="${is8Cols ? 'px-1 text-[8px]' : 'px-2 py-0.5 text-[10px]'} rounded font-medium border truncate">${m.job}</span>
-                    <div class="shrink-0">${statusPill}</div>
-                  </div>
+            <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-2' : 'py-1.5 px-3'} rounded-xl border flex items-center gap-2">
+              <div class="shrink-0">
+                ${renderJobEmblem(m.job, is8Cols ? 28 : 34)}
+              </div>
+              <div class="min-w-0 flex-1 space-y-0.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span style="${meta.namePillStyle}" class="px-1.5 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                  ${statusPill}
+                </div>
+                <div>
+                  <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
                 </div>
               </div>
-              ${gearPill}
             </div>
           `;
         }).join('');
@@ -170,34 +160,24 @@ let selectedSlot = null;
           const isLeave = m.status === 'leave';
 
           let statusPill = '';
-          if (showStatus) {
-            if (isLeave) {
-              statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1 text-[8px] rounded font-semibold whitespace-nowrap">🏖️ ลา</span>`;
-            } else {
-              statusPill = `<span style="color: #6ee7b7;" class="text-[8.5px] font-medium whitespace-nowrap">● พร้อม</span>`;
-            }
+          if (showStatus && isLeave) {
+            statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.2 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
           }
 
-          const gearPill = showGear
-            ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono px-1 py-0.2 text-[9px] rounded-lg font-bold shrink-0">${m.gear.toLocaleString()}</span>`
-            : '';
-
           return `
-            <div style="${meta.cardTintStyle}" class="py-1 px-1.5 rounded-xl border flex items-center justify-between gap-1.5">
-              <div class="flex items-center gap-1.5 min-w-0 flex-1">
-                ${renderJobEmblem(m.job, 24)}
-                <div class="min-w-0 flex-1 space-y-0.5">
-                  <div class="flex items-center justify-between gap-1">
-                    <span style="${meta.namePillStyle}" class="px-1 py-0.2 rounded text-xs border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
-                    <span class="mono text-[9px] text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
-                  </div>
-                  <div class="flex items-center justify-between gap-1">
-                    <span style="${meta.badgeStyle}" class="px-1 text-[8px] rounded font-medium border truncate">${m.job}</span>
-                    <div class="shrink-0">${statusPill}</div>
-                  </div>
+            <div style="${meta.cardTintStyle}" class="py-1 px-2 rounded-xl border flex items-center gap-2">
+              <div class="shrink-0">
+                ${renderJobEmblem(m.job, 26)}
+              </div>
+              <div class="min-w-0 flex-1 space-y-0.5">
+                <div class="flex items-center justify-between gap-1">
+                  <span style="${meta.namePillStyle}" class="px-1.5 py-0.5 rounded text-xs border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                  ${statusPill}
+                </div>
+                <div>
+                  <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
                 </div>
               </div>
-              ${gearPill}
             </div>
           `;
         }).join('');
@@ -206,7 +186,7 @@ let selectedSlot = null;
           <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-2 gap-1.5 flex flex-col shadow-md">
             <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-2 -mt-2 px-2.5 py-1.5 rounded-t-2xl flex items-center justify-between gap-1">
               <div class="flex items-center gap-1 min-w-0">
-                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.2 rounded text-[9px] font-bold truncate">${team.name}</span>
+                <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-1 rounded text-[9px] font-bold truncate">${team.name}</span>
                 <span class="font-bold text-[11px] text-white truncate">${p.name}</span>
               </div>
               <div class="text-[9.5px] text-slate-200 shrink-0">

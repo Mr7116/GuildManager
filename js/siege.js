@@ -902,34 +902,24 @@ function renderSiegeExportTeamBlockHtml(team, showGear, showStatus) {
       const isLeave = m.status === 'leave';
 
       let statusPill = '';
-      if (showStatus) {
-        if (isLeave) {
-          statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap">🏖️ ลา: ${m.leaveReason || 'วันนี้'}</span>`;
-        } else {
-          statusPill = `<span style="color: #6ee7b7;" class="text-[10px] font-medium whitespace-nowrap">● พร้อมวอร์</span>`;
-        }
+      if (showStatus && isLeave) {
+        statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.2 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
       }
 
-      const gearPill = showGear
-        ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono px-2 py-0.5 rounded-lg text-xs font-bold shrink-0">${m.gear.toLocaleString()}</span>`
-        : '';
-
       return `
-        <div style="${meta.cardTintStyle}" class="py-1.5 px-3 rounded-xl border flex items-center justify-between gap-2">
-          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+        <div style="${meta.cardTintStyle}" class="py-1.5 px-2.5 rounded-xl border flex items-center gap-2">
+          <div class="shrink-0">
             ${renderJobEmblem(m.job, 32)}
-            <div class="min-w-0 flex-1 space-y-0.5">
-              <div class="flex items-center justify-between gap-2">
-                <span style="${meta.namePillStyle}" class="px-2 py-0.5 rounded font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
-                <span class="mono text-[10px] text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
-              </div>
-              <div class="flex items-center justify-between gap-2">
-                <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate">${m.job}</span>
-                <div class="shrink-0">${statusPill}</div>
-              </div>
+          </div>
+          <div class="min-w-0 flex-1 space-y-0.5">
+            <div class="flex items-center justify-between gap-1">
+              <span style="${meta.namePillStyle}" class="px-1.5 py-0.5 rounded font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+              ${statusPill}
+            </div>
+            <div>
+              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
             </div>
           </div>
-          ${gearPill}
         </div>
       `;
     }).join('');
@@ -1008,34 +998,24 @@ function renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus) {
       const isLeave = m.status === 'leave';
 
       let statusPill = '';
-      if (showStatus) {
-        if (isLeave) {
-          statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="${is8Cols ? 'px-1 text-[8px]' : 'px-1.5 py-0.5 text-[10px]'} rounded font-semibold whitespace-nowrap">🏖️ ลา</span>`;
-        } else {
-          statusPill = `<span style="color: #6ee7b7;" class="${is8Cols ? 'text-[8.5px]' : 'text-[10px]'} font-medium whitespace-nowrap">● พร้อม</span>`;
-        }
+      if (showStatus && isLeave) {
+        statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.2 rounded text-[9px] font-semibold whitespace-nowrap shrink-0">🏖️ ลา</span>`;
       }
 
-      const gearPill = showGear
-        ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono ${is8Cols ? 'px-1 py-0.2 text-[9px]' : 'px-2 py-0.5 text-xs'} rounded-lg font-bold shrink-0">${m.gear.toLocaleString()}</span>`
-        : '';
-
       return `
-        <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-1.5' : 'py-1.5 px-3'} rounded-xl border flex items-center justify-between gap-1.5">
-          <div class="flex items-center gap-1.5 min-w-0 flex-1">
-            ${renderJobEmblem(m.job, is8Cols ? 24 : 32)}
-            <div class="min-w-0 flex-1 space-y-0.5">
-              <div class="flex items-center justify-between gap-1">
-                <span style="${meta.namePillStyle}" class="${is8Cols ? 'px-1 py-0.2 text-xs' : 'px-2 py-0.5 text-sm'} rounded font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
-                <span class="mono ${is8Cols ? 'text-[9px]' : 'text-[10px]'} text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
-              </div>
-              <div class="flex items-center justify-between gap-1">
-                <span style="${meta.badgeStyle}" class="${is8Cols ? 'px-1 text-[8px]' : 'px-1.5 py-0.2 text-[9px]'} rounded font-medium border truncate">${m.job}</span>
-                <div class="shrink-0">${statusPill}</div>
-              </div>
+        <div style="${meta.cardTintStyle}" class="${is8Cols ? 'py-1 px-2' : 'py-1.5 px-3'} rounded-xl border flex items-center gap-2">
+          <div class="shrink-0">
+            ${renderJobEmblem(m.job, is8Cols ? 26 : 32)}
+          </div>
+          <div class="min-w-0 flex-1 space-y-0.5">
+            <div class="flex items-center justify-between gap-1">
+              <span style="${meta.namePillStyle}" class="${is8Cols ? 'px-1.5 py-0.2 text-xs' : 'px-2 py-0.5 text-sm'} rounded font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+              ${statusPill}
+            </div>
+            <div>
+              <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate inline-block max-w-full">${m.job}</span>
             </div>
           </div>
-          ${gearPill}
         </div>
       `;
     }).join('');
