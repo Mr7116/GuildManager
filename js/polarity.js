@@ -867,8 +867,8 @@ function renderPolarityExportTeamBlockHtml(team, showGear, showStatus) {
             ${renderJobEmblem(m.job, 32)}
           </div>
           <div class="min-w-0 flex-1 space-y-0.5">
-            <div class="flex items-center justify-between gap-1">
-              <span style="${meta.namePillStyle}" class="px-1.5 py-0.5 rounded font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+            <div class="flex items-center gap-1 w-full">
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
               ${statusPill}
             </div>
             <div>
@@ -963,8 +963,8 @@ function renderPolarityExportUnified8PartiesBlockHtml(showGear, showStatus) {
             ${renderJobEmblem(m.job, is8Cols ? 26 : 32)}
           </div>
           <div class="min-w-0 flex-1 space-y-0.5">
-            <div class="flex items-center justify-between gap-1">
-              <span style="${meta.namePillStyle}" class="${is8Cols ? 'px-1.5 py-0.2 text-xs' : 'px-2 py-0.5 text-sm'} rounded font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+            <div class="flex items-center gap-1 w-full">
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 ${is8Cols ? 'px-2 py-0.5 text-xs' : 'px-2.5 py-0.5 text-sm'} rounded font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
               ${statusPill}
             </div>
             <div>

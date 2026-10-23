@@ -79,8 +79,8 @@ let selectedSlot = null;
                 ${renderJobEmblem(m.job, is8Cols ? 28 : 34)}
               </div>
               <div class="min-w-0 flex-1 space-y-0.5">
-                <div class="flex items-center justify-between gap-1">
-                  <span style="${meta.namePillStyle}" class="px-1.5 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                <div class="flex items-center gap-1 w-full">
+                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
                   ${statusPill}
                 </div>
                 <div>
@@ -170,8 +170,8 @@ let selectedSlot = null;
                 ${renderJobEmblem(m.job, 26)}
               </div>
               <div class="min-w-0 flex-1 space-y-0.5">
-                <div class="flex items-center justify-between gap-1">
-                  <span style="${meta.namePillStyle}" class="px-1.5 py-0.5 rounded text-xs border font-bold truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                <div class="flex items-center gap-1 w-full">
+                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 px-2 py-0.5 rounded-md border font-bold text-xs truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</div>
                   ${statusPill}
                 </div>
                 <div>
