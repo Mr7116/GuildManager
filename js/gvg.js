@@ -80,8 +80,8 @@ let selectedSlot = null;
               </div>
               <div class="min-w-0 flex-1 w-full space-y-1">
                 <div class="w-full flex items-center gap-1">
-                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} text-center ${isLeave ? 'line-through opacity-75' : ''}">
-                    <span class="truncate block w-full text-center" style="line-height: 1.3;">${m.name}</span>
+                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold ${is8Cols ? 'text-lg' : 'text-lg'} text-center ${isLeave ? 'line-through opacity-75' : ''}">
+                    <span class="truncate block w-full text-center" style="line-height: 2;">${m.name}</span>
                   </div>
                   ${statusPill}
                 </div>
@@ -100,7 +100,7 @@ let selectedSlot = null;
                 <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded ${is8Cols ? 'text-[9px]' : 'text-[11px]'} font-bold truncate shrink-0 max-w-[65px]">${team.name}</span>
                 <span class="font-bold ${is8Cols ? 'text-[10.5px]' : 'text-sm'} text-white truncate">${p.name}</span>
               </div>
-              <div class="${is8Cols ? 'text-[9.5px]' : 'text-xs'} text-slate-200 shrink-0 whitespace-nowrap">
+              <div class="${is8Cols ? 'text-[9.5px]' : 'text-lg'} text-slate-200 shrink-0 whitespace-nowrap">
                 ${showGear ? `<strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
               </div>
             </div>
@@ -173,8 +173,8 @@ let selectedSlot = null;
               </div>
               <div class="min-w-0 flex-1 w-full space-y-1">
                 <div class="w-full flex items-center gap-1">
-                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold text-xs text-center ${isLeave ? 'line-through opacity-75' : ''}">
-                    <span class="truncate block w-full text-center" style="line-height: 1.3;">${m.name}</span>
+                  <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold text-lg text-center ${isLeave ? 'line-through opacity-75' : ''}">
+                    <span class="truncate block w-full text-center" style="line-height: 2;">${m.name}</span>
                   </div>
                   ${statusPill}
                 </div>

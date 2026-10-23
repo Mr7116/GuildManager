@@ -913,8 +913,8 @@ function renderSiegeExportTeamBlockHtml(team, showGear, showStatus) {
           </div>
           <div class="min-w-0 flex-1 w-full space-y-1">
             <div class="w-full flex items-center gap-1">
-              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold text-sm text-center ${isLeave ? 'line-through opacity-75' : ''}">
-                <span class="truncate block w-full text-center" style="line-height: 1.3;">${m.name}</span>
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold text-lg text-center ${isLeave ? 'line-through opacity-75' : ''}">
+                <span class="truncate block w-full text-center" style="line-height: 2;">${m.name}</span>
               </div>
               ${statusPill}
             </div>
@@ -933,7 +933,7 @@ function renderSiegeExportTeamBlockHtml(team, showGear, showStatus) {
             <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-2 py-0.5 rounded text-[10px] font-bold shrink-0 truncate">${team.name}</span>
             <span class="font-bold text-xs sm:text-sm text-white truncate">${p.name}</span>
           </div>
-          <div class="text-[11px] text-slate-200 shrink-0 whitespace-nowrap">
+          <div class="text-lg text-slate-200 shrink-0 whitespace-nowrap">
             ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
           </div>
         </div>
@@ -1011,8 +1011,8 @@ function renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus) {
           </div>
           <div class="min-w-0 flex-1 w-full space-y-1">
             <div class="w-full flex items-center gap-1">
-              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold ${is8Cols ? 'text-xs' : 'text-sm'} text-center ${isLeave ? 'line-through opacity-75' : ''}">
-                <span class="truncate block w-full text-center" style="line-height: 1.3;">${m.name}</span>
+              <div style="${meta.namePillStyle}" class="flex-1 min-w-0 w-full px-2 py-1 rounded-md border font-bold ${is8Cols ? 'text-lg' : 'text-lg'} text-center ${isLeave ? 'line-through opacity-75' : ''}">
+                <span class="truncate block w-full text-center" style="line-height: 2;">${m.name}</span>
               </div>
               ${statusPill}
             </div>
@@ -1031,9 +1031,9 @@ function renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus) {
         <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="${is8Cols ? '-mx-2 -mt-2 px-2 py-1.5' : '-mx-3 -mt-3 px-3 py-2'} rounded-t-2xl flex items-center justify-between gap-1 leading-normal">
           <div class="flex items-center gap-1 min-w-0 flex-1 truncate">
             <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-1.5 py-0.5 rounded text-[8.5px] font-bold shrink-0 truncate max-w-[65px]" title="${parentTeam.name}">${shortRole || parentTeam.name}</span>
-            <span class="font-bold ${is8Cols ? 'text-[10.5px]' : 'text-xs sm:text-sm'} text-white truncate">${p.name || `ปาร์ตี้ ${pIdx + 1}`}</span>
+            <span class="font-bold ${is8Cols ? 'text-[10.5px]' : 'text-sm'} text-white truncate">${p.name || `ปาร์ตี้ ${pIdx + 1}`}</span>
           </div>
-          <div class="${is8Cols ? 'text-[9.5px]' : 'text-[11px]'} text-slate-200 shrink-0 whitespace-nowrap">
+          <div class="${is8Cols ? 'text-[9.5px]' : 'text-lg'} text-slate-200 shrink-0 whitespace-nowrap">
             ${showGear ? `<strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5</span>
           </div>
         </div>
@@ -1097,6 +1097,7 @@ function renderExportPosterPreview() {
   boardEl.style.minWidth = `${posterWidth}px`;
 
   const assignedSet = getSiegeAssignedSet();
+  const readyCount = members.filter(m => m.status === 'ready').length;
   const leaveList = members.filter(m => m.status === 'leave');
 
   let teamsHtml = '';
@@ -1111,49 +1112,62 @@ function renderExportPosterPreview() {
 
   let leaveFooterHtml = '';
   if (showLeaveFooter && leaveList.length > 0) {
+    const leaveChips = leaveList.map(m => {
+      return `
+        <span style="background: rgba(136, 19, 55, 0.35); border: 1px solid rgba(244, 63, 94, 0.45);" class="inline-flex items-start gap-1.5 px-3 py-1 rounded-xl text-xs text-rose-200">
+          ${renderJobEmblem(m.job, 20)}
+          <strong class="text-white">${m.name}</strong>
+          <span class="text-rose-300 text-[11px]">(${m.leaveReason || 'แจ้งลา'})</span>
+        </span>
+      `;
+    }).join('');
+
     leaveFooterHtml = `
-      <div style="background: rgba(244, 63, 94, 0.08); border: 2px solid rgba(244, 63, 94, 0.35);" class="rounded-2xl p-4 space-y-2.5">
-        <div class="flex items-center justify-between border-b border-rose-500/30 pb-2">
-          <span class="font-bold text-sm text-rose-300 flex items-center gap-1.5">
-            <span>🏖️ สรุปรายชื่อสมาชิกที่แจ้งลาประจำวัน (${selectedDate})</span>
-          </span>
-          <span class="mono text-xs font-bold text-rose-400">${leaveList.length} คน</span>
+      <div style="background: rgba(15, 23, 42, 0.9); border: 1px solid rgba(244, 63, 94, 0.4);" class="rounded-2xl p-4 space-y-2">
+        <div class="text-xs font-bold text-rose-300 flex items-center gap-2">
+          <span>🏖️ รายชื่อสมาชิกที่แจ้งลาประจำวันที่ ${formatThaiDateFull(selectedDate)} (${leaveList.length} คน):</span>
         </div>
-        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-2 text-xs">
-          ${leaveList.map(lm => `
-            <div class="p-2 rounded-xl bg-slate-900/80 border border-slate-800 flex items-center justify-between">
-              <span class="font-medium text-slate-200 truncate">${lm.name}</span>
-              <span class="text-[10px] text-rose-300 truncate">${lm.leaveReason || 'ลา'}</span>
-            </div>
-          `).join('')}
+        <div class="flex flex-wrap gap-2">
+          ${leaveChips}
         </div>
       </div>
     `;
   }
 
   boardEl.innerHTML = `
-    <!-- Poster Top Header -->
-    <div class="flex items-center justify-between border-b border-slate-700/80 pb-5">
-      <div class="space-y-1">
-        <div class="flex items-center gap-2">
-          <span class="text-2xl">🏰</span>
-          <h1 class="text-2xl sm:text-3xl font-extrabold text-white">
-            ผังทัพศึกชิงปราสาท (Siege War) — กิลด์ ${guildName}
-          </h1>
+    <!-- Poster Top Header (Matching GVG Style) -->
+    <div style="background: linear-gradient(90deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.95) 100%);" class="rounded-2xl border border-slate-700 p-5 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <div style="background: linear-gradient(135deg, #f43f5e 0%, #be123c 100%);" class="w-14 h-14 rounded-2xl flex items-center justify-center text-3xl font-bold text-white shadow-lg">
+          🏰
         </div>
-        <p class="text-xs text-slate-400">
-          ประจำวันที่: <strong class="text-rose-300">${formatThaiDateFull(selectedDate)}</strong> • ไฟล์ซิงค์: ${fileTimestamp}
-        </p>
+        <div>
+          <div class="flex items-center gap-3">
+            <h1 class="text-2xl font-bold text-white tracking-wide">ผังทัพศึกชิงปราสาท (Siege War) — ${guildName}</h1>
+            <span style="background: rgba(244, 63, 94, 0.2); border: 1px solid rgba(244, 63, 94, 0.5); color: #fecdd3;" class="px-3 py-0.5 rounded-full text-xs font-semibold">
+              📅 ประจำวันที่ ${formatThaiDateFull(selectedDate)}
+            </span>
+          </div>
+          <p class="text-xs text-slate-400 mt-1">RO Guild Tactical Lineup & Siege War Assignment • อัปเดตข้อมูล: ${fileTimestamp}</p>
+        </div>
       </div>
 
-      <div class="flex items-center gap-3">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl px-4 py-2 text-center">
+      <div class="flex items-center gap-3 text-xs">
+        <div class="bg-slate-900 border border-slate-700 rounded-xl px-4 py-2 text-center">
           <div class="text-[10px] text-slate-400">สมาชิกทั้งหมด</div>
           <div class="mono font-bold text-base text-white">${members.length} คน</div>
         </div>
+        <div class="bg-slate-900 border border-emerald-500/40 rounded-xl px-4 py-2 text-center">
+          <div class="text-[10px] text-emerald-300">พร้อมวอร์วันนี้</div>
+          <div class="mono font-bold text-base text-emerald-400">${readyCount} คน</div>
+        </div>
         <div class="bg-slate-900 border border-rose-500/40 rounded-xl px-4 py-2 text-center">
-          <div class="text-[10px] text-rose-300">จัดลงทัพแล้ว</div>
-          <div class="mono font-bold text-base text-rose-400">${assignedSet.size} คน</div>
+          <div class="text-[10px] text-rose-300">แจ้งลาวันนี้</div>
+          <div class="mono font-bold text-base text-rose-400">${leaveList.length} คน</div>
+        </div>
+        <div class="bg-slate-900 border border-amber-500/40 rounded-xl px-4 py-2 text-center">
+          <div class="text-[10px] text-amber-300">จัดลงทัพแล้ว</div>
+          <div class="mono font-bold text-base text-amber-400">${assignedSet.size} คน</div>
         </div>
       </div>
     </div>
