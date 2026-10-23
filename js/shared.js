@@ -1319,8 +1319,9 @@ if (typeof window.updateBulkDeleteButton !== 'function') {
       const readyList = members.filter(m => m.status === 'ready');
       const leaveList = members.filter(m => m.status === 'leave');
       const assignedSet = getAssignedSet();
-      const avgGear = readyList.length
-        ? Math.round(readyList.reduce((acc, m) => acc + m.gear, 0) / readyList.length)
+      // คำนวณ Gear เฉลี่ยจากสมาชิกทั้งหมดในกิลด์ โดยไม่ต้องคำนึงว่าพร้อมหรือลา
+      const avgGear = members.length
+        ? Math.round(members.reduce((acc, m) => acc + (m.gear || 0), 0) / members.length)
         : 0;
 
       const elTotal = document.getElementById('statTotal');
