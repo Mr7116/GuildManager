@@ -106,7 +106,7 @@ let selectedSlot = null;
                 <span class="font-bold text-sm text-white">${p.name}</span>
               </div>
               <div class="text-xs text-slate-200">
-                ${showGear ? `เฉลี่ย <strong class="mono text-amber-300">${avgPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
+                ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
               </div>
             </div>
             <div class="space-y-2">
