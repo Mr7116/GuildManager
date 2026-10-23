@@ -853,10 +853,11 @@ function openExportImageModal(initialFilter = 'all') {
   const selectEl = document.getElementById('exportTeamSelect');
   if (selectEl) {
     selectEl.innerHTML =
-      `<option value="all">ทุกทัพชิงปราสาททั้งหมด (${siegeTeams.length} ทัพ)</option>` +
-      siegeTeams.map(t => `<option value="${t.id}">เฉพาะ ${t.name}</option>`).join('');
+      `<option value="all">🏰 ทัพศึกชิงปราสาทรวม (1 ทีม 8 ปาร์ตี้)</option>` +
+      `<option value="split_teams">📋 แยกตาม 4 ทัพกลยุทธ์ (ทัพละ 2 ปาร์ตี้)</option>` +
+      siegeTeams.map(t => `<option value="${t.id}">เฉพาะ ${t.name} (${siegeParties.filter(p => p.teamId === t.id).length} ตี้)</option>`).join('');
 
-    const validValues = new Set(['all', ...siegeTeams.map(t => t.id)]);
+    const validValues = new Set(['all', 'split_teams', ...siegeTeams.map(t => t.id)]);
     selectEl.value = validValues.has(initialFilter) ? initialFilter : 'all';
   }
 
@@ -973,6 +974,121 @@ function renderSiegeExportTeamBlockHtml(team, showGear, showStatus) {
   `;
 }
 
+function renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus) {
+  const allSiegeMembers = [];
+  siegeParties.forEach(p => {
+    (p.slots || []).forEach(mId => {
+      const m = members.find(x => x.id === mId);
+      if (m) allSiegeMembers.push(m);
+    });
+  });
+  const totalSiegeGear = allSiegeMembers.reduce((s, m) => s + (m.gear || 0), 0);
+
+  const partyCardsHtml = siegeParties.map((p, pIdx) => {
+    const parentTeam = siegeTeams.find(t => t.id === p.teamId) || { name: 'ทัพชิงปราสาท', color: 'rose' };
+    const theme = getTeamTheme(parentTeam.color || 'rose');
+    const presentMembers = (p.slots || []).map(id => members.find(m => m.id === id)).filter(Boolean);
+    const totalPartyGear = presentMembers.reduce((s, m) => s + (m.gear || 0), 0);
+
+    const slotsRowsHtml = (p.slots || []).map((mId, sIdx) => {
+      const m = members.find(x => x.id === mId);
+      if (!m) {
+        return `
+          <div style="background: rgba(15, 23, 42, 0.55); border: 1px dashed rgba(71, 85, 105, 0.6);" class="h-11 rounded-xl px-3 flex items-center justify-between text-xs text-slate-500">
+            <span>ช่องว่างที่ ${sIdx + 1}</span>
+            <span class="text-[10px] opacity-60">-</span>
+          </div>
+        `;
+      }
+
+      const meta = getJobMeta(m.job);
+      const isLeave = m.status === 'leave';
+
+      let statusPill = '';
+      if (showStatus) {
+        if (isLeave) {
+          statusPill = `<span style="background: rgba(244,63,94,0.25); border: 1px solid rgba(244,63,94,0.5); color: #fecdd3;" class="px-1.5 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap">🏖️ ลา: ${m.leaveReason || 'วันนี้'}</span>`;
+        } else {
+          statusPill = `<span style="color: #6ee7b7;" class="text-[10px] font-medium whitespace-nowrap">● พร้อมวอร์</span>`;
+        }
+      }
+
+      const gearPill = showGear
+        ? `<span style="background: rgba(15,23,42,0.85); border: 1px solid rgba(148,163,184,0.3); color: #fde68a;" class="mono px-2 py-0.5 rounded-lg text-xs font-bold shrink-0">${m.gear.toLocaleString()}</span>`
+        : '';
+
+      return `
+        <div style="${meta.cardTintStyle}" class="py-1.5 px-3 rounded-xl border flex items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5 min-w-0 flex-1">
+            ${renderJobEmblem(m.job, 32)}
+            <div class="min-w-0 flex-1 space-y-0.5">
+              <div class="flex items-center justify-between gap-2">
+                <span style="${meta.namePillStyle}" class="px-2 py-0.5 rounded font-bold text-sm truncate ${isLeave ? 'line-through opacity-75' : ''}">${m.name}</span>
+                <span class="mono text-[10px] text-slate-300 font-semibold shrink-0">Lv.${m.lv}</span>
+              </div>
+              <div class="flex items-center justify-between gap-2">
+                <span style="${meta.badgeStyle}" class="px-1.5 py-0.2 rounded text-[9px] font-medium border truncate">${m.job}</span>
+                <div class="shrink-0">${statusPill}</div>
+              </div>
+            </div>
+          </div>
+          ${gearPill}
+        </div>
+      `;
+    }).join('');
+
+    const shortRole = parentTeam.name.replace(/^[^\s]+\s+/, '').split('/')[0].trim();
+
+    return `
+      <div style="background: rgba(9, 13, 24, 0.92); border: 1px solid ${theme.hexAccent}66;" class="rounded-2xl p-3 flex flex-col gap-2 shadow-md">
+        <div style="background: ${theme.hexHeaderBg}; border-bottom: 1px solid ${theme.hexAccent}44;" class="-mx-3 -mt-3 px-3.5 py-2 rounded-t-2xl flex items-center justify-between gap-1">
+          <div class="flex items-center gap-1.5 min-w-0">
+            <span style="background: ${theme.hexAccent}; color: #ffffff;" class="px-2 py-0.5 rounded text-[10px] font-bold truncate max-w-[130px]" title="${parentTeam.name}">${shortRole || parentTeam.name}</span>
+            <span class="font-bold text-xs sm:text-sm text-white truncate">${p.name || `ปาร์ตี้ ${pIdx + 1}`}</span>
+          </div>
+          <div class="text-[11px] text-slate-200 shrink-0">
+            ${showGear ? `ผลรวม <strong class="mono text-amber-300">${totalPartyGear.toLocaleString()}</strong> • ` : ''}<span>${presentMembers.length}/5 คน</span>
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          ${slotsRowsHtml}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div style="background: rgba(15, 23, 42, 0.78); border: 2px solid rgba(244, 63, 94, 0.7);" class="rounded-3xl p-5 space-y-4 shadow-2xl">
+      <div style="background: linear-gradient(135deg, rgba(244,63,94,0.35) 0%, rgba(30,41,59,0.95) 100%); border: 1px solid rgba(244, 63, 94, 0.55);" class="px-5 py-3.5 rounded-2xl flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-slate-950/80 border border-rose-500/50 flex items-center justify-center text-2xl shadow">
+            🏰
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="text-base sm:text-lg font-extrabold text-white tracking-wide">ทัพศึกชิงปราสาท (Siege War)</h3>
+              <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500 text-white shadow">
+                1 ทีมเต็มอัตรา (${siegeParties.length} ปาร์ตี้)
+              </span>
+            </div>
+            <p class="text-xs text-rose-200/80">ผังจัดทัพกลยุทธ์ชิงปราสาทครอบคลุมทั้ง ${siegeParties.length} ปาร์ตี้ (${siegeParties.length * 5} สล็อต)</p>
+          </div>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-200 bg-slate-950/85 px-4 py-2 rounded-xl border border-slate-800">
+          <span>ปาร์ตี้: <strong class="text-white">${siegeParties.length} ตี้</strong></span>
+          <span>•</span>
+          <span>สมาชิกในทัพ: <strong class="text-amber-400">${allSiegeMembers.length}/${siegeParties.length * 5} คน</strong></span>
+          ${showGear ? `<span>•</span><span>ผลรวม Gear: <strong class="mono text-amber-300">${totalSiegeGear.toLocaleString()}</strong></span>` : ''}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3.5">
+        ${partyCardsHtml}
+      </div>
+    </div>
+  `;
+}
+
 function renderExportPosterPreview() {
   syncSiegeTeamMetadataToParties();
   syncMembersStatusForSelectedDate();
@@ -992,12 +1108,15 @@ function renderExportPosterPreview() {
   const assignedSet = getSiegeAssignedSet();
   const leaveList = members.filter(m => m.status === 'leave');
 
-  let targetTeams = siegeTeams;
-  if (teamFilterVal !== 'all') {
-    targetTeams = siegeTeams.filter(t => t.id === teamFilterVal);
+  let teamsHtml = '';
+  if (teamFilterVal === 'all') {
+    teamsHtml = renderSiegeExportUnified8PartiesBlockHtml(showGear, showStatus);
+  } else if (teamFilterVal === 'split_teams') {
+    teamsHtml = siegeTeams.map(t => renderSiegeExportTeamBlockHtml(t, showGear, showStatus)).join('');
+  } else {
+    const targetTeams = siegeTeams.filter(t => t.id === teamFilterVal);
+    teamsHtml = targetTeams.map(t => renderSiegeExportTeamBlockHtml(t, showGear, showStatus)).join('');
   }
-
-  const teamsHtml = targetTeams.map(t => renderSiegeExportTeamBlockHtml(t, showGear, showStatus)).join('');
 
   let leaveFooterHtml = '';
   if (showLeaveFooter && leaveList.length > 0) {
@@ -1089,8 +1208,10 @@ async function downloadExportedTeamImage() {
 
     const selectEl = document.getElementById('exportTeamSelect');
     const filterVal = selectEl ? selectEl.value : 'all';
-    let teamSuffix = '_ทุกทัพปราสาท';
-    if (filterVal !== 'all') {
+    let teamSuffix = '_1ทีม8ปาร์ตี้';
+    if (filterVal === 'split_teams') {
+      teamSuffix = '_แยกตามทัพกลยุทธ์';
+    } else if (filterVal !== 'all') {
       const teamObj = siegeTeams.find(t => t.id === filterVal);
       if (teamObj) teamSuffix = `_${teamObj.name.replace(/\s+/g, '')}`;
     }
