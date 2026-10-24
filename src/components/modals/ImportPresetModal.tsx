@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Party } from '@/types/party';
 import { Member } from '@/types/member';
 
@@ -22,6 +23,11 @@ export const ImportPresetModal: React.FC<ImportPresetModalProps> = ({
   onConfirm,
 }) => {
   const [selectedPresetId, setSelectedPresetId] = useState<string>('');
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (presetParties && presetParties.length > 0) {
@@ -29,7 +35,7 @@ export const ImportPresetModal: React.FC<ImportPresetModalProps> = ({
     }
   }, [presetParties, isOpen]);
 
-  if (!isOpen || !targetParty) return null;
+  if (!isOpen || !targetParty || !mounted) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,9 +44,9 @@ export const ImportPresetModal: React.FC<ImportPresetModalProps> = ({
     onClose();
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm animate-fadeIn">
-      <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900 p-5 shadow-2xl space-y-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-4 backdrop-blur-md">
+      <div className="relative w-full max-w-md rounded-2xl border border-slate-700 bg-[#0d121f] p-5 shadow-2xl space-y-4">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-800 pb-3">
           <h3 className="flex items-center gap-2 text-base font-bold text-white">
@@ -116,7 +122,8 @@ export const ImportPresetModal: React.FC<ImportPresetModalProps> = ({
           </div>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

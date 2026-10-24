@@ -5,6 +5,7 @@ import { useGuildStore } from '@/lib/guildStore';
 import MemberPool from '@/components/tactical/MemberPool';
 import JobEmblemBar from '@/components/tactical/JobEmblemBar';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
+import DonateCard from '@/components/common/DonateCard';
 import { PartyCard } from '@/components/tactical/PartyCard';
 import { Party } from '@/types/party';
 import { JOB_LOOKUP } from '@/constants/jobs';
@@ -236,6 +237,7 @@ export default function SquadsPage() {
               }
             }}
           />
+          <DonateCard />
         </div>
 
         <div className="lg:col-span-9 space-y-6">

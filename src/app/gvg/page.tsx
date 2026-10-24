@@ -6,6 +6,7 @@ import TeamSection from '@/components/tactical/TeamSection';
 import MemberPool from '@/components/tactical/MemberPool';
 import JobEmblemBar from '@/components/tactical/JobEmblemBar';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
+import DonateCard from '@/components/common/DonateCard';
 import CreateTeamModal from '@/components/modals/CreateTeamModal';
 import ExportImageModal from '@/components/modals/ExportImageModal';
 import { ImportPresetModal } from '@/components/modals/ImportPresetModal';
@@ -283,7 +284,7 @@ export default function GvgPage() {
 
       {/* Main Grid: Left Member Pool + Right Tactical Teams */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
-        {/* Left: Unassigned Members Pool */}
+        {/* Left: Unassigned Members Pool & Donate Card */}
         <div className="lg:col-span-3 lg:sticky lg:top-20 space-y-4">
           <MemberPool
             members={members}
@@ -292,6 +293,7 @@ export default function GvgPage() {
             selectedFamily={selectedFamily}
             onSelectMember={handleSelectMemberFromPool}
           />
+          <DonateCard />
         </div>
 
         {/* Right: Tactical Teams (Main & Sub Field) */}

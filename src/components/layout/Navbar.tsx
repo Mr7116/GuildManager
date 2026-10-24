@@ -36,7 +36,6 @@ export default function Navbar() {
         {/* Guild Brand Logo */}
         <div className="flex items-center gap-3 shrink-0">
           <Link href="/gvg" className="flex items-center gap-2.5 transition hover:opacity-90">
-            
             <div className="flex flex-col">
               <span className="text-base font-extrabold tracking-wide text-white">
                 TUMDOOD
