@@ -46,34 +46,46 @@ export const PartyCard: React.FC<PartyCardProps> = ({
   const laneMeta = getGvgLane(party.lane);
 
   return (
-    <div className="bg-slate-950/90 border border-slate-800/80 rounded-2xl p-3 flex flex-col gap-2.5 shadow-lg">
+    <div className="bg-white dark:bg-slate-950/90 border border-slate-200 dark:border-slate-800/80 rounded-2xl p-3 flex flex-col gap-2.5 shadow-md dark:shadow-lg overflow-hidden">
       {/* Party Card Header */}
-      <div className="flex flex-col gap-1.5 border-b border-slate-800/90 pb-2 bg-slate-900/60 -mx-3 -mt-3 px-3 pt-2.5 rounded-t-2xl">
-        {/* Line 1: Team & Preset Squad & Stats */}
-        <div className="flex items-center justify-between gap-1 text-xs">
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-800 text-slate-200 border border-slate-700 shrink-0">
-              {teamName}
+      <div className="flex flex-col gap-2 border-b border-slate-200 dark:border-slate-800/90 pb-2.5 bg-slate-50/80 dark:bg-slate-900/60 -mx-3 -mt-3 p-3 rounded-t-2xl">
+        {/* Line 1: Party Name & Quick Actions */}
+        <div className="flex items-center justify-between gap-1.5 min-w-0">
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <span className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white tracking-wide truncate">
+              {party.name}
             </span>
+            {!isReadOnly && onRenameParty && (
+              <button
+                type="button"
+                onClick={onRenameParty}
+                title="เปลี่ยนชื่อปาร์ตี้"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 text-xs p-1 rounded-md hover:bg-slate-200/80 dark:hover:bg-slate-800 transition shrink-0 cursor-pointer"
+              >
+                ✏️
+              </button>
+            )}
+          </div>
+
+          {/* Action Toolbar */}
+          <div className="flex items-center gap-1 shrink-0">
             {!isReadOnly && onImportPreset && (
               <button
                 type="button"
                 onClick={onImportPreset}
                 title="ดึงสมาชิกจากตี้ประจำ"
-                className="px-2 py-0.5 rounded-md bg-indigo-500/20 hover:bg-indigo-500/35 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium transition flex items-center gap-1 shrink-0 cursor-pointer"
+                className="px-2 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/35 border border-indigo-200 dark:border-indigo-500/30 text-indigo-700 dark:text-indigo-300 text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
               >
-                <span>📥 ตี้ประจำ</span>
+                <span>📥</span>
+                <span className="hidden sm:inline">ตี้ประจำ</span>
               </button>
             )}
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            <span className="text-emerald-400 font-extrabold text-xs mr-1">{filledMembers.length}/5 คน</span>
             {!isReadOnly && filledMembers.length > 0 && onClearParty && (
               <button
                 type="button"
                 onClick={onClearParty}
                 title="ถอดสมาชิกทั้งหมดออกจากตี้"
-                className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] transition"
+                className="px-2 py-1 rounded-lg bg-slate-200/80 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-[10px] font-medium transition cursor-pointer"
               >
                 ล้าง
               </button>
@@ -83,7 +95,7 @@ export const PartyCard: React.FC<PartyCardProps> = ({
                 type="button"
                 onClick={onDeleteParty}
                 title="ลบปาร์ตี้นี้"
-                className="px-2 py-0.5 rounded bg-rose-500/15 hover:bg-rose-500/30 border border-rose-500/30 text-rose-300 text-[10px] transition"
+                className="h-7 w-7 rounded-lg bg-rose-50 dark:bg-rose-500/15 hover:bg-rose-100 dark:hover:bg-rose-500/30 border border-rose-200 dark:border-rose-500/30 text-rose-600 dark:text-rose-300 flex items-center justify-center text-xs transition cursor-pointer"
               >
                 🗑️
               </button>
@@ -91,47 +103,42 @@ export const PartyCard: React.FC<PartyCardProps> = ({
           </div>
         </div>
 
-        {/* Line 2: Party Name & Controls (Move Team right behind Party Name) */}
-        <div className="flex items-center justify-between gap-1.5 min-w-0 pt-0.5">
-          <div className="flex items-center gap-2 min-w-0 flex-1">
-            <span className="font-extrabold text-sm sm:text-base text-white tracking-wide truncate shrink-0">
-              {party.name}
-            </span>
-            {!isReadOnly && onChangeTeam && allTeams.length > 0 && (
-              <select
-                value={party.teamId}
-                onChange={(e) => onChangeTeam(e.target.value)}
-                className="bg-slate-950 border border-slate-700 hover:border-slate-600 rounded-lg px-2 py-1 text-[11px] text-slate-300 focus:outline-none max-w-[125px] truncate cursor-pointer shrink-0"
-              >
-                {allTeams.map(t => (
-                  <option key={t.id} value={t.id}>
-                    ย้ายไป: {t.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-
-          {!isReadOnly && onRenameParty && (
-            <button
-              type="button"
-              onClick={onRenameParty}
-              title="เปลี่ยนชื่อปาร์ตี้"
-              className="text-slate-400 hover:text-white text-xs px-2 py-1 rounded bg-slate-800/80 hover:bg-slate-700 border border-slate-700/80 transition shrink-0"
-            >
-              ✏️
-            </button>
-          )}
+        {/* Line 2: Team Identity */}
+        <div className="flex items-center justify-between gap-2 min-w-0">
+          <span
+            title={teamName}
+            className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300/70 dark:border-slate-700 truncate max-w-full"
+          >
+            {teamName}
+          </span>
         </div>
 
-        {/* Line 3: Tactical Controls (Lane) placed below Party Name */}
+        {/* Line 3: Move Team Dropdown (New Row) */}
+        {!isReadOnly && onChangeTeam && allTeams.length > 1 && (
+          <div className="flex items-center gap-1.5 min-w-0 pt-0.5">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0 font-medium">ย้ายไป:</span>
+            <select
+              value={party.teamId}
+              onChange={(e) => onChangeTeam(e.target.value)}
+              className="flex-1 min-w-0 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 hover:border-slate-400 dark:hover:border-slate-600 rounded-lg px-2.5 py-1 text-[11px] text-slate-700 dark:text-slate-200 focus:outline-none truncate cursor-pointer font-medium"
+            >
+              {allTeams.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Line 3: Tactical Controls (Lane - GVG only) */}
         {showLane && (
           <div className="pt-0.5">
             {!isReadOnly && onChangeLane ? (
               <select
                 value={party.lane || 'lane_mid'}
                 onChange={(e) => onChangeLane(e.target.value as LaneKey)}
-                className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-amber-300 focus:outline-none truncate cursor-pointer"
+                className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg px-2 py-1 text-[11px] text-amber-700 dark:text-amber-300 focus:outline-none truncate cursor-pointer font-medium"
               >
                 {GVG_LANES.map(ln => (
                   <option key={ln.key} value={ln.key}>
@@ -142,7 +149,7 @@ export const PartyCard: React.FC<PartyCardProps> = ({
             ) : (
               <span
                 style={{ borderColor: `${laneMeta.hexAccent}88`, color: laneMeta.hexAccent }}
-                className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-950/70 border shrink-0 flex items-center justify-center gap-1 w-full"
+                className="px-2 py-0.5 rounded-md text-[11px] font-bold bg-slate-100 dark:bg-slate-950/70 border shrink-0 flex items-center justify-center gap-1 w-full"
               >
                 <span>{laneMeta.icon}</span>
                 <span>{laneMeta.name}</span>

@@ -167,74 +167,79 @@ export default function PolarityPage() {
   return (
     <div className="mx-auto max-w-[1600px] px-3 py-4 sm:px-6 space-y-6">
       {/* Top Banner */}
-      <div className="flex flex-col gap-4 rounded-3xl border border-slate-800/80 bg-[#0d121f]/95 p-4 sm:p-5 shadow-2xl lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 dark:border-slate-800/80 bg-white dark:bg-[#0d121f]/95 p-4 sm:p-5 shadow-md dark:shadow-2xl lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-amber-500/20 text-xl border border-amber-500/30">
             ✨
           </span>
           <div>
-            <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-wide">
+            <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-wide">
               สงครามดาว (Polarity War) — {guildName}
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               จัดทัพปาร์ตี้ลงดันเจี้ยนสงครามขั้วพลัง • {polarityParties.length} ปาร์ตี้
             </p>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Date & Member Stats (Top Banner right section) */}
-          <div className="bg-indigo-950/80 border border-indigo-500/50 rounded-xl px-3 py-1.5 flex items-center gap-2 shadow-sm">
-            <span className="text-indigo-200 font-semibold text-xs flex items-center gap-1">
-              <span>📅</span>
-              <span>ข้อมูลวันที่:</span>
-            </span>
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(e) => setSelectedDate(e.target.value)}
-              className="bg-slate-900/90 border border-indigo-500/40 hover:border-indigo-400 rounded-lg px-2 py-0.5 text-white font-bold mono text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500/40 cursor-pointer shadow-inner"
-            />
-            <button
-              type="button"
-              onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
-              className="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow transition active:scale-95 cursor-pointer"
-              title="กลับมาวันนี้"
-            >
-              วันนี้
-            </button>
+        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+          {/* Status & Date */}
+          <div className="flex items-center gap-2">
+            <div className="bg-slate-100 dark:bg-slate-900/90 border border-slate-300 dark:border-indigo-500/40 rounded-xl px-2.5 py-1.5 flex items-center gap-2 shadow-xs text-xs">
+              <span className="text-slate-700 dark:text-indigo-200 font-semibold flex items-center gap-1">
+                <span>📅</span>
+                <span className="hidden sm:inline">ข้อมูลวันที่:</span>
+              </span>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="bg-white dark:bg-slate-950 border border-slate-300 dark:border-indigo-500/30 hover:border-indigo-400 rounded-lg px-2 py-0.5 text-slate-900 dark:text-white font-bold font-mono text-xs focus:outline-none cursor-pointer"
+              />
+              <button
+                type="button"
+                onClick={() => setSelectedDate(new Date().toISOString().split('T')[0])}
+                className="px-2 py-0.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-[11px] shadow transition active:scale-95 cursor-pointer"
+                title="กลับมาวันนี้"
+              >
+                วันนี้
+              </button>
+            </div>
+
+            <AutoSaveBadge />
           </div>
 
-          <AutoSaveBadge />
+          {/* Action Buttons Toolbar */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleAddParty}
+              className="flex items-center gap-1.5 rounded-xl border border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-600/25 px-3 py-1.5 text-xs font-semibold text-amber-700 dark:text-amber-200 hover:bg-amber-100 dark:hover:bg-amber-600/40 transition cursor-pointer whitespace-nowrap"
+            >
+              <span>➕</span>
+              <span>เพิ่มปาร์ตี้</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={handleAddParty}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-600/25 px-3.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-600/40 hover:text-white transition"
-          >
-            <span>➕</span>
-            <span>เพิ่มปาร์ตี้</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsExportImageModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shadow-sm cursor-pointer whitespace-nowrap"
+              title="ส่งออกรูปภาพผังสงครามดาว (PNG)"
+            >
+              <span>📸</span>
+              <span>ส่งออกรูป</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setIsExportImageModalOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-950/60 hover:bg-amber-900/70 px-3.5 py-1.5 text-xs font-semibold text-amber-200 transition shadow-sm cursor-pointer"
-            title="ส่งออกรูปภาพผังสงครามดาว (PNG)"
-          >
-            <span>📸</span>
-            <span>ส่งออกรูปผังทัพ</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={saveToCloud}
-            disabled={isSaving}
-            className="flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-600/30 px-4 py-1.5 text-xs font-bold text-indigo-100 hover:bg-indigo-600/50 hover:text-white transition shadow-sm"
-          >
-            <span>💾</span>
-            <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึกขึ้น Cloud'}</span>
-          </button>
+            <button
+              type="button"
+              onClick={saveToCloud}
+              disabled={isSaving}
+              className="flex items-center gap-1.5 rounded-xl border border-indigo-400 dark:border-indigo-500/50 bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition shadow-sm cursor-pointer whitespace-nowrap disabled:opacity-50"
+            >
+              <span>💾</span>
+              <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึก Cloud'}</span>
+            </button>
+          </div>
         </div>
       </div>
 

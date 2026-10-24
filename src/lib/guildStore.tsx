@@ -82,9 +82,31 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   const [members, setMembers] = useState<Member[]>([]);
   const [gvgTeams, setGvgTeams] = useState<Team[]>(DEFAULT_GVG_TEAMS);
   const [gvgParties, setGvgParties] = useState<Party[]>(DEFAULT_GVG_PARTIES);
-  const [siegeTeams, setSiegeTeams] = useState<Team[]>([]);
+  const [siegeTeams, setSiegeTeams] = useState<Team[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('TUMDOOD_siege_teams');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [{ id: 'siege_team_1', name: 'ทีมปราสาท 1', color: 'sky', field: 'main' }];
+  });
   const [siegeParties, setSiegeParties] = useState<Party[]>([]);
-  const [polarityTeams, setPolarityTeams] = useState<Team[]>([]);
+  const [polarityTeams, setPolarityTeams] = useState<Team[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('TUMDOOD_polarity_teams');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [{ id: 'pol_main', name: 'สงครามดาว', color: 'amber', field: 'main' }];
+  });
   const [polarityParties, setPolarityParties] = useState<Party[]>([]);
   const [presetParties, setPresetParties] = useState<Party[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
@@ -178,7 +200,15 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Polarity
-          const polRaw = rawParties.filter((p) => p.category === 'polarity');
+          const polTeamsConfig = rawParties.find((p: any) => p.id === '__polarity_teams_config__') as { teams?: Team[] } | undefined;
+          if (polTeamsConfig && Array.isArray(polTeamsConfig.teams) && polTeamsConfig.teams.length > 0) {
+            setPolarityTeams(polTeamsConfig.teams);
+            try {
+              localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(polTeamsConfig.teams));
+            } catch (e) {}
+          }
+
+          const polRaw = rawParties.filter((p) => p.category === 'polarity' && p.id !== '__polarity_teams_config__');
           if (polRaw.length > 0) {
             setPolarityParties(polRaw);
           } else {
@@ -193,15 +223,52 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           }
 
           // Siege
-          const siegeRaw = rawParties.filter((p) => p.category === 'siege');
+          const siegeTeamsConfig = rawParties.find((p: any) => p.id === '__siege_teams_config__') as { teams?: Team[] } | undefined;
+          const siegeRaw = rawParties.filter((p) => p.category === 'siege' && p.id !== '__siege_teams_config__');
+
+          if (siegeTeamsConfig && Array.isArray(siegeTeamsConfig.teams) && siegeTeamsConfig.teams.length > 0) {
+            setSiegeTeams(siegeTeamsConfig.teams);
+            try {
+              localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
+            } catch (e) {}
+          } else if (siegeRaw.length > 0) {
+            // Reconstruct teams from siege parties metadata if available
+            const teamMap = new Map<string, Team>();
+            siegeRaw.forEach((p) => {
+              const tid = p.teamId || 'siege_team_1';
+              if (!teamMap.has(tid)) {
+                teamMap.set(tid, {
+                  id: tid,
+                  name: p.teamName || (tid === 'siege_team_1' ? 'ทีมปราสาท 1' : `ทีมปราสาท ${tid.replace('siege_team_', '')}`),
+                  field: p.teamField === 'sub' ? 'sub' : 'main',
+                  color: p.teamColor || 'sky',
+                });
+              }
+            });
+            const extracted = Array.from(teamMap.values());
+            if (extracted.length > 0) {
+              setSiegeTeams(extracted);
+              try {
+                localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(extracted));
+              } catch (e) {}
+            }
+          }
+
           if (siegeRaw.length > 0) {
-            setSiegeParties(siegeRaw);
+            setSiegeParties(
+              siegeRaw.map((p) => ({
+                id: p.id,
+                name: p.name || 'ปาร์ตี้',
+                teamId: p.teamId || 'siege_team_1',
+                slots: Array.isArray(p.slots) ? p.slots.slice(0, 5) : [null, null, null, null, null],
+              }))
+            );
           } else {
             setSiegeParties(
               Array.from({ length: 8 }, (_, i) => ({
                 id: `siege_p${i + 1}`,
                 name: `ปาร์ตี้ ${i + 1}`,
-                teamId: 'siege_main',
+                teamId: 'siege_team_1',
                 slots: [null, null, null, null, null],
               }))
             );
@@ -250,6 +317,17 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
+      const siegePartiesWithMeta = state.siegeParties.map((p) => {
+        const team = state.siegeTeams.find((t) => t.id === p.teamId);
+        return {
+          ...p,
+          teamName: team?.name || 'ทีมปราสาท',
+          teamField: team?.field || 'main',
+          teamColor: team?.color || 'sky',
+          category: 'siege',
+        };
+      });
+
       const pin = typeof window !== 'undefined' ? localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD' : 'TUMDOOD';
       const authEntry = {
         id: '__guild_auth_config__',
@@ -258,12 +336,31 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         updatedAt: new Date().toISOString(),
       };
 
+      const siegeTeamsEntry = {
+        id: '__siege_teams_config__',
+        category: '__system__',
+        teams: state.siegeTeams,
+      };
+
+      const polarityTeamsEntry = {
+        id: '__polarity_teams_config__',
+        category: '__system__',
+        teams: state.polarityTeams,
+      };
+
+      try {
+        localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(state.siegeTeams));
+        localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(state.polarityTeams));
+      } catch (e) {}
+
       const combinedParties = [
         ...gvgPartiesWithMeta,
         ...state.polarityParties.map((p) => ({ ...p, category: 'polarity' })),
-        ...state.siegeParties.map((p) => ({ ...p, category: 'siege' })),
+        ...siegePartiesWithMeta,
         ...state.presetParties.map((p) => ({ ...p, category: 'preset' })),
         authEntry,
+        siegeTeamsEntry,
+        polarityTeamsEntry,
       ];
 
       const { error: saveErr } = await supabase.from('guild_state').upsert({
@@ -308,7 +405,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!isInitialLoadDone.current) return;
     triggerAutoSave(800);
-  }, [gvgParties, gvgTeams, members, siegeParties, polarityParties, presetParties, triggerAutoSave]);
+  }, [gvgParties, gvgTeams, members, siegeParties, siegeTeams, polarityParties, polarityTeams, presetParties, triggerAutoSave]);
 
   // Flush beforeunload
   useEffect(() => {

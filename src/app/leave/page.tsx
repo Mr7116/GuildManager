@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { useGuildStore } from '@/lib/guildStore';
 import { getJobMeta } from '@/constants/jobs';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 const QUICK_REASONS = [
   'ติดงาน / ทำโอที',
@@ -128,6 +129,7 @@ export default function LeavePage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <ThemeToggle />
           <div className="rounded-xl border border-rose-500/30 bg-rose-950/30 px-3 py-1.5 text-xs text-rose-300 font-bold">
             🔴 ผู้แจ้งลา {leaveMembers.length} คน
           </div>

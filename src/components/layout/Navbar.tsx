@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import AdminNavActions from './AdminNavActions';
+import ThemeToggle from './ThemeToggle';
 
 interface NavItem {
   label: string;
@@ -65,8 +66,9 @@ export default function Navbar() {
           })}
         </nav>
 
-        {/* Quick action / Auth */}
+        {/* Quick action / Theme Toggle / Auth */}
         <div className="flex items-center gap-2 shrink-0">
+          <ThemeToggle />
           {isAuthenticated ? (
             <AdminNavActions />
           ) : (

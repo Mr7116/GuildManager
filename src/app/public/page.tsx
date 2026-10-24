@@ -10,6 +10,7 @@ import { MemberSlot } from '@/components/tactical/MemberSlot';
 import JobEmblem from '@/components/tactical/JobEmblem';
 import { getJobMeta } from '@/constants/jobs';
 import { getGvgLane } from '@/constants/lanes';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 export default function PublicPage() {
   const {
@@ -68,6 +69,7 @@ export default function PublicPage() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
+            <ThemeToggle />
             <button
               type="button"
               onClick={loadFromCloud}

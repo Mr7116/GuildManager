@@ -4,6 +4,7 @@ import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 
 function LoginForm() {
   const router = useRouter();
@@ -264,6 +265,9 @@ function LoginForm() {
 export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-[#090d16] relative overflow-hidden">
+      <div className="absolute top-4 right-4 z-50">
+        <ThemeToggle />
+      </div>
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[550px] h-[550px] bg-indigo-950/30 rounded-full blur-[140px] pointer-events-none" />
       <Suspense fallback={<div className="text-white text-xs">กำลังโหลดหน้าล็อกอิน...</div>}>
         <LoginForm />

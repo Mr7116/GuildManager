@@ -84,7 +84,7 @@ export const MemberSlot: React.FC<MemberSlotProps> = ({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`h-11 rounded-xl border border-dashed border-slate-700/80 hover:border-slate-500 bg-slate-950/40 px-2.5 flex items-center justify-between text-[11px] text-slate-500 cursor-pointer transition select-none ${
+        className={`h-11 rounded-xl border border-dashed border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-500 bg-slate-50 dark:bg-slate-950/40 px-2.5 flex items-center justify-between text-[11px] text-slate-500 cursor-pointer transition select-none ${
           isDragOver ? 'ring-2 ring-indigo-400 bg-indigo-500/20 border-indigo-400 scale-[1.01]' : ''
         } ${isSelected ? 'ring-2 ring-amber-400 bg-amber-500/10' : ''} ${className}`}
       >
@@ -96,6 +96,8 @@ export const MemberSlot: React.FC<MemberSlotProps> = ({
 
   const fam = getJobFamily(member.job);
   const isLeave = member.status === 'leave';
+  const bgTint = fam.cardTintStyle.match(/background-color:\s*([^;]+);/)?.[1] || 'rgba(15,23,42,0.6)';
+  const borderTint = fam.cardTintStyle.match(/border-color:\s*([^;]+);/)?.[1] || 'rgba(51,65,85,0.4)';
 
   return (
     <div
@@ -106,10 +108,10 @@ export const MemberSlot: React.FC<MemberSlotProps> = ({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       style={{
-        backgroundColor: fam.cardTintStyle.match(/background-color:\s*([^;]+);/)?.[1] || 'rgba(15,23,42,0.6)',
-        borderColor: fam.cardTintStyle.match(/border-color:\s*([^;]+);/)?.[1] || 'rgba(51,65,85,0.4)'
+        background: `linear-gradient(${bgTint}, ${bgTint}), var(--slot-base, #ffffff)`,
+        borderColor: borderTint
       }}
-      className={`py-2 px-3 rounded-xl border flex items-center justify-between gap-2.5 cursor-grab active:cursor-grabbing transition select-none group hover:brightness-110 relative ${
+      className={`py-2 px-3 rounded-xl border flex items-center justify-between gap-2.5 cursor-grab active:cursor-grabbing transition select-none group hover:brightness-105 dark:hover:brightness-110 relative member-slot-card shadow-sm dark:shadow-none ${
         isDragOver ? 'ring-2 ring-indigo-400 scale-[1.02] shadow-lg shadow-indigo-500/30' : ''
       } ${isSelected ? 'ring-2 ring-amber-400 shadow-md shadow-amber-500/20' : ''} ${className}`}
     >
@@ -120,7 +122,7 @@ export const MemberSlot: React.FC<MemberSlotProps> = ({
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-center justify-between gap-2 w-full min-w-0">
             <span
-              className={`font-extrabold text-sm sm:text-base text-white truncate flex-1 block ${
+              className={`font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate flex-1 block ${
                 isLeave ? 'line-through opacity-75' : ''
               }`}
             >
@@ -148,7 +150,7 @@ export const MemberSlot: React.FC<MemberSlotProps> = ({
             onRemove();
           }}
           title="ถอดออกจากตี้"
-          className="w-6 h-6 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-300 text-xs flex items-center justify-center transition shrink-0 ml-1"
+          className="w-6 h-6 rounded-lg hover:bg-rose-500/20 text-slate-400 hover:text-rose-500 dark:hover:text-rose-300 text-xs flex items-center justify-center transition shrink-0 ml-1 cursor-pointer"
         >
           ✕
         </button>

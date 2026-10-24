@@ -4,6 +4,7 @@ import './globals.css';
 import Navbar from '@/components/layout/Navbar';
 import { AuthProvider } from '@/lib/auth';
 import { GuildProvider } from '@/lib/guildStore';
+import { ThemeProvider } from '@/lib/theme';
 
 const kanit = Kanit({
   subsets: ['thai', 'latin'],
@@ -30,18 +31,41 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="th" className={`${kanit.variable} ${jetbrainsMono.variable} dark`}>
-      <body className="min-h-screen bg-[#0b0f19] text-slate-100 antialiased selection:bg-indigo-600/30 selection:text-indigo-200">
-        <AuthProvider>
-          <GuildProvider>
-            <Navbar />
-            <main className="min-h-[calc(100vh-64px)] pb-12">
-              {children}
-            </main>
-          </GuildProvider>
-        </AuthProvider>
+    <html lang="th" suppressHydrationWarning className={`${kanit.variable} ${jetbrainsMono.variable} dark`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var t = localStorage.getItem('TUMDOOD_theme');
+                  var isDark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches) || !t;
+                  if (t === 'light') isDark = false;
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                    document.documentElement.classList.remove('light');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                    document.documentElement.classList.add('light');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="min-h-screen bg-[#0b0f19] text-slate-100 antialiased selection:bg-indigo-500/30 selection:text-indigo-400">
+        <ThemeProvider>
+          <AuthProvider>
+            <GuildProvider>
+              <Navbar />
+              <main className="min-h-[calc(100vh-64px)] pb-12">
+                {children}
+              </main>
+            </GuildProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
 }
-
