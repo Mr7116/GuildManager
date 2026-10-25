@@ -3,23 +3,33 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { FieldZoneKey } from '@/types/party';
+import { TEAM_COLOR_LIST, TEAM_COLORS } from '@/constants/teamColors';
 
 interface CreateTeamModalProps {
   isOpen: boolean;
   onClose: () => void;
   nextLetter: string;
-  onCreateTeam: (teamName: string, field: FieldZoneKey) => void;
+  defaultColor?: string;
+  showColorSelector?: boolean;
+  showFieldSelector?: boolean;
+  title?: string;
+  onCreateTeam: (teamName: string, field: FieldZoneKey, color: string) => void;
 }
 
 export default function CreateTeamModal({
   isOpen,
   onClose,
   nextLetter,
+  defaultColor = 'rose',
+  showColorSelector = true,
+  showFieldSelector = true,
+  title = 'สร้างทีมใหม่เข้าสนามรบ',
   onCreateTeam,
 }: CreateTeamModalProps) {
   const [mounted, setMounted] = useState(false);
   const [teamName, setTeamName] = useState(`ทีม ${nextLetter}`);
   const [selectedField, setSelectedField] = useState<FieldZoneKey>('main');
+  const [selectedColor, setSelectedColor] = useState<string>(defaultColor);
 
   useEffect(() => {
     setMounted(true);
@@ -29,15 +39,16 @@ export default function CreateTeamModal({
     if (isOpen) {
       setTeamName(`ทีม ${nextLetter}`);
       setSelectedField('main');
+      setSelectedColor(defaultColor);
     }
-  }, [isOpen, nextLetter]);
+  }, [isOpen, nextLetter, defaultColor]);
 
   if (!isOpen || !mounted) return null;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const finalName = teamName.trim() || `ทีม ${nextLetter}`;
-    onCreateTeam(finalName, selectedField);
+    onCreateTeam(finalName, selectedField, selectedColor);
     onClose();
   };
 
@@ -48,7 +59,7 @@ export default function CreateTeamModal({
         <div className="flex items-center justify-between pb-1">
           <h2 className="text-base font-bold text-white flex items-center gap-2">
             <span className="text-purple-400 font-extrabold text-lg">+</span>
-            <span>สร้างทีมใหม่เข้าสนามรบ</span>
+            <span>{title}</span>
           </h2>
           <button
             type="button"
@@ -63,7 +74,7 @@ export default function CreateTeamModal({
           {/* Description */}
           <div className="text-xs text-slate-300 leading-relaxed space-y-1">
             <p className="font-medium text-slate-200">
-              ตั้งชื่อทีมใหม่ และเลือกสนามรบ (สนามหลัก / สนามรอง):
+              ตั้งชื่อทีมใหม่ และเลือกสีประจำทีม:
             </p>
             <p className="text-slate-400 text-[11px]">
               ระบบจะสร้าง ปาร์ตี้ 1 ถึง ปาร์ตี้ 4 ให้ในทีมอัตโนมัติ:
@@ -82,41 +93,77 @@ export default function CreateTeamModal({
             />
           </div>
 
-          {/* Field Selector */}
-          <div className="space-y-2">
-            <label className="block text-xs font-medium text-slate-400">
-              เลือกสนามประจำทีม (สนามหลัก / สนามรอง):
-            </label>
-            <div className="grid grid-cols-2 gap-3">
-              {/* สนามหลัก */}
-              <button
-                type="button"
-                onClick={() => setSelectedField('main')}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition cursor-pointer ${
-                  selectedField === 'main'
-                    ? 'border-2 border-amber-400 bg-[#161d31] text-white shadow-md shadow-amber-500/10'
-                    : 'border border-slate-800 bg-[#070b14] text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                }`}
-              >
-                <span>🏟️</span>
-                <span>สนามหลัก</span>
-              </button>
-
-              {/* สนามรอง */}
-              <button
-                type="button"
-                onClick={() => setSelectedField('sub')}
-                className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition cursor-pointer ${
-                  selectedField === 'sub'
-                    ? 'border-2 border-amber-400 bg-[#161d31] text-white shadow-md shadow-amber-500/10'
-                    : 'border border-slate-800 bg-[#070b14] text-slate-400 hover:text-slate-200 hover:bg-slate-900'
-                }`}
-              >
-                <span>🚩</span>
-                <span>สนามรอง</span>
-              </button>
+          {/* Color Selector */}
+          {showColorSelector && (
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-slate-400">
+                เลือกสีประจำทีม (Team Color):
+              </label>
+              <div className="grid grid-cols-4 gap-2">
+                {TEAM_COLOR_LIST.map((c) => {
+                  const isSelected = selectedColor === c.key;
+                  return (
+                    <button
+                      key={c.key}
+                      type="button"
+                      onClick={() => setSelectedColor(c.key)}
+                      className={`flex items-center gap-2 p-2 rounded-xl border transition cursor-pointer ${
+                        isSelected
+                          ? 'border-white/80 bg-slate-800/90 ring-2 ring-indigo-400 shadow-sm'
+                          : 'border-slate-800 bg-[#070b14] hover:border-slate-700 hover:bg-slate-900/60'
+                      }`}
+                    >
+                      <span
+                        style={{ backgroundColor: c.hex }}
+                        className="w-4 h-4 rounded-full shrink-0 shadow-xs inline-block"
+                      />
+                      <span className="text-[11px] font-bold text-slate-200 truncate">
+                        {c.name.split(' ')[0]}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Field Selector (Optional) */}
+          {showFieldSelector && (
+            <div className="space-y-2">
+              <label className="block text-xs font-medium text-slate-400">
+                เลือกสนามประจำทีม (สนามหลัก / สนามรอง):
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* สนามหลัก */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedField('main')}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition cursor-pointer ${
+                    selectedField === 'main'
+                      ? 'border-2 border-amber-400 bg-[#161d31] text-white shadow-md shadow-amber-500/10'
+                      : 'border border-slate-800 bg-[#070b14] text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <span>🏟️</span>
+                  <span>สนามหลัก</span>
+                </button>
+
+                {/* สนามรอง */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedField('sub')}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 px-3 text-xs font-bold transition cursor-pointer ${
+                    selectedField === 'sub'
+                      ? 'border-2 border-amber-400 bg-[#161d31] text-white shadow-md shadow-amber-500/10'
+                      : 'border border-slate-800 bg-[#070b14] text-slate-400 hover:text-slate-200 hover:bg-slate-900'
+                  }`}
+                >
+                  <span>🚩</span>
+                  <span>สนามรอง</span>
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800/80">

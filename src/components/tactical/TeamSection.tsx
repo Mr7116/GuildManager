@@ -1,9 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Team, Party, LaneKey, FieldZoneKey } from '@/types/party';
 import { Member } from '@/types/member';
 import { PartyCard } from './PartyCard';
+import { getTeamColorConfig, TEAM_COLOR_LIST } from '@/constants/teamColors';
 
 interface TeamSectionProps {
   team: Team;
@@ -22,6 +23,8 @@ interface TeamSectionProps {
   onChangeTeam?: (partyId: string, targetTeamId: string) => void;
   onImportPreset?: (partyId: string) => void;
   onRenameTeam?: (teamId: string) => void;
+  showTeamColor?: boolean;
+  onChangeTeamColor?: (teamId: string, color: string) => void;
   onChangeTeamField?: (teamId: string, field: FieldZoneKey) => void;
   onAddParty?: (teamId: string) => void;
   onRenumberParties?: (teamId: string) => void;
@@ -47,6 +50,8 @@ export default function TeamSection({
   onChangeTeam,
   onImportPreset,
   onRenameTeam,
+  showTeamColor = false,
+  onChangeTeamColor,
   onChangeTeamField,
   onAddParty,
   onRenumberParties,
@@ -54,6 +59,9 @@ export default function TeamSection({
   onExportTeamImage,
   onDropMemberToSlot,
 }: TeamSectionProps) {
+  const [showColorPicker, setShowColorPicker] = useState(false);
+  const colorCfg = getTeamColorConfig(team.color);
+
   // Count total members in this team
   const totalSlots = parties.length * 5;
   const occupiedSlots = parties.reduce((sum, p) => {
@@ -61,13 +69,25 @@ export default function TeamSection({
   }, 0);
 
   return (
-    <section className="rounded-3xl border border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#0d121f]/90 p-4 sm:p-5 shadow-md dark:shadow-xl transition-all">
+    <section className={`rounded-3xl border border-slate-200 dark:border-slate-800/90 ${showTeamColor ? `border-l-4 ${colorCfg.borderLeftClass}` : ''} bg-white dark:bg-[#0d121f]/90 p-4 sm:p-5 shadow-md dark:shadow-xl transition-all`}>
       {/* Team Header */}
-      <div className="flex flex-col gap-3 pb-4 mb-4 border-b border-slate-200 dark:border-slate-800/80 lg:flex-row lg:items-center lg:justify-between">
-        {/* Left: Team Name, Field Switcher & Stats */}
+      <div
+        style={showTeamColor ? {
+          background: `linear-gradient(90deg, ${colorCfg.hex}18 0%, transparent 100%)`,
+          borderColor: `${colorCfg.hex}35`,
+        } : undefined}
+        className={`flex flex-col gap-3 pb-4 mb-4 border-b ${showTeamColor ? 'p-3 rounded-2xl border' : 'border-slate-200 dark:border-slate-800/80'} lg:flex-row lg:items-center lg:justify-between`}
+      >
+        {/* Left: Team Name, Color, Field Switcher & Stats */}
         <div className="flex flex-wrap items-center gap-3">
-          {/* Team Name */}
+          {/* Team Name & Color */}
           <div className="flex items-center gap-2">
+            {showTeamColor && (
+              <span
+                style={{ backgroundColor: colorCfg.hex }}
+                className="w-3.5 h-3.5 rounded-full shadow-sm shrink-0 inline-block"
+              />
+            )}
             <h2 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-wide">
               {team.name}
             </h2>
@@ -81,6 +101,55 @@ export default function TeamSection({
                 <span>✏️</span>
                 <span className="hidden sm:inline">เปลี่ยนชื่อ</span>
               </button>
+            )}
+
+            {/* Color Picker Popover */}
+            {!isReadOnly && showTeamColor && onChangeTeamColor && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                  className="flex items-center gap-1.5 rounded-lg bg-slate-100 dark:bg-slate-800/90 px-2.5 py-1 text-xs text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                  title="เปลี่ยนสีทีม"
+                >
+                  <span
+                    style={{ backgroundColor: colorCfg.hex }}
+                    className="w-3 h-3 rounded-full shrink-0 shadow-xs border border-white/40 inline-block"
+                  />
+                  <span>🎨 สีทีม</span>
+                </button>
+
+                {showColorPicker && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowColorPicker(false)}
+                    />
+                    <div className="absolute left-0 top-full mt-1.5 z-50 rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-2.5 shadow-2xl flex items-center gap-2 min-w-[280px]">
+                      {TEAM_COLOR_LIST.map((c) => {
+                        const isCurrent = team.color === c.key;
+                        return (
+                          <button
+                            key={c.key}
+                            type="button"
+                            onClick={() => {
+                              onChangeTeamColor(team.id, c.key);
+                              setShowColorPicker(false);
+                            }}
+                            style={{ backgroundColor: c.hex }}
+                            className={`w-6 h-6 rounded-full flex items-center justify-center transition cursor-pointer hover:scale-110 shadow-sm ${
+                              isCurrent ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900 scale-105' : 'opacity-85 hover:opacity-100'
+                            }`}
+                            title={c.name}
+                          >
+                            {isCurrent && <span className="text-[10px] text-white font-bold drop-shadow">✓</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
             )}
           </div>
 
@@ -141,53 +210,55 @@ export default function TeamSection({
         </div>
 
         {/* Right: Eye-friendly Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2">
-          {onExportTeamImage && (
-            <button
-              type="button"
-              onClick={() => onExportTeamImage(team.id)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 hover:text-slate-900 dark:hover:text-white transition shadow-sm cursor-pointer"
-              title="ส่งออกรูปทีม"
-            >
-              <span>📷</span>
-              <span>รูป{team.name}</span>
-            </button>
-          )}
-
+        <div className="flex flex-col sm:items-end gap-1.5 shrink-0">
           {!isReadOnly && onAddParty && (
             <button
               type="button"
               onClick={() => onAddParty(team.id)}
-              className="flex items-center gap-1.5 rounded-xl border border-indigo-300 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-600/25 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 hover:text-indigo-900 dark:hover:text-white transition shadow-sm cursor-pointer"
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-indigo-300 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-600/25 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-200 hover:bg-indigo-100 dark:hover:bg-indigo-600/40 hover:text-indigo-900 dark:hover:text-white transition shadow-sm cursor-pointer w-full sm:w-auto"
             >
               <span>➕</span>
               <span>เพิ่มปาร์ตี้ใน {team.name}</span>
             </button>
           )}
 
-          {!isReadOnly && onRenumberParties && parties.length > 0 && (
-            <button
-              type="button"
-              onClick={() => onRenumberParties(team.id)}
-              className="flex items-center gap-1.5 rounded-xl border border-sky-300 dark:border-sky-600/30 bg-sky-50 dark:bg-sky-950/30 px-3 py-1.5 text-xs font-medium text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/40 hover:text-sky-900 dark:hover:text-white transition shadow-sm cursor-pointer"
-              title="จัดเรียงเลขปาร์ตี้ใหม่ 1 ถึง N"
-            >
-              <span>🔢</span>
-              <span className="hidden sm:inline">รันเลขตี้ 1-N</span>
-            </button>
-          )}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {onExportTeamImage && (
+              <button
+                type="button"
+                onClick={() => onExportTeamImage(team.id)}
+                className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/70 bg-slate-100 dark:bg-slate-800/80 px-2.5 py-1 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700/80 hover:text-slate-900 dark:hover:text-white transition shadow-sm cursor-pointer"
+                title="ส่งออกรูปทีม"
+              >
+                <span>📷</span>
+                <span>รูป{team.name}</span>
+              </button>
+            )}
 
-          {!isReadOnly && onDeleteTeam && (
-            <button
-              type="button"
-              onClick={() => onDeleteTeam(team.id)}
-              className="flex items-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-600/30 bg-rose-50 dark:bg-rose-950/30 px-3 py-1.5 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 hover:text-rose-900 dark:hover:text-white transition shadow-sm cursor-pointer"
-              title="ลบทีมนี้"
-            >
-              <span>🗑️</span>
-              <span className="hidden sm:inline">ลบทีม</span>
-            </button>
-          )}
+            {!isReadOnly && onRenumberParties && parties.length > 0 && (
+              <button
+                type="button"
+                onClick={() => onRenumberParties(team.id)}
+                className="flex items-center gap-1.5 rounded-xl border border-sky-300 dark:border-sky-600/30 bg-sky-50 dark:bg-sky-950/30 px-2.5 py-1 text-xs font-medium text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-900/40 hover:text-sky-900 dark:hover:text-white transition shadow-sm cursor-pointer"
+                title="จัดเรียงเลขปาร์ตี้ใหม่ 1 ถึง N"
+              >
+                <span>🔢</span>
+                <span className="inline">รันเลขตี้ 1-N</span>
+              </button>
+            )}
+
+            {!isReadOnly && onDeleteTeam && (
+              <button
+                type="button"
+                onClick={() => onDeleteTeam(team.id)}
+                className="flex items-center gap-1.5 rounded-xl border border-rose-300 dark:border-rose-600/30 bg-rose-50 dark:bg-rose-950/30 px-2.5 py-1 text-xs font-medium text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/40 hover:text-rose-900 dark:hover:text-white transition shadow-sm cursor-pointer"
+                title="ลบทีมนี้"
+              >
+                <span>🗑️</span>
+                <span className="inline">ลบทีม</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -213,6 +284,8 @@ export default function TeamSection({
               key={party.id}
               party={party}
               teamName={team.name}
+              teamColor={showTeamColor ? team.color : undefined}
+              showTeamColor={showTeamColor}
               members={members}
               allTeams={allTeams}
               selectedSlot={selectedSlot}

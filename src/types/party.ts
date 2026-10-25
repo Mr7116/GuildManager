@@ -35,6 +35,7 @@ export interface Party {
   category?: 'gvg' | 'siege' | 'polarity' | 'preset' | string;
   lane?: LaneKey;
   slots: (string | null)[]; // Array of 5 member IDs
+  presetId?: string;
 }
 
 export interface Team {

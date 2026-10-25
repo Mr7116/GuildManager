@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useGuildStore } from '@/lib/guildStore';
 import { getJobMeta, getJobFamily } from '@/constants/jobs';
 import { getGvgLane } from '@/constants/lanes';
+import { getTeamColorConfig } from '@/constants/teamColors';
 import { useTheme } from '@/lib/theme';
 import JobEmblem from '@/components/tactical/JobEmblem';
 
@@ -357,6 +358,8 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
   const renderPartyCard = (party: any, team: any, isEightCols: boolean) => {
     const laneMeta = getGvgLane(party.lane);
     const filledCount = party.slots?.filter(Boolean).length || 0;
+    const isSiegeColor = mode === 'siege';
+    const teamColorCfg = getTeamColorConfig(team?.color);
 
     return (
       <div
@@ -371,7 +374,7 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
         {isEightCols ? (
           <div className="space-y-1 pb-1">
             <div className="flex items-center justify-between text-[11px] gap-1">
-              <h3 style={{ whiteSpace: 'nowrap', lineHeight: '1.8' }} className={`font-extrabold text-xs sm:text-sm tracking-wide truncate max-w-[110px] ${
+              <h3 style={{ whiteSpace: 'nowrap', lineHeight: '2' }} className={`font-extrabold text-xl tracking-wide truncate max-w-[110px] ${
                 isDarkPoster ? 'text-white' : 'text-slate-900'
               }`}>
                 {party.name}
@@ -387,13 +390,25 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
               </span>
             </div>
             <div className="flex items-center gap-1 text-[10px] pt-0.5 overflow-hidden">
-              <span
-                className={`px-1.5 py-0.5 rounded font-bold text-[9px] whitespace-nowrap shrink-0 border ${
-                  isDarkPoster ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-200 text-slate-700 border-slate-300'
-                }`}
-              >
-                {team.name}
-              </span>
+              {isSiegeColor ? (
+                <span
+                  className={`px-1.5 py-0.5 rounded font-bold text-[9px] whitespace-nowrap shrink-0 border flex items-center gap-1 ${teamColorCfg.badgeClass}`}
+                >
+                  <span
+                    style={{ backgroundColor: teamColorCfg.hex }}
+                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                  />
+                  <span>{team.name}</span>
+                </span>
+              ) : (
+                <span
+                  className={`px-1.5 py-0.5 rounded font-bold text-[9px] whitespace-nowrap shrink-0 border ${
+                    isDarkPoster ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-200 text-slate-700 border-slate-300'
+                  }`}
+                >
+                  {team.name}
+                </span>
+              )}
               {modeConfig.showLane && (
                 <span
                   style={{ borderColor: `${laneMeta.hexAccent}90`, color: isDarkPoster ? laneMeta.hexAccent : '#0f172a', lineHeight: '1.8' }}
@@ -411,13 +426,25 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
           <div className="space-y-1.5 pb-1">
             <div className="flex items-center justify-between text-xs">
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span
-                  className={`px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap border ${
-                    isDarkPoster ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-200 text-slate-700 border-slate-300'
-                  }`}
-                >
-                  {team.name}
-                </span>
+                {isSiegeColor ? (
+                  <span
+                    className={`px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap border flex items-center gap-1.5 ${teamColorCfg.badgeClass}`}
+                  >
+                    <span
+                      style={{ backgroundColor: teamColorCfg.hex }}
+                      className="w-2 h-2 rounded-full shrink-0"
+                    />
+                    <span>{team.name}</span>
+                  </span>
+                ) : (
+                  <span
+                    className={`px-2 py-0.5 rounded font-bold text-xs whitespace-nowrap border ${
+                      isDarkPoster ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-200 text-slate-700 border-slate-300'
+                    }`}
+                  >
+                    {team.name}
+                  </span>
+                )}
                 {modeConfig.showLane && (
                   <span
                     style={{ borderColor: `${laneMeta.hexAccent}90`, color: isDarkPoster ? laneMeta.hexAccent : '#0f172a', lineHeight: '1.8' }}
@@ -485,7 +512,7 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
                   background: isDarkPoster ? bgTint : `linear-gradient(${bgTint}, ${bgTint}), #ffffff`,
                   borderColor: borderTint,
                 }}
-                className={`h-12 rounded-xl border ${isEightCols ? 'px-2' : 'px-2.5'} flex items-center justify-between gap-2 shadow-sm overflow-hidden member-slot-card`}
+                className={`h-18 rounded-xl border ${isEightCols ? 'px-2' : 'px-2.5'} flex items-center justify-between gap-2 shadow-sm overflow-hidden member-slot-card`}
               >
                 <div className="flex items-center gap-2 min-w-0 flex-1 overflow-hidden">
                   <div className="shrink-0 flex items-center justify-center">
@@ -493,8 +520,8 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
                   </div>
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <div
-                      style={{ whiteSpace: 'nowrap', lineHeight: '1.8' }}
-                      className={`truncate font-extrabold text-xs sm:text-sm ${
+                      style={{ whiteSpace: 'nowrap', lineHeight: '2' }}
+                      className={`truncate font-extrabold text-xl ${
                         isDarkPoster ? 'text-white' : 'text-slate-900'
                       }`}
                     >
@@ -816,21 +843,16 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">{modeConfig.icon}</span>
                   <div>
-                    <div className="flex items-center gap-2.5">
-                      <h2 className={`text-base sm:text-lg font-extrabold tracking-wide ${isDarkPoster ? 'text-white' : 'text-slate-900'}`}>
-                        {modeConfig.fieldTitle}
-                      </h2>
-                      <span className={`rounded-full ${modeConfig.badgeColor} px-2.5 py-0.5 text-xs font-extrabold text-white shadow-sm`}>
-                        ครอบคลุม {mainTeams.length} ทีม ({mainTeams.map((t) => t.name).join(', ')})
-                      </span>
-                    </div>
+                    <h2 className={`text-base sm:text-lg font-extrabold tracking-wide ${isDarkPoster ? 'text-white' : 'text-slate-900'}`}>
+                      {modeConfig.fieldTitle}
+                    </h2>
                     <p className={`text-xs mt-0.5 ${isDarkPoster ? 'text-slate-400' : 'text-slate-500'}`}>
                       {modeConfig.fieldSubtitle}
                     </p>
                   </div>
                 </div>
                 <div
-                  className={`flex items-center gap-3 text-xs px-4 py-2 rounded-xl border ${
+                  className={`flex items-center gap-3 text-xs px-4 py-2 rounded-xl border shrink-0 whitespace-nowrap ${
                     isDarkPoster
                       ? 'text-slate-300 bg-slate-950/80 border-slate-800'
                       : 'text-slate-700 bg-slate-50 border-slate-200 shadow-xs'
@@ -863,35 +885,56 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
                           }}
                         >
                           {/* Row 1: Team Headers spanning their parties */}
-                          {group.teams.map((item) => (
-                            <div
-                              key={`hdr_${item.team.id}`}
-                              style={{ gridColumn: `span ${item.parties.length}` }}
-                              className={`rounded-xl px-3 py-2 flex items-center justify-between border ${
-                                isDarkPoster
-                                  ? 'bg-slate-800/90 border-slate-700 text-white shadow-sm'
-                                  : 'bg-slate-100 border-slate-300 text-slate-900 shadow-xs'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span style={{ whiteSpace: 'nowrap', lineHeight: '1.8' }} className="font-extrabold text-sm sm:text-base tracking-wide truncate">
-                                  {item.team.name}
-                                </span>
-                                <span
-                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${
-                                    isDarkPoster
-                                      ? 'bg-sky-950 text-sky-300 border-sky-800'
-                                      : 'bg-sky-100 text-sky-800 border-sky-200'
-                                  }`}
-                                >
-                                  {item.parties.length} ตี้
-                                </span>
+                          {group.teams.map((item) => {
+                            const isSiege = mode === 'siege';
+                            const itemColorCfg = getTeamColorConfig(item.team.color);
+                            return (
+                              <div
+                                key={`hdr_${item.team.id}`}
+                                style={{
+                                  gridColumn: `span ${item.parties.length}`,
+                                  borderLeft: `4px solid ${itemColorCfg.hex}`,
+                                  borderColor: isSiege
+                                    ? (isDarkPoster ? `${itemColorCfg.hex}55` : `${itemColorCfg.hex}65`)
+                                    : (isDarkPoster ? '#334155' : '#cbd5e1'),
+                                  background: isSiege
+                                    ? (isDarkPoster
+                                        ? `linear-gradient(90deg, ${itemColorCfg.hex}33 0%, ${itemColorCfg.hex}15 100%)`
+                                        : `linear-gradient(90deg, ${itemColorCfg.hex}22 0%, ${itemColorCfg.hex}0a 100%)`)
+                                    : (isDarkPoster ? 'rgba(30, 41, 59, 0.9)' : '#f1f5f9'),
+                                }}
+                                className={`rounded-xl px-3 py-2 flex items-center justify-between border shadow-sm ${
+                                  isDarkPoster ? 'text-white' : 'text-slate-900'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  {isSiege && (
+                                    <span
+                                      style={{ backgroundColor: itemColorCfg.hex }}
+                                      className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
+                                    />
+                                  )}
+                                  <span style={{ whiteSpace: 'nowrap', lineHeight: '2' }} className="font-extrabold text-xl tracking-wide truncate">
+                                    {item.team.name}
+                                  </span>
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold border shrink-0 ${
+                                      isSiege
+                                        ? itemColorCfg.badgeClass
+                                        : isDarkPoster
+                                        ? 'bg-slate-800 text-slate-300 border-slate-700'
+                                        : 'bg-slate-100 text-slate-700 border-slate-200'
+                                    }`}
+                                  >
+                                    {item.parties.length} ตี้
+                                  </span>
+                                </div>
+                                <div className={`text-xs shrink-0 ${isDarkPoster ? 'text-slate-300' : 'text-slate-600'}`}>
+                                  สมาชิก: <strong className={isDarkPoster ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold'}>{item.teamFilled}/{item.parties.length * 5} คน</strong>
+                                </div>
                               </div>
-                              <div className={`text-xs shrink-0 ${isDarkPoster ? 'text-slate-400' : 'text-slate-500'}`}>
-                                สมาชิก: <strong className={isDarkPoster ? 'text-emerald-400 font-bold' : 'text-emerald-700 font-bold'}>{item.teamFilled}/{item.parties.length * 5} คน</strong>
-                              </div>
-                            </div>
-                          ))}
+                            );
+                          })}
 
                           {/* Row 2: All Parties from the combined teams aligned side-by-side in 1 row of 8 columns */}
                           {group.teams.flatMap((item) =>
@@ -904,22 +947,47 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
 
                   /* Standard per-team box layout when a team cannot pair into an exact 8-party row */
                   const { team, parties, teamFilled } = group.teams[0];
+                  const isSiege = mode === 'siege';
+                  const teamColorCfg = getTeamColorConfig(team.color);
                   const gridColsClass = parties.length <= 4 ? 'grid-cols-4' : rowLayout === '8' ? 'grid-cols-8' : 'grid-cols-4';
                   const isEightCols = gridColsClass === 'grid-cols-8';
 
                   return (
                     <div
                       key={team.id}
+                      style={isSiege ? { borderLeft: `4px solid ${teamColorCfg.hex}` } : undefined}
                       className={`rounded-2xl border p-4 space-y-3 ${
                         isDarkPoster ? 'border-slate-800 bg-[#0c1220] shadow-inner' : 'border-slate-200 bg-white shadow-sm'
                       }`}
                     >
-                      <div className="flex items-center justify-between text-xs pb-1">
+                      <div
+                        style={isSiege ? {
+                          borderLeft: `4px solid ${teamColorCfg.hex}`,
+                          borderColor: isDarkPoster ? `${teamColorCfg.hex}55` : `${teamColorCfg.hex}65`,
+                          background: isDarkPoster
+                            ? `linear-gradient(90deg, ${teamColorCfg.hex}33 0%, ${teamColorCfg.hex}15 100%)`
+                            : `linear-gradient(90deg, ${teamColorCfg.hex}22 0%, ${teamColorCfg.hex}0a 100%)`,
+                        } : undefined}
+                        className={isSiege
+                          ? `rounded-xl px-3.5 py-2 flex items-center justify-between border shadow-sm ${
+                              isDarkPoster ? 'text-white' : 'text-slate-900'
+                            }`
+                          : 'flex items-center justify-between text-xs pb-1'
+                        }
+                      >
                         <div className="flex items-center gap-2.5">
+                          {isSiege && (
+                            <span
+                              style={{ backgroundColor: teamColorCfg.hex }}
+                              className="w-3 h-3 rounded-full shrink-0 shadow-xs"
+                            />
+                          )}
                           <span style={{ whiteSpace: 'nowrap', lineHeight: '1.8' }} className={`font-extrabold text-base tracking-wide ${isDarkPoster ? 'text-white' : 'text-slate-900'}`}>{team.name}</span>
                           <span style={{ whiteSpace: 'nowrap', lineHeight: '1.8' }}
                             className={`px-2 py-0.5 rounded-md text-[11px] font-bold border ${
-                              isDarkPoster
+                              isSiege
+                                ? teamColorCfg.badgeClass
+                                : isDarkPoster
                                 ? 'bg-slate-800 text-slate-300 border-slate-700'
                                 : 'bg-slate-100 text-slate-700 border-slate-200'
                             }`}
@@ -927,7 +995,7 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
                             {mode === 'gvg' ? 'สนามหลัก' : modeConfig.fieldTitle}
                           </span>
                         </div>
-                        <div className={`text-xs ${isDarkPoster ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <div className={`text-xs ${isDarkPoster ? 'text-slate-300' : 'text-slate-600'}`}>
                           จำนวนปาร์ตี้: <span className={`font-bold ${isDarkPoster ? 'text-slate-200' : 'text-slate-900'}`}>{parties.length} ตี้</span> • สมาชิกในทีม: <span className={`font-bold ${isDarkPoster ? 'text-emerald-400' : 'text-emerald-700'}`}>{teamFilled}/{parties.length * 5} คน</span>
                         </div>
                       </div>
@@ -958,21 +1026,16 @@ export default function ExportImageModal({ isOpen, onClose, mode = 'gvg' }: Expo
                 <div className="flex items-center gap-3">
                   <span className="text-2xl">🚩</span>
                   <div>
-                    <div className="flex items-center gap-2.5">
-                      <h2 className={`text-base sm:text-lg font-extrabold tracking-wide ${isDarkPoster ? 'text-white' : 'text-slate-900'}`}>
-                        สนามรอง (Sub Field)
-                      </h2>
-                      <span className="rounded-full bg-cyan-600 px-2.5 py-0.5 text-xs font-extrabold text-white shadow-sm">
-                        ครอบคลุม {subTeams.length} ทีม ({subTeams.map((t) => t.name).join(', ')})
-                      </span>
-                    </div>
+                    <h2 className={`text-base sm:text-lg font-extrabold tracking-wide ${isDarkPoster ? 'text-white' : 'text-slate-900'}`}>
+                      สนามรอง (Sub Field)
+                    </h2>
                     <p className={`text-xs mt-0.5 ${isDarkPoster ? 'text-slate-400' : 'text-slate-500'}`}>
                       ทัพหนุนประจำสมรภูมิรอง
                     </p>
                   </div>
                 </div>
                 <div
-                  className={`flex items-center gap-3 text-xs px-4 py-2 rounded-xl border ${
+                  className={`flex items-center gap-3 text-xs px-4 py-2 rounded-xl border shrink-0 whitespace-nowrap ${
                     isDarkPoster
                       ? 'text-slate-300 bg-slate-950/80 border-slate-800'
                       : 'text-slate-700 bg-slate-50 border-slate-200 shadow-xs'

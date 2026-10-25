@@ -93,7 +93,33 @@ export default function EventsPage() {
   const [analyticsSearch, setAnalyticsSearch] = useState('');
   const [analyticsTeamFilter, setAnalyticsTeamFilter] = useState('all');
   const [analyticsMemberFilter, setAnalyticsMemberFilter] = useState<'all' | 'has_leave_or_absent' | 'has_absent' | 'has_leave' | 'perfect'>('all');
-  const [analyticsSort, setAnalyticsSort] = useState<'leave_absent_desc' | 'absent_desc' | 'leave_desc' | 'joined_desc'>('leave_absent_desc');
+  const [analyticsSortField, setAnalyticsSortField] = useState<string>('leave_absent');
+  const [analyticsSortDir, setAnalyticsSortDir] = useState<'asc' | 'desc'>('desc');
+
+  const handleAnalyticsSort = (field: string) => {
+    if (analyticsSortField === field) {
+      setAnalyticsSortDir((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setAnalyticsSortField(field);
+      if (field === 'member' || field === 'team') {
+        setAnalyticsSortDir('asc');
+      } else {
+        setAnalyticsSortDir('desc');
+      }
+    }
+  };
+
+  const renderAnalyticsSortIcon = (field: string) => {
+    const isActive = analyticsSortField === field;
+    if (!isActive) {
+      return <span className="opacity-0 group-hover:opacity-40 text-[10px] ml-1 transition select-none">↕</span>;
+    }
+    return (
+      <span className="text-amber-400 text-[11px] font-bold ml-1 inline-block select-none">
+        {analyticsSortDir === 'asc' ? '▲' : '▼'}
+      </span>
+    );
+  };
 
   const currentMondayIso = useMemo(() => getWeekMondayISO(new Date()), []);
 
@@ -425,12 +451,34 @@ export default function EventsPage() {
         return true;
       })
       .sort((a, b) => {
-        if (analyticsSort === 'absent_desc') return b.totalAbsent - a.totalAbsent || b.totalLeaveAndAbsent - a.totalLeaveAndAbsent;
-        if (analyticsSort === 'leave_desc') return b.totalLeave - a.totalLeave || b.totalLeaveAndAbsent - a.totalLeaveAndAbsent;
-        if (analyticsSort === 'joined_desc') return b.totalJoined - a.totalJoined;
-        return b.totalLeaveAndAbsent - a.totalLeaveAndAbsent || b.totalAbsent - a.totalAbsent;
+        let diff = 0;
+        if (analyticsSortField === 'member') {
+          diff = (a.member.name || '').localeCompare(b.member.name || '', 'th', { sensitivity: 'base' });
+        } else if (analyticsSortField === 'team') {
+          const aTeam = `${a.team?.name || 'zzz'} - ${a.party?.name || 'zzz'}`;
+          const bTeam = `${b.team?.name || 'zzz'} - ${b.party?.name || 'zzz'}`;
+          diff = aTeam.localeCompare(bTeam, 'th', { sensitivity: 'base' });
+        } else if (analyticsSortField === 'leave') {
+          diff = a.totalLeave - b.totalLeave || a.totalLeaveAndAbsent - b.totalLeaveAndAbsent;
+        } else if (analyticsSortField === 'absent') {
+          diff = a.totalAbsent - b.totalAbsent || a.totalLeaveAndAbsent - b.totalLeaveAndAbsent;
+        } else if (analyticsSortField === 'leave_absent') {
+          diff = a.totalLeaveAndAbsent - b.totalLeaveAndAbsent || a.totalAbsent - b.totalAbsent;
+        } else if (analyticsSortField === 'joined') {
+          diff = a.totalJoined - b.totalJoined;
+        } else {
+          // Event key sorting
+          const aEv = a.byEvent[analyticsSortField];
+          const bEv = b.byEvent[analyticsSortField];
+          if (aEv && bEv) {
+            const aScore = aEv.absent * 10 + aEv.leave * 2;
+            const bScore = bEv.absent * 10 + bEv.leave * 2;
+            diff = aScore - bScore || aEv.joined - bEv.joined;
+          }
+        }
+        return analyticsSortDir === 'asc' ? diff : -diff;
       });
-  }, [analyticsData.memberStats, analyticsSearch, analyticsTeamFilter, analyticsMemberFilter, analyticsSort]);
+  }, [analyticsData.memberStats, analyticsSearch, analyticsTeamFilter, analyticsMemberFilter, analyticsSortField, analyticsSortDir]);
 
   // Filtered members list for Matrix Table (Tab 1)
   const filteredMatrixMembers = useMemo(() => {
@@ -865,14 +913,42 @@ export default function EventsPage() {
               </select>
 
               <select
-                value={analyticsSort}
-                onChange={(e) => setAnalyticsSort(e.target.value as any)}
+                value={
+                  analyticsSortField === 'leave_absent' && analyticsSortDir === 'desc'
+                    ? 'leave_absent_desc'
+                    : analyticsSortField === 'absent' && analyticsSortDir === 'desc'
+                    ? 'absent_desc'
+                    : analyticsSortField === 'leave' && analyticsSortDir === 'desc'
+                    ? 'leave_desc'
+                    : analyticsSortField === 'joined' && analyticsSortDir === 'desc'
+                    ? 'joined_desc'
+                    : 'custom'
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === 'leave_absent_desc') {
+                    setAnalyticsSortField('leave_absent');
+                    setAnalyticsSortDir('desc');
+                  } else if (val === 'absent_desc') {
+                    setAnalyticsSortField('absent');
+                    setAnalyticsSortDir('desc');
+                  } else if (val === 'leave_desc') {
+                    setAnalyticsSortField('leave');
+                    setAnalyticsSortDir('desc');
+                  } else if (val === 'joined_desc') {
+                    setAnalyticsSortField('joined');
+                    setAnalyticsSortDir('desc');
+                  }
+                }}
                 className="bg-slate-950 border border-amber-500/40 rounded-xl px-3 py-1.5 text-xs text-amber-300 font-bold focus:outline-none"
               >
                 <option value="leave_absent_desc">เรียงตาม: รวม ลา + ขาด กิจกรรม (มาก ➔ น้อย)</option>
                 <option value="absent_desc">เรียงตาม: ขาดกิจกรรม (มาก ➔ น้อย)</option>
                 <option value="leave_desc">เรียงตาม: แจ้งลากิจกรรม (มาก ➔ น้อย)</option>
                 <option value="joined_desc">เรียงตาม: เข้ากิจกรรมมากที่สุด (มาก ➔ น้อย)</option>
+                <option value="custom" disabled hidden>
+                  เรียงตาม: เลือกจากหัวตาราง
+                </option>
               </select>
             </div>
           </div>
@@ -1187,21 +1263,104 @@ export default function EventsPage() {
               <table className="w-full text-left text-xs text-slate-300 border-collapse">
                 <thead className="bg-[#090d16] text-slate-400 uppercase text-[11px] border-b border-slate-800 select-none">
                   <tr>
-                    <th className="py-3 px-3 min-w-[170px]">อันดับ / สมาชิก</th>
-                    <th className="py-3 px-2.5 min-w-[120px]">ทีม / ปาร์ตี้</th>
+                    <th
+                      onClick={() => handleAnalyticsSort('member')}
+                      className={`py-3 px-3 min-w-[170px] cursor-pointer hover:bg-slate-800/60 hover:text-white transition group ${
+                        analyticsSortField === 'member' ? 'bg-slate-800/50 text-amber-300 font-bold' : ''
+                      }`}
+                      title="คลิกเพื่อจัดเรียงตามชื่อสมาชิก"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>อันดับ / สมาชิก</span>
+                        {renderAnalyticsSortIcon('member')}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleAnalyticsSort('team')}
+                      className={`py-3 px-2.5 min-w-[120px] cursor-pointer hover:bg-slate-800/60 hover:text-white transition group ${
+                        analyticsSortField === 'team' ? 'bg-slate-800/50 text-amber-300 font-bold' : ''
+                      }`}
+                      title="คลิกเพื่อจัดเรียงตามทีมและปาร์ตี้"
+                    >
+                      <div className="flex items-center gap-1">
+                        <span>ทีม / ปาร์ตี้</span>
+                        {renderAnalyticsSortIcon('team')}
+                      </div>
+                    </th>
+
                     {WEEKLY_EVENTS_CONFIG.map((ev) => (
-                      <th key={ev.key} className="py-3 px-2 text-center min-w-[95px]">
+                      <th
+                        key={ev.key}
+                        onClick={() => handleAnalyticsSort(ev.key)}
+                        className={`py-3 px-2 text-center min-w-[95px] cursor-pointer hover:bg-slate-800/60 hover:text-white transition group ${
+                          analyticsSortField === ev.key ? 'bg-slate-800/50 text-amber-300 font-bold' : ''
+                        }`}
+                        title={`คลิกเพื่อจัดเรียงตามกิจกรรม ${ev.name} (ขาด/ลา/เข้า)`}
+                      >
                         <div className="flex flex-col items-center justify-center">
-                          <span className="text-xs">{ev.icon}</span>
+                          <div className="flex items-center justify-center gap-0.5">
+                            <span className="text-xs">{ev.icon}</span>
+                            {renderAnalyticsSortIcon(ev.key)}
+                          </div>
                           <span className="text-[10px] font-bold text-slate-300 truncate max-w-[85px] mt-0.5">{ev.shortName}</span>
                           <span className="text-[8px] text-slate-500 font-normal lowercase">(เข้า/ลา/ขาด)</span>
                         </div>
                       </th>
                     ))}
-                    <th className="py-3 px-2 text-center min-w-[85px] text-amber-300">🔔 รวมลากิจกรรม</th>
-                    <th className="py-3 px-2 text-center min-w-[85px] text-rose-300">❌ รวมขาดกิจกรรม</th>
-                    <th className="py-3 px-2.5 text-center min-w-[110px] text-rose-200">🏖️ รวมลา+ขาด</th>
-                    <th className="py-3 px-2 text-center min-w-[90px] text-emerald-300">✅ เข้าร่วมสะสม (%)</th>
+
+                    <th
+                      onClick={() => handleAnalyticsSort('leave')}
+                      className={`py-3 px-2 text-center min-w-[85px] cursor-pointer hover:bg-slate-800/60 transition group ${
+                        analyticsSortField === 'leave' ? 'bg-slate-800/50 text-amber-300 font-bold' : 'text-amber-300/80 hover:text-amber-300'
+                      }`}
+                      title="คลิกเพื่อจัดเรียงตามจำนวนแจ้งลา (มาก ➔ น้อย / น้อย ➔ มาก)"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <span>🔔 รวมลากิจกรรม</span>
+                        {renderAnalyticsSortIcon('leave')}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleAnalyticsSort('absent')}
+                      className={`py-3 px-2 text-center min-w-[85px] cursor-pointer hover:bg-slate-800/60 transition group ${
+                        analyticsSortField === 'absent' ? 'bg-slate-800/50 text-rose-300 font-bold' : 'text-rose-300/80 hover:text-rose-300'
+                      }`}
+                      title="คลิกเพื่อจัดเรียงตามจำนวนขาดกิจกรรม (มาก ➔ น้อย / น้อย ➔ มาก)"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <span>❌ รวมขาดกิจกรรม</span>
+                        {renderAnalyticsSortIcon('absent')}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleAnalyticsSort('leave_absent')}
+                      className={`py-3 px-2.5 text-center min-w-[110px] cursor-pointer hover:bg-slate-800/60 transition group ${
+                        analyticsSortField === 'leave_absent' ? 'bg-slate-800/50 text-rose-200 font-bold' : 'text-rose-200/80 hover:text-rose-200'
+                      }`}
+                      title="คลิกเพื่อจัดเรียงตามผลรวมลา + ขาด (มาก ➔ น้อย / น้อย ➔ มาก)"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <span>🏖️ รวมลา+ขาด</span>
+                        {renderAnalyticsSortIcon('leave_absent')}
+                      </div>
+                    </th>
+
+                    <th
+                      onClick={() => handleAnalyticsSort('joined')}
+                      className={`py-3 px-2 text-center min-w-[90px] cursor-pointer hover:bg-slate-800/60 transition group ${
+                        analyticsSortField === 'joined' ? 'bg-slate-800/50 text-emerald-300 font-bold' : 'text-emerald-300/80 hover:text-emerald-300'
+                      }`}
+                      title="คลิกเพื่อจัดเรียงตามเปอร์เซ็นต์เข้าร่วมสะสม"
+                    >
+                      <div className="flex items-center justify-center gap-1">
+                        <span>✅ เข้าร่วมสะสม (%)</span>
+                        {renderAnalyticsSortIcon('joined')}
+                      </div>
+                    </th>
+
                     <th className="py-3 px-3 min-w-[220px]">รายละเอียดกิจกรรมที่ ลา / ขาด & หมายเหตุ</th>
                   </tr>
                 </thead>

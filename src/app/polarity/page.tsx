@@ -365,6 +365,7 @@ export default function PolarityPage() {
         onClose={() => setImportPresetPartyId(null)}
         targetParty={polarityParties.find((p) => p.id === importPresetPartyId) || null}
         presetParties={presetParties}
+        currentParties={polarityParties}
         members={members}
         onConfirm={(presetPartyId) => {
           if (importPresetPartyId) {

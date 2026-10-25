@@ -51,6 +51,7 @@ export interface GuildState {
   renumberTeamParties: (teamId: string) => void;
   setTeamField: (teamId: string, field: FieldZoneKey) => void;
   renameTeam: (teamId: string, newName: string) => void;
+  setTeamColor: (teamId: string, color: string) => void;
   removeMemberFromSlot: (partyId: string, slotIndex: number) => void;
   placeMemberInSlot: (partyId: string, slotIndex: number, memberId: string) => void;
   swapSlots: (fromPartyId: string, fromSlotIdx: number, toPartyId: string, toSlotIdx: number) => void;
@@ -480,6 +481,12 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
 
   const renameTeam = (teamId: string, newName: string) => {
     setGvgTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, name: newName } : t)));
+    setSiegeTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, name: newName } : t)));
+  };
+
+  const setTeamColor = (teamId: string, color: string) => {
+    setGvgTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, color } : t)));
+    setSiegeTeams((prev) => prev.map((t) => (t.id === teamId ? { ...t, color } : t)));
   };
 
   const removeMemberFromSlot = (partyId: string, slotIndex: number) => {
@@ -563,7 +570,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         });
         return cleaned.map((p) => {
           if (p.id !== targetPartyId) return p;
-          return { ...p, slots: presetSlots };
+          return { ...p, slots: presetSlots, presetId: presetPartyId };
         });
       });
     } else if (mode === 'siege') {
@@ -577,7 +584,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         });
         return cleaned.map((p) => {
           if (p.id !== targetPartyId) return p;
-          return { ...p, slots: presetSlots };
+          return { ...p, slots: presetSlots, presetId: presetPartyId };
         });
       });
     } else if (mode === 'polarity') {
@@ -591,7 +598,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         });
         return cleaned.map((p) => {
           if (p.id !== targetPartyId) return p;
-          return { ...p, slots: presetSlots };
+          return { ...p, slots: presetSlots, presetId: presetPartyId };
         });
       });
     }
@@ -640,6 +647,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         renumberTeamParties,
         setTeamField,
         renameTeam,
+        setTeamColor,
         removeMemberFromSlot,
         placeMemberInSlot,
         swapSlots,
