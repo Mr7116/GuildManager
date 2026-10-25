@@ -1,0 +1,677 @@
+'use client';
+
+import React, { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
+import Image from 'next/image';
+import { useGuildStore } from '@/lib/guildStore';
+import { useAuth } from '@/lib/auth';
+import JobEmblem from '@/components/tactical/JobEmblem';
+import ThemeToggle from '@/components/layout/ThemeToggle';
+import { AuctionItem, AuctionRound } from '@/types/auction';
+
+interface MemberAuctionViewProps {
+  onSwitchToAdmin?: () => void;
+}
+
+export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionViewProps) {
+  const {
+    guildName,
+    members,
+    auctionRounds,
+    auctionItems,
+    addMemberToAuction,
+    removeMemberFromAuction,
+  } = useGuildStore();
+
+  const { isAuthenticated } = useAuth();
+
+  // Member selection
+  const [selectedMemberId, setSelectedMemberId] = useState<string>('');
+  const [memberSearch, setMemberSearch] = useState<string>('');
+  const [itemSearch, setItemSearch] = useState<string>('');
+  const [activeTab, setActiveTab] = useState<'active' | 'my' | 'all'>('active');
+  const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
+  const [toastMsg, setToastMsg] = useState<{ text: string; isError?: boolean } | null>(null);
+
+  // Restore saved member from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('Moonz_auction_selected_member');
+      if (saved && members.some((m) => m.id === saved)) {
+        setSelectedMemberId(saved);
+      }
+    } catch {}
+  }, [members]);
+
+  // Handle member selection
+  const handleSelectMember = (id: string) => {
+    setSelectedMemberId(id);
+    try {
+      localStorage.setItem('Moonz_auction_selected_member', id);
+    } catch {}
+  };
+
+  // Selected member object
+  const currentMember = useMemo(() => {
+    return members.find((m) => m.id === selectedMemberId) || null;
+  }, [members, selectedMemberId]);
+
+  // Current active round (or newest)
+  const currentRound: AuctionRound | null = useMemo(() => {
+    if (auctionRounds.length === 0) return null;
+    return auctionRounds.find((r) => r.status === 'active') || auctionRounds[0];
+  }, [auctionRounds]);
+
+  // Items for this round
+  const roundItems: AuctionItem[] = useMemo(() => {
+    if (!currentRound) return [];
+    return auctionItems.filter((item) => {
+      const rId = item.roundId || auctionRounds[0]?.id || 'round_default';
+      return rId === currentRound.id;
+    });
+  }, [auctionItems, currentRound, auctionRounds]);
+
+  // Open items (status === 'active')
+  const activeItems = useMemo(() => {
+    return roundItems.filter((item) => item.status === 'active');
+  }, [roundItems]);
+
+  // Items joined by selected member
+  const myRegisteredItems = useMemo(() => {
+    if (!selectedMemberId) return [];
+    return roundItems.filter((item) =>
+      (item.entries || []).some((e) => e.memberId === selectedMemberId)
+    );
+  }, [roundItems, selectedMemberId]);
+
+  // Filtered items based on activeTab and search
+  const displayItems = useMemo(() => {
+    let list = roundItems;
+    if (activeTab === 'active') {
+      list = activeItems;
+    } else if (activeTab === 'my') {
+      list = myRegisteredItems;
+    }
+
+    if (itemSearch.trim()) {
+      const q = itemSearch.trim().toLowerCase();
+      list = list.filter((item) => {
+        const matchName = item.accessoryName.toLowerCase().includes(q);
+        const matchSource = item.sourceNote?.toLowerCase().includes(q);
+        return matchName || matchSource;
+      });
+    }
+
+    return list;
+  }, [roundItems, activeItems, myRegisteredItems, activeTab, itemSearch]);
+
+  // Filtered members for member picker
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return members;
+    const q = memberSearch.trim().toLowerCase();
+    return members.filter(
+      (m) =>
+        m.name.toLowerCase().includes(q) ||
+        (m.job && m.job.toLowerCase().includes(q))
+    );
+  }, [members, memberSearch]);
+
+  // Show temporary toast message
+  const showToast = (text: string, isError = false) => {
+    setToastMsg({ text, isError });
+    setTimeout(() => {
+      setToastMsg((prev) => (prev?.text === text ? null : prev));
+    }, 3000);
+  };
+
+  // Join item
+  const handleJoin = (item: AuctionItem) => {
+    if (!currentMember) {
+      showToast('กรุณาเลือกชื่อของคุณด้านบนก่อน', true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (item.status !== 'active') {
+      showToast('รายการนี้ยังไม่เปิดรับรายชื่อ หรือสุ่มเสร็จแล้ว', true);
+      return;
+    }
+
+    addMemberToAuction(item.id, currentMember.id);
+    showToast(`ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`);
+  };
+
+  // Leave item
+  const handleLeave = (item: AuctionItem) => {
+    if (!currentMember) return;
+    if (
+      window.confirm(
+        `คุณต้องการยกเลิกการลงชื่อลุ้น "${item.accessoryName}" ใช่หรือไม่?`
+      )
+    ) {
+      removeMemberFromAuction(item.id, currentMember.id);
+      showToast(`ยกเลิกการลงชื่อ "${item.accessoryName}" เรียบร้อยแล้ว`);
+    }
+  };
+
+  return (
+    <div className="mx-auto max-w-4xl px-3 py-4 sm:px-6 space-y-5 pb-16">
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div
+          className={`fixed bottom-5 right-5 z-50 max-w-md rounded-2xl p-4 text-xs sm:text-sm font-bold shadow-2xl transition-all border animate-bounce ${
+            toastMsg.isError
+              ? 'bg-rose-900/90 text-rose-100 border-rose-500/60'
+              : 'bg-emerald-900/90 text-emerald-100 border-emerald-500/60'
+          }`}
+        >
+          {toastMsg.text}
+        </div>
+      )}
+
+      {/* Top Bar / Header */}
+      <div className="flex flex-col gap-3 rounded-3xl border border-rose-300 dark:border-rose-500/30 bg-white dark:bg-[#0d121f] p-4 sm:p-5 shadow-sm dark:shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-rose-500/20 via-pink-500/15 to-amber-500/20 text-2xl border border-rose-500/30 text-rose-500 dark:text-rose-400 shrink-0">
+              💎
+            </span>
+            <div>
+              <h1 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-wide flex items-center gap-2">
+                <span>ลงชื่อลุ้นรับไอเทมประมูล</span>
+                <span className="text-rose-600 dark:text-rose-400 font-extrabold">
+                  — {guildName}
+                </span>
+              </h1>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                เลือกชื่อตัวละครของคุณ แล้วกดลงชื่อในไอเทมที่ต้องการลุ้นสุ่มวงล้อ (ไม่ต้อง Login)
+              </p>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <ThemeToggle />
+
+            {isAuthenticated ? (
+              onSwitchToAdmin ? (
+                <button
+                  type="button"
+                  onClick={onSwitchToAdmin}
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 transition cursor-pointer"
+                >
+                  <span>👑</span>
+                  <span>โหมดแอดมิน</span>
+                </button>
+              ) : (
+                <Link
+                  href="/auction"
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 transition cursor-pointer"
+                >
+                  <span>👑</span>
+                  <span>โหมดแอดมิน</span>
+                </Link>
+              )
+            ) : (
+              <Link
+                href="/login?redirect=/auction"
+                className="flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition"
+              >
+                <span>🔑</span>
+                <span>แอดมิน</span>
+              </Link>
+            )}
+          </div>
+        </div>
+
+        {/* Current Round Banner */}
+        {currentRound ? (
+          <div className="mt-1 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
+                <span>🎯</span>
+                <span>{currentRound.name}</span>
+              </span>
+
+              {currentRound.status === 'active' ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <span>กำลังเปิดให้สมาชิกลงชื่อ</span>
+                </span>
+              ) : (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
+                  🏆 รอบนี้จบการสุ่มแล้ว
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3 text-slate-500 dark:text-slate-400 text-[11px]">
+              {currentRound.date && (
+                <span>📅 วันที่: <strong className="text-slate-800 dark:text-slate-200">{currentRound.date}</strong></span>
+              )}
+              {currentRound.note && (
+                <span>• 📝 {currentRound.note}</span>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-1 pt-3 border-t border-slate-200 dark:border-slate-800 text-xs text-amber-600 dark:text-amber-400">
+            ⚠️ ยังไม่มีรอบการประมูลเปิดอยู่ในขณะนี้ กรุณารอหัวหน้ากิลด์สร้างรอบใหม่
+          </div>
+        )}
+      </div>
+
+      {/* STEP 1: MEMBER SELECTOR BOX */}
+      <div className="rounded-3xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d121f] p-4 sm:p-5 shadow-sm space-y-3">
+        <div className="flex items-center justify-between">
+          <label className="text-xs sm:text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-rose-600 text-white text-[11px] font-bold">
+              1
+            </span>
+            <span>เลือกชื่อตัวละครของคุณ (Select Your Character):</span>
+          </label>
+
+          {currentMember && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedMemberId('');
+                try {
+                  localStorage.removeItem('Moonz_auction_selected_member');
+                } catch {}
+              }}
+              className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"
+            >
+              🔄 เปลี่ยนตัวละคร
+            </button>
+          )}
+        </div>
+
+        {currentMember ? (
+          /* Selected Member Card View */
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border border-emerald-500/40 bg-emerald-50/50 dark:bg-emerald-950/20">
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white dark:bg-slate-900 border border-emerald-500/30 shadow-sm shrink-0">
+                <JobEmblem job={currentMember.job} size={28} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-extrabold text-base text-slate-900 dark:text-white">
+                    {currentMember.name}
+                  </span>
+                  {currentMember.title && (
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
+                      {currentMember.title}
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2 mt-0.5">
+                  <span>อาชีพ: <strong className="text-slate-800 dark:text-slate-200">{currentMember.job || '-'}</strong></span>
+                  <span>•</span>
+                  <span>Lv.{currentMember.lv || 1}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Registered summary pill */}
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <div className="px-3 py-1.5 rounded-xl border border-emerald-500/30 bg-white dark:bg-slate-900/80 text-xs font-bold text-emerald-700 dark:text-emerald-300 shadow-sm">
+                ลงชื่อไว้ในรอบนี้: <strong className="font-mono text-sm">{myRegisteredItems.length}</strong> ชิ้น
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Member Search & Dropdown Picker */
+          <div className="space-y-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+              <input
+                type="text"
+                placeholder="ค้นหาชื่อตัวละคร หรือ อาชีพของคุณ..."
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                className="flex-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3.5 py-2 text-xs sm:text-sm text-slate-900 dark:text-white placeholder-slate-400 focus:border-rose-500 focus:outline-none"
+              />
+
+              <select
+                value={selectedMemberId}
+                onChange={(e) => handleSelectMember(e.target.value)}
+                className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-900 dark:text-white focus:border-rose-500 focus:outline-none cursor-pointer"
+              >
+                <option value="">-- คลิกเลือกชื่อของคุณจากรายชื่อ --</option>
+                {filteredMembers.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name} ({m.job || 'ไม่ระบุอาชีพ'}) — Lv.{m.lv || 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {memberSearch.trim() && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-1.5 max-h-44 overflow-y-auto p-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/60 scrollbar-thin">
+                {filteredMembers.map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => handleSelectMember(m.id)}
+                    className="flex items-center gap-2 p-1.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:border-rose-500/60 hover:bg-rose-500/10 text-left transition cursor-pointer"
+                  >
+                    <JobEmblem job={m.job} size={20} />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                      {m.name}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* STEP 2: OPEN AUCTION ITEMS LIST */}
+      <div className="space-y-3">
+        {/* Controls & Filter Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0d121f] shadow-sm">
+          {/* Tabs */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+            <button
+              type="button"
+              onClick={() => setActiveTab('active')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'active'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>🟢 เปิดรับรายชื่ออยู่</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/20 dark:bg-black/30 font-mono">
+                {activeItems.length}
+              </span>
+            </button>
+
+            {currentMember && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('my')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                  activeTab === 'my'
+                    ? 'bg-rose-600 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                }`}
+              >
+                <span>⭐ ชิ้นที่คุณลงชื่อไว้</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/20 dark:bg-black/30 font-mono">
+                  {myRegisteredItems.length}
+                </span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setActiveTab('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer whitespace-nowrap flex items-center gap-1.5 ${
+                activeTab === 'all'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              }`}
+            >
+              <span>ทั้งหมดในรอบ</span>
+              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-slate-200 dark:bg-black/30 font-mono">
+                {roundItems.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Search item */}
+          <input
+            type="text"
+            placeholder="ค้นหาชื่อไอเทม..."
+            value={itemSearch}
+            onChange={(e) => setItemSearch(e.target.value)}
+            className="rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 px-3 py-1.5 text-xs text-slate-900 dark:text-white placeholder-slate-400 focus:border-rose-500 focus:outline-none w-full sm:w-48"
+          />
+        </div>
+
+        {/* Items List */}
+        {displayItems.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-slate-300 dark:border-slate-800 bg-white/40 dark:bg-transparent p-10 text-center space-y-2">
+            <span className="text-3xl">📦</span>
+            <h4 className="text-sm font-bold text-slate-800 dark:text-slate-300">
+              {activeTab === 'active'
+                ? 'ยังไม่มีรายการที่เปิดรับรายชื่อในขณะนี้'
+                : activeTab === 'my'
+                ? 'คุณยังไม่ได้ลงชื่อในไอเทมชิ้นใด'
+                : 'ไม่พบรายการไอเทม'}
+            </h4>
+            <p className="text-xs text-slate-500">
+              {activeTab === 'active'
+                ? 'กรุณารอแอดมินหรือหัวหน้ากิลด์กดเปิดรับรายชื่อไอเทม'
+                : 'คลิกแท็บ "🟢 เปิดรับรายชื่ออยู่" เพื่อเลือกไอเทมที่คุณอยากได้'}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {displayItems.map((item, index) => {
+              const isOpen = item.status === 'active';
+              const isEnded = item.status === 'ended';
+              const isPending = item.status === 'pending';
+              const entries = item.entries || [];
+              const isRegistered = selectedMemberId
+                ? entries.some((e) => e.memberId === selectedMemberId)
+                : false;
+              const isExpanded = expandedItemId === item.id;
+              const isCard = item.itemCategory === 'card' || item.cardQuality === 'Purple';
+              const isRelic = item.itemCategory === 'relic' || item.cardQuality === 'Sage';
+              const imageSrc = isRelic
+                ? `/images/relics/${item.accessoryIcon}.webp`
+                : isCard
+                ? `/images/cards/${item.accessoryIcon}.webp`
+                : `/images/accessories/${item.accessoryIcon}.webp`;
+
+              return (
+                <div
+                  key={item.id}
+                  className={`rounded-2xl border p-3.5 sm:p-4 transition shadow-sm ${
+                    isRegistered
+                      ? 'border-emerald-500/60 bg-emerald-50/40 dark:bg-emerald-950/15'
+                      : isOpen
+                      ? 'border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d121f] hover:border-slate-400'
+                      : 'border-slate-200 dark:border-slate-800/80 bg-slate-50/60 dark:bg-[#0a0e18]/80 opacity-80'
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    {/* Left: Thumbnail & Info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-xs font-mono font-bold text-slate-400 w-5 shrink-0 text-right">
+                        {index + 1}.
+                      </span>
+
+                      {/* Icon */}
+                      <div className={`relative w-13 h-13 shrink-0 rounded-xl border flex items-center justify-center shadow-md ${
+                        isRelic
+                          ? 'border-amber-500/50 bg-amber-950/20'
+                          : isCard
+                          ? 'border-purple-500/50 bg-purple-950/20'
+                          : 'border-rose-500/40 bg-slate-100 dark:bg-[#080d19]'
+                      }`}>
+                        <Image
+                          src={imageSrc}
+                          alt={item.accessoryName}
+                          width={44}
+                          height={44}
+                          unoptimized
+                          className="object-contain drop-shadow"
+                          onError={(e) => {
+                            const fallback = isRelic
+                              ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
+                              : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
+                            (e.target as HTMLImageElement).src = fallback;
+                          }}
+                        />
+                        {isRelic ? (
+                          <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-amber-950/90 border border-amber-500/60 text-amber-200">
+                            Sage
+                          </span>
+                        ) : isCard ? (
+                          <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-purple-950/90 border border-purple-500/60 text-purple-200">
+                            {item.cardSlot || 'MVP'}
+                          </span>
+                        ) : (
+                          item.accessoryLevel && (
+                            <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[8px] font-bold bg-black/90 border border-slate-700 text-amber-300 font-mono">
+                              Lv.{item.accessoryLevel}
+                            </span>
+                          )
+                        )}
+                      </div>
+
+                      {/* Name & Badges */}
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <h4 className="font-extrabold text-sm sm:text-base text-slate-900 dark:text-white truncate">
+                            {item.accessoryName}
+                          </h4>
+
+                          {isRelic ? (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                              🏺 Relic · {item.cardSlot || 'Sage'}
+                            </span>
+                          ) : isCard ? (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/40">
+                              🃏 MVP ม่วง · {item.cardSlot || 'การ์ด'}
+                            </span>
+                          ) : (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-300 border border-rose-500/30">
+                              Red Lv.90
+                            </span>
+                          )}
+
+                          {/* Status */}
+                          {isOpen && (
+                            <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              <span>เปิดรับรายชื่อ</span>
+                            </span>
+                          )}
+                          {isPending && (
+                            <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
+                              ⏳ ยังไม่เปิดรับ
+                            </span>
+                          )}
+                          {isEnded && (
+                            <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40">
+                              🏆 สุ่มเสร็จแล้ว
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Note & Participant Count */}
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                          {item.sourceNote && (
+                            <span>🏷️ {item.sourceNote}</span>
+                          )}
+
+                          {isEnded && item.winnerMemberName ? (
+                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                              <span>ผู้ชนะ:</span>
+                              {item.winnerMemberJob && (
+                                <JobEmblem job={item.winnerMemberJob} size={15} />
+                              )}
+                              <span>{item.winnerMemberName}</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setExpandedItemId(isExpanded ? null : item.id)
+                              }
+                              className="text-amber-600 dark:text-amber-400 font-semibold hover:underline cursor-pointer flex items-center gap-1"
+                            >
+                              <span>👥 ผู้ลงชื่อ {entries.length} คน</span>
+                              <span className="text-[10px]">
+                                {isExpanded ? '▲ ซ่อน' : '▼ ดูรายชื่อ'}
+                              </span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Action Button */}
+                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      {isOpen ? (
+                        isRegistered ? (
+                          <div className="flex items-center gap-2">
+                            <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
+                              <span>✅</span>
+                              <span>ลงชื่อแล้ว</span>
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() => handleLeave(item)}
+                              className="px-2.5 py-1.5 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition cursor-pointer"
+                              title="ยกเลิกการลงชื่อชิ้นนี้"
+                            >
+                              ✕ ยกเลิก
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleJoin(item)}
+                            className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-emerald-950/40 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                          >
+                            <span>+</span>
+                            <span>ลงชื่อลุ้นรับชิ้นนี้</span>
+                          </button>
+                        )
+                      ) : isPending ? (
+                        <span className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-400 text-xs font-semibold">
+                          ⏳ รอเปิดสุ่ม
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-400 text-xs font-semibold">
+                          🔒 ปิดรับแล้ว
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Expanded Participant List */}
+                  {isExpanded && entries.length > 0 && (
+                    <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800/80">
+                      <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
+                        รายชื่อสมาชิกที่ลงชื่อลุ้นชิ้นนี้ ({entries.length} คน):
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {entries.map((e) => {
+                          const isMe = e.memberId === selectedMemberId;
+                          return (
+                            <span
+                              key={e.id}
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold border ${
+                                isMe
+                                  ? 'border-emerald-500 bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 font-bold ring-1 ring-emerald-500'
+                                  : 'border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-300'
+                              }`}
+                            >
+                              {e.memberJob && (
+                                <JobEmblem job={e.memberJob} size={15} />
+                              )}
+                              <span>{e.memberName}</span>
+                              {isMe && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">(คุณ)</span>}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+

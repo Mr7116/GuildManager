@@ -67,7 +67,14 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
 html:not(.dark) [class*="bg-[#0"],
 html:not(.dark) [class*="bg-[#1"],
 html:not(.dark) [class*="bg-[#2"],
-html:not(.dark) [class*="bg-[#3"] {
+html:not(.dark) [class*="bg-[#3"],
+html:not(.dark) [class*="from-[#0"],
+html:not(.dark) [class*="from-[#1"],
+html:not(.dark) [class*="via-[#0"],
+html:not(.dark) [class*="via-[#1"],
+html:not(.dark) [class*="to-[#0"],
+html:not(.dark) [class*="to-[#1"] {
+  background-image: none !important;
   background-color: #cfcfcf !important;
   border-color: #b0b0b0 !important;
 }

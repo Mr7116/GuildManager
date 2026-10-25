@@ -20,14 +20,15 @@ const navItems: NavItem[] = [
   { label: 'ตี้ประจำ (Squads)', href: '/squads', icon: '👥' },
   { label: 'จัดการสมาชิก', href: '/roster', icon: '🛡️' },
   { label: 'กิจกรรมประจำสัปดาห์', href: '/events', icon: '📅' },
+  { label: 'ประมูลไอเทม', href: '/auction', icon: '💎' },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { isAuthenticated, logout } = useAuth();
 
-  // Hide navbar on login, public viewer, and leave request pages
-  if (pathname === '/login' || pathname === '/public' || pathname === '/leave') {
+  // Hide navbar on login, public viewer, leave request, and public auctions pages
+  if (pathname === '/login' || pathname === '/public' || pathname === '/leave' || pathname === '/auctions' || pathname === '/auction/join') {
     return null;
   }
 
@@ -39,7 +40,7 @@ export default function Navbar() {
           <Link href="/gvg" className="flex items-center gap-2.5 transition hover:opacity-90">
             <div className="flex flex-col">
               <span className="text-base font-extrabold tracking-wide text-white">
-                TUMDOOD
+                Moonz
               </span>           
             </div>
           </Link>

@@ -14,7 +14,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const PUBLIC_ROUTES = ['/login', '/public', '/leave'];
+const PUBLIC_ROUTES = ['/login', '/public', '/leave', '/auctions'];
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -25,8 +25,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check auth status on mount
   useEffect(() => {
     const session =
-      localStorage.getItem('TUMDOOD_auth_session') === 'logged_in' ||
-      sessionStorage.getItem('TUMDOOD_auth_session') === 'logged_in';
+      localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
+      sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
 
     setIsAuthenticated(session);
     setIsLoading(false);
@@ -47,19 +47,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!trimmed) return false;
 
     // Fetch cloud PIN
-    let validPin = localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD';
+    let validPin = localStorage.getItem('Moonz_guild_pin') || 'Moonz';
     try {
       const { data } = await supabase
         .from('guild_state')
         .select('parties')
-        .eq('id', 2)
+        .eq('id', 1)
         .maybeSingle();
 
       if (data && Array.isArray(data.parties)) {
         const authEntry = data.parties.find((p: any) => p.id === '__guild_auth_config__');
         if (authEntry && authEntry.pin) {
           validPin = authEntry.pin;
-          localStorage.setItem('TUMDOOD_guild_pin', authEntry.pin);
+          localStorage.setItem('Moonz_guild_pin', authEntry.pin);
         }
       }
     } catch (e) {
@@ -68,13 +68,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (trimmed.toLowerCase() === validPin.toLowerCase()) {
       const storage = remember ? localStorage : sessionStorage;
-      storage.setItem('TUMDOOD_auth_session', 'logged_in');
-      storage.setItem('TUMDOOD_auth_timestamp', Date.now().toString());
+      storage.setItem('Moonz_auth_session', 'logged_in');
+      storage.setItem('Moonz_auth_timestamp', Date.now().toString());
 
       if (remember) {
-        sessionStorage.removeItem('TUMDOOD_auth_session');
+        sessionStorage.removeItem('Moonz_auth_session');
       } else {
-        localStorage.removeItem('TUMDOOD_auth_session');
+        localStorage.removeItem('Moonz_auth_session');
       }
 
       setIsAuthenticated(true);
@@ -85,19 +85,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('TUMDOOD_auth_session');
-    sessionStorage.removeItem('TUMDOOD_auth_session');
+    localStorage.removeItem('Moonz_auth_session');
+    sessionStorage.removeItem('Moonz_auth_session');
     setIsAuthenticated(false);
     router.replace('/login');
   };
 
   const changePin = async (oldPin: string, newPin: string): Promise<{ success: boolean; message: string }> => {
-    let currentPin = localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD';
+    let currentPin = localStorage.getItem('Moonz_guild_pin') || 'Moonz';
     try {
       const { data } = await supabase
         .from('guild_state')
         .select('*')
-        .eq('id', 2)
+        .eq('id', 1)
         .maybeSingle();
 
       let latestParties = data?.parties || [];
@@ -127,15 +127,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       await supabase.from('guild_state').upsert({
-        id: 2,
+        id: 1,
         parties: latestParties,
         updated_at: new Date().toISOString(),
       });
 
-      localStorage.setItem('TUMDOOD_guild_pin', newPin);
+      localStorage.setItem('Moonz_guild_pin', newPin);
       return { success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จแล้ว' };
     } catch (err: any) {
-      localStorage.setItem('TUMDOOD_guild_pin', newPin);
+      localStorage.setItem('Moonz_guild_pin', newPin);
       return { success: true, message: 'บันทึกรหัสผ่านใหม่เรียบร้อยแล้ว' };
     }
   };

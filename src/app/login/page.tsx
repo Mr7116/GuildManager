@@ -84,7 +84,7 @@ function LoginForm() {
         <div className="text-center space-y-3 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
-              TUMDOOD <span className="text-indigo-400">Tactical</span>
+              Moonz <span className="text-indigo-400">Tactical</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1">ระบบจัดผังทัพและยุทธศาสตร์กิลด์วอร์</p>
           </div>
@@ -160,7 +160,13 @@ function LoginForm() {
               href="/public"
               className="block py-2 rounded-xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 text-xs text-slate-300 hover:text-white transition"
             >
-              🌐 มุมมองลูกกิลด์ (ค้นหาตี้ ไม่ต้องใส่รหัส)
+              🌐 มุมมองลูกกิลด์ (ค้นหาตี้)
+            </Link>
+            <Link
+              href="/auctions"
+              className="block py-2 rounded-xl bg-slate-900 hover:bg-slate-800/80 border border-slate-800 text-xs text-slate-300 hover:text-white transition"
+            >
+              💎 ประมูล (ลงชื่อลุ้นไอเทม)
             </Link>
             <Link
               href="/leave"
