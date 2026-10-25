@@ -84,7 +84,7 @@ function LoginForm() {
         <div className="text-center space-y-3 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
-              Moonz <span className="text-indigo-400">Tactical</span>
+              TUMDOOD <span className="text-indigo-400">Tactical</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1">ระบบจัดผังทัพและยุทธศาสตร์กิลด์วอร์</p>
           </div>

@@ -21,7 +21,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Moonz Tactical — ระบบจัดทัพกิลด์วอร์',
+  title: 'TUMDOOD Tactical — ระบบจัดทัพกิลด์วอร์',
   description: 'ระบบจัดผังทัพกิลด์วอร์ ROX (GVG / Siege / Polarity / Squads)',
 };
 
@@ -38,7 +38,7 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var t = localStorage.getItem('Moonz_theme');
+                  var t = localStorage.getItem('TUMDOOD_theme');
                   var isDark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches) || !t;
                   if (t === 'light') isDark = false;
                   if (isDark) {

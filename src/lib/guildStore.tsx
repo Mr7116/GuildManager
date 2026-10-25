@@ -107,7 +107,7 @@ const DEFAULT_GVG_PARTIES: Party[] = [
 const GuildContext = createContext<GuildState | null>(null);
 
 export function GuildProvider({ children }: { children: React.ReactNode }) {
-  const [guildName, setGuildName] = useState('Moonz');
+  const [guildName, setGuildName] = useState('TUMDOOD');
   const [fileTimestamp, setFileTimestamp] = useState('กำลังโหลด...');
   const [members, setMembers] = useState<Member[]>([]);
   const [gvgTeams, setGvgTeams] = useState<Team[]>(DEFAULT_GVG_TEAMS);
@@ -115,7 +115,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   const [siegeTeams, setSiegeTeams] = useState<Team[]>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('Moonz_siege_teams');
+        const cached = localStorage.getItem('TUMDOOD_siege_teams');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -128,7 +128,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   const [polarityTeams, setPolarityTeams] = useState<Team[]>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('Moonz_polarity_teams');
+        const cached = localStorage.getItem('TUMDOOD_polarity_teams');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -142,7 +142,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   const [auctionRounds, setAuctionRounds] = useState<AuctionRound[]>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('Moonz_auction_rounds');
+        const cached = localStorage.getItem('TUMDOOD_auction_rounds');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) return parsed;
@@ -163,7 +163,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   const [activeRoundId, setActiveRoundId] = useState<string | null>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cachedRounds = localStorage.getItem('Moonz_auction_rounds');
+        const cachedRounds = localStorage.getItem('TUMDOOD_auction_rounds');
         if (cachedRounds) {
           const parsed = JSON.parse(cachedRounds);
           if (Array.isArray(parsed) && parsed.length > 0) {
@@ -179,7 +179,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   const [auctionItems, setAuctionItems] = useState<AuctionItem[]>(() => {
     if (typeof window !== 'undefined') {
       try {
-        const cached = localStorage.getItem('Moonz_auctions');
+        const cached = localStorage.getItem('TUMDOOD_auctions');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed)) return parsed;
@@ -193,7 +193,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('Moonz_auctions', JSON.stringify(auctionItems));
+        localStorage.setItem('TUMDOOD_auctions', JSON.stringify(auctionItems));
       } catch (e) {}
     }
   }, [auctionItems]);
@@ -201,7 +201,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('Moonz_auction_rounds', JSON.stringify(auctionRounds));
+        localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify(auctionRounds));
       } catch (e) {}
     }
   }, [auctionRounds]);
@@ -259,7 +259,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       const { data, error: fetchErr } = await supabase
         .from('guild_state')
         .select('*')
-        .eq('id', 1)
+        .eq('id', 2)
         .maybeSingle();
 
       if (fetchErr) throw fetchErr;
@@ -305,7 +305,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           if (polTeamsConfig && Array.isArray(polTeamsConfig.teams) && polTeamsConfig.teams.length > 0) {
             setPolarityTeams(polTeamsConfig.teams);
             try {
-              localStorage.setItem('Moonz_polarity_teams', JSON.stringify(polTeamsConfig.teams));
+              localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(polTeamsConfig.teams));
             } catch (e) {}
           }
 
@@ -330,7 +330,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           if (siegeTeamsConfig && Array.isArray(siegeTeamsConfig.teams) && siegeTeamsConfig.teams.length > 0) {
             setSiegeTeams(siegeTeamsConfig.teams);
             try {
-              localStorage.setItem('Moonz_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
+              localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
             } catch (e) {}
           } else if (siegeRaw.length > 0) {
             // Reconstruct teams from siege parties metadata if available
@@ -350,7 +350,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
             if (extracted.length > 0) {
               setSiegeTeams(extracted);
               try {
-                localStorage.setItem('Moonz_siege_teams', JSON.stringify(extracted));
+                localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(extracted));
               } catch (e) {}
             }
           }
@@ -440,7 +440,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
-      const pin = typeof window !== 'undefined' ? localStorage.getItem('Moonz_guild_pin') || 'Moonz' : 'Moonz';
+      const pin = typeof window !== 'undefined' ? localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD' : 'TUMDOOD';
       const authEntry = {
         id: '__guild_auth_config__',
         category: '__system__',
@@ -468,10 +468,10 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       };
 
       try {
-        localStorage.setItem('Moonz_siege_teams', JSON.stringify(state.siegeTeams));
-        localStorage.setItem('Moonz_polarity_teams', JSON.stringify(state.polarityTeams));
-        localStorage.setItem('Moonz_auctions', JSON.stringify(state.auctionItems));
-        localStorage.setItem('Moonz_auction_rounds', JSON.stringify(state.auctionRounds));
+        localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(state.siegeTeams));
+        localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(state.polarityTeams));
+        localStorage.setItem('TUMDOOD_auctions', JSON.stringify(state.auctionItems));
+        localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify(state.auctionRounds));
       } catch (e) {}
 
       const combinedParties = [
@@ -486,7 +486,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       ];
 
       const { error: saveErr } = await supabase.from('guild_state').upsert({
-        id: 1,
+        id: 2,
         guild_name: state.guildName,
         file_timestamp: state.fileTimestamp,
         members: state.members,

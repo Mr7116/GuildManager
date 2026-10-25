@@ -417,8 +417,8 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
               </button>
             </div>
 
-            {/* Relic Affix Selector Bar (Shows ONLY when in Relic tab) */}
-            {categoryTab === 'relic' && (
+            {/* Relic Affix Selector Bar (Shows in Relic and All tabs) */}
+            {(categoryTab === 'relic' || categoryTab === 'all') && (
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-2.5 rounded-2xl border border-amber-500/40 bg-amber-500/10 dark:bg-gradient-to-r dark:from-amber-950/30 dark:via-slate-900/60 dark:to-amber-950/20 shadow-inner">
                 <div className="flex items-center gap-2">
                   <RelicSvgIcon className="w-5 h-5 text-amber-500 dark:text-amber-400 shrink-0" />
