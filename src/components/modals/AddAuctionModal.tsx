@@ -7,13 +7,19 @@ import { RED_ACCESSORIES, RedAccessory } from '@/constants/redAccessories';
 import { PURPLE_MVP_CARDS, PurpleMvpCard } from '@/constants/purpleMvpCards';
 import { GVG_BASE_RELICS, GvgBaseRelic } from '@/constants/gvgRelics';
 import { RELIC_AFFIXES, RelicAffix } from '@/constants/relicAffixes';
+import { TITLE_ITEMS, TitleItem, getTitleTierStyle } from '@/constants/titleItems';
+import { CHEST_ITEMS, ChestItem, getChestTierStyle } from '@/constants/chestItems';
+import { PET_ITEMS, PetItem, getPetTierStyle } from '@/constants/petItems';
 import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
+import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
+import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
+import PetSvgIcon from '@/components/icons/PetSvgIcon';
 import { AuctionItem } from '@/types/auction';
 
 export interface SelectableAuctionItem {
   id: number;
   name: string;
-  category: 'accessory' | 'card' | 'relic';
+  category: 'accessory' | 'card' | 'relic' | 'title' | 'chest' | 'pet';
   level?: number;
   slot?: string;
   slotTh?: string;
@@ -32,6 +38,7 @@ interface SelectedEntry {
   item: SelectableAuctionItem;
   affixId?: string;
   count: number;
+  maxEntries?: number;
 }
 
 interface AddAuctionModalProps {
@@ -43,10 +50,11 @@ interface AddAuctionModalProps {
 }
 
 export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAuctionModalProps) {
-  const [categoryTab, setCategoryTab] = useState<'all' | 'accessory' | 'card' | 'relic'>('all');
+  const [categoryTab, setCategoryTab] = useState<'all' | 'accessory' | 'card' | 'relic' | 'title' | 'chest' | 'pet'>('all');
   const [selectedAffixId, setSelectedAffixId] = useState<string>('sage');
   const [search, setSearch] = useState('');
   const [sourceNote, setSourceNote] = useState<string>('ดรอปจากกิลด์วอร์ (GVG)');
+  const [defaultMaxEntries, setDefaultMaxEntries] = useState<number | undefined>(undefined);
   const [selectedMap, setSelectedMap] = useState<Record<string, SelectedEntry>>({});
 
   const currentAffix = useMemo(() => {
@@ -93,10 +101,49 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
       icon: base.icon,
       localIcon: base.localIcon,
       remoteIcon: base.remoteIcon,
-      stats: [`Relic (${currentAffix.effect})`, ...base.baseStats],
+      stats: [`GVG Relic (${currentAffix.effect})`, ...base.baseStats],
     }));
 
-    return [...accessories, ...cards, ...relics];
+    const titles: SelectableAuctionItem[] = TITLE_ITEMS.map((title) => ({
+      id: title.id,
+      name: title.name,
+      category: 'title' as const,
+      slot: title.type,
+      slotTh: title.type,
+      qualityBadge: title.qualityBadge,
+      icon: title.icon,
+      localIcon: title.localIcon,
+      remoteIcon: title.remoteIcon,
+      stats: title.stats,
+    }));
+
+    const chests: SelectableAuctionItem[] = CHEST_ITEMS.map((chest) => ({
+      id: chest.id,
+      name: chest.name,
+      category: 'chest' as const,
+      slot: chest.type,
+      slotTh: chest.type,
+      qualityBadge: chest.qualityBadge,
+      icon: chest.icon,
+      localIcon: chest.localIcon,
+      remoteIcon: chest.remoteIcon,
+      stats: chest.stats,
+    }));
+
+    const pets: SelectableAuctionItem[] = PET_ITEMS.map((pet) => ({
+      id: pet.id,
+      name: pet.name,
+      category: 'pet' as const,
+      slot: pet.qualityTag,
+      slotTh: pet.qualityName,
+      qualityBadge: pet.qualityBadge,
+      icon: pet.icon,
+      localIcon: pet.localIcon,
+      remoteIcon: pet.remoteIcon,
+      stats: pet.stats,
+    }));
+
+    return [...accessories, ...cards, ...relics, ...titles, ...chests, ...pets];
   }, [currentAffix]);
 
   // Filtered items
@@ -165,9 +212,24 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
             item,
             affixId: item.category === 'relic' ? selectedAffixId : undefined,
             count: 1,
+            maxEntries: defaultMaxEntries !== undefined ? defaultMaxEntries : (item.category === 'title' ? 24 : undefined),
           },
         };
       }
+    });
+  };
+
+  const handleUpdateEntryMaxLimit = (entryKey: string, maxLimit?: number) => {
+    setSelectedMap((prev) => {
+      const existing = prev[entryKey];
+      if (!existing) return prev;
+      return {
+        ...prev,
+        [entryKey]: {
+          ...existing,
+          maxEntries: maxLimit !== undefined && maxLimit > 0 ? maxLimit : undefined,
+        },
+      };
     });
   };
 
@@ -214,7 +276,7 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
         affixName: affix.name,
         affixEffect: affix.effect,
         qualityBadge: `Relic · ${affix.name}`,
-        stats: [`Relic (${affix.effect})`, `สาย: ${affix.name} (${affix.effect})`],
+        stats: [`GVG Relic (${affix.effect})`, `สาย: ${affix.name} (${affix.effect})`],
       };
 
       const copy = { ...prev };
@@ -263,15 +325,28 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
           cardSlot:
             entry.item.category === 'relic'
               ? `${entry.item.affixName || 'Sage'} (${entry.item.affixEffect || ''})`
+              : entry.item.category === 'title'
+              ? 'ไอเทม Title'
+              : entry.item.category === 'chest'
+              ? 'กล่อง / หีบสมบัติ (Pack)'
+              : entry.item.category === 'pet'
+              ? `สัตว์เลี้ยง (${entry.item.slot || 'Pet'})`
               : entry.item.slotTh || entry.item.slot,
           cardQuality:
             entry.item.category === 'card'
               ? 'Purple'
               : entry.item.category === 'relic'
               ? entry.item.affixName || 'Sage'
+              : entry.item.category === 'title'
+              ? entry.item.qualityBadge || 'Title'
+              : entry.item.category === 'chest'
+              ? entry.item.qualityBadge || 'Pack'
+              : entry.item.category === 'pet'
+              ? entry.item.qualityBadge || 'Pet'
               : undefined,
           startPrice: 0,
           minIncrement: 0,
+          maxEntries: entry.maxEntries && entry.maxEntries > 0 ? entry.maxEntries : undefined,
           sourceNote: sourceNote.trim() || undefined,
           status,
         });
@@ -298,19 +373,7 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
             <div>
               <h3 className="text-lg font-extrabold text-white tracking-wide flex items-center gap-2 flex-wrap">
                 <span>เพิ่มรายการของดรอปเพื่อเปิดสุ่ม (Add Drop Items)</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 border border-amber-500/40 text-amber-300">
-                  Relic (27 สาย)
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 border border-purple-500/40 text-purple-300">
-                  MVP ม่วง
-                </span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 border border-rose-500/40 text-rose-300">
-                  Lv.90 Red
-                </span>
-              </h3>
-              <p className="text-xs text-slate-400">
-                คลิกเลือก Relic, เครื่องประดับ หรือการ์ดม่วง MVP เพื่อเพิ่มเป็น List รายการให้สมาชิกกิลด์ส่งรายชื่อเข้ามาสุ่มด้วยวงล้อ
-              </p>
+              </h3>             
             </div>
           </div>
           <button
@@ -322,16 +385,103 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
           </button>
         </div>
 
-        {/* Source Note Bar */}
-        <div className="p-3 rounded-2xl border border-slate-800 bg-slate-950/60 shrink-0 text-xs">
-          <label className="text-slate-400 block mb-1 font-semibold">แหล่งที่มา / หมายเหตุ (Source):</label>
-          <input
-            type="text"
-            value={sourceNote}
-            onChange={(e) => setSourceNote(e.target.value)}
-            placeholder="เช่น ดรอปจาก GVG รอบวันอาทิตย์ / Siege War / กล่องสมบัติกิลด์"
-            className="w-full rounded-xl border border-slate-700 bg-[#080d1a] px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-rose-500 focus:outline-none"
-          />
+        {/* Source Note & Quota Settings */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 p-3 rounded-2xl border border-slate-800 bg-slate-950/60 shrink-0 text-xs">
+          <div className="md:col-span-2">
+            <label className="text-slate-400 block mb-1 font-semibold">แหล่งที่มา / หมายเหตุ (Source):</label>
+            <input
+              type="text"
+              value={sourceNote}
+              onChange={(e) => setSourceNote(e.target.value)}
+              placeholder="เช่น ดรอปจาก GVG รอบวันอาทิตย์ / Siege War / กล่องสมบัติกิลด์"
+              className="w-full rounded-xl border border-slate-700 bg-[#080d1a] px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-rose-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="text-slate-400 block mb-1 font-semibold flex items-center justify-between">
+              <span>โควตาคนลงชื่อเริ่มต้น:</span>
+              <span className="text-[10px] text-amber-400 font-bold">
+                {defaultMaxEntries ? `จำกัด ${defaultMaxEntries} คน (0/${defaultMaxEntries})` : 'ไม่จำกัด'}
+              </span>
+            </label>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => {
+                  setDefaultMaxEntries(undefined);
+                  setSelectedMap((prev) => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach((k) => (next[k] = { ...next[k], maxEntries: undefined }));
+                    return next;
+                  });
+                }}
+                className={`px-2 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer border ${
+                  defaultMaxEntries === undefined
+                    ? 'bg-slate-700 text-white border-slate-500'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+              >
+                ไม่จำกัด
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDefaultMaxEntries(1);
+                  setSelectedMap((prev) => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach((k) => (next[k] = { ...next[k], maxEntries: 1 }));
+                    return next;
+                  });
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer border ${
+                  defaultMaxEntries === 1
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 border-amber-400 font-black shadow'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+                title="ตั้งค่าให้คนลงชื่อได้แค่ 1 คน พอลงครบแล้วปิดรับทันที (0/1)"
+              >
+                ⚡ 1 คน (0/1)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setDefaultMaxEntries(24);
+                  setSelectedMap((prev) => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach((k) => (next[k] = { ...next[k], maxEntries: 24 }));
+                    return next;
+                  });
+                }}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer border ${
+                  defaultMaxEntries === 24
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 border-amber-400 font-black shadow'
+                    : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                }`}
+                title="ตั้งค่าโควตา 24 คน (เหมาะสำหรับ Title GVG 24 ชิ้น)"
+              >
+                👑 24 คน (0/24)
+              </button>
+              <input
+                type="number"
+                min={0}
+                placeholder="กำหนด"
+                value={defaultMaxEntries ?? ''}
+                onChange={(e) => {
+                  const val = e.target.value === '' ? undefined : Math.max(0, parseInt(e.target.value) || 0);
+                  const parsed = val && val > 0 ? val : undefined;
+                  setDefaultMaxEntries(parsed);
+                  setSelectedMap((prev) => {
+                    const next = { ...prev };
+                    Object.keys(next).forEach((k) => (next[k] = { ...next[k], maxEntries: parsed }));
+                    return next;
+                  });
+                }}
+                className="w-14 text-center rounded-lg border border-slate-700 bg-[#080d1a] px-1 py-1 text-xs text-amber-300 font-bold placeholder-slate-600 focus:border-amber-400 focus:outline-none"
+                title="กำหนดจำนวนคนลงชื่อสูงสุดต่อชิ้น"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Middle Body */}
@@ -372,6 +522,54 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
 
               <button
                 type="button"
+                onClick={() => setCategoryTab('pet')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  categoryTab === 'pet'
+                    ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500 text-slate-950 font-black shadow-md shadow-orange-950'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <PetSvgIcon className="w-4 h-4 shrink-0" variant="gold" />
+                <span> สัตว์เลี้ยง (Pet)</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-amber-300">
+                  {PET_ITEMS.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCategoryTab('title')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  categoryTab === 'title'
+                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black shadow-md shadow-amber-950'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <TitleSvgIcon className="w-4 h-4 shrink-0" />
+                <span> Title</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-amber-300">
+                  {TITLE_ITEMS.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCategoryTab('chest')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                  categoryTab === 'chest'
+                    ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-600 text-white font-black shadow-md shadow-purple-950'
+                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                }`}
+              >
+                <TitleChestSvgIcon className="w-4 h-4 shrink-0" />
+                <span> กล่อง / หีบสมบัติ (Pack)</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-purple-300">
+                  {CHEST_ITEMS.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setCategoryTab('relic')}
                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
                   categoryTab === 'relic'
@@ -380,7 +578,7 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                 }`}
               >
                 <RelicSvgIcon className="w-4 h-4 shrink-0" />
-                <span>🏺 Relic (8 ชิ้น · 27 สาย)</span>
+                <span>🏺Relic (8 ชิ้น · 27 สาย)</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40 text-amber-300">
                   {GVG_BASE_RELICS.length}
                 </span>
@@ -395,7 +593,7 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
-                <span>🃏 การ์ดม่วง MVP</span>
+                <span> การ์ดม่วง MVP</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40">
                   {PURPLE_MVP_CARDS.length}
                 </span>
@@ -410,7 +608,7 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                     : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                 }`}
               >
-                <span>💎 เครื่องประดับแดง</span>
+                <span> เครื่องประดับแดง</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/40">
                   {RED_ACCESSORIES.length}
                 </span>
@@ -474,6 +672,12 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                 const count = entry?.count || 0;
                 const isCard = item.category === 'card';
                 const isRelic = item.category === 'relic';
+                const isTitle = item.category === 'title';
+                const isChest = item.category === 'chest';
+                const isPet = item.category === 'pet';
+                const titleTier = isTitle ? getTitleTierStyle(item.icon || item.name) : null;
+                const chestTier = isChest ? getChestTierStyle(item.name || item.qualityBadge) : null;
+                const petTier = isPet ? getPetTierStyle(item.name || item.qualityBadge) : null;
 
                 return (
                   <button
@@ -482,11 +686,23 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                     onClick={() => handleToggleItem(item)}
                     className={`flex flex-col items-center p-2 rounded-xl border text-center transition cursor-pointer relative group ${
                       isSelected
-                        ? isRelic
+                        ? isTitle
+                          ? `${titleTier?.border} ${titleTier?.bg} ring-1 ring-current shadow-md ${titleTier?.shadow}`
+                          : isChest
+                          ? `${chestTier?.border} ${chestTier?.bg} ring-1 ring-current shadow-md ${chestTier?.shadow}`
+                          : isPet
+                          ? `${petTier?.border} ${petTier?.bg} ring-1 ring-current shadow-md ${petTier?.shadow}`
+                          : isRelic
                           ? 'border-amber-400 bg-amber-950/40 ring-1 ring-amber-500 shadow-md shadow-amber-500/20'
                           : isCard
                           ? 'border-purple-400 bg-purple-950/40 ring-1 ring-purple-500 shadow-md shadow-purple-500/20'
                           : 'border-rose-400 bg-rose-950/40 ring-1 ring-rose-500 shadow-md shadow-rose-500/20'
+                        : isTitle
+                        ? `${titleTier?.border} bg-[#0b101c] hover:bg-slate-900/80`
+                        : isChest
+                        ? `${chestTier?.border} bg-[#0b101c] hover:bg-slate-900/80`
+                        : isPet
+                        ? `${petTier?.border} bg-[#0b101c] hover:bg-slate-900/80`
                         : 'border-slate-800 bg-[#0b101c] hover:border-slate-700 hover:bg-slate-900/80'
                     }`}
                   >
@@ -502,7 +718,19 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                           (e.target as HTMLImageElement).src = item.remoteIcon;
                         }}
                       />
-                      {isRelic ? (
+                      {isTitle ? (
+                        <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
+                          {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
+                        </span>
+                      ) : isChest ? (
+                        <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${chestTier?.badgeBg}`}>
+                          {chestTier?.tier === 'purple' ? 'ม่วง' : chestTier?.tier === 'blue' ? 'ฟ้า' : 'ทอง'}
+                        </span>
+                      ) : isPet ? (
+                        <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${petTier?.badgeBg}`}>
+                          {item.slot || (petTier?.tier === 'gold' ? 'SSR' : petTier?.tier === 'purple' ? 'SR' : petTier?.tier === 'blue' ? 'R' : 'N')}
+                        </span>
+                      ) : isRelic ? (
                         <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-amber-950/90 border border-amber-500/60 text-amber-200">
                           {item.affixName || 'Sage'}
                         </span>
@@ -523,17 +751,43 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
 
                     <span
                       className={`text-[9px] font-semibold mt-0.5 truncate w-full ${
-                        isRelic ? 'text-amber-400' : isCard ? 'text-purple-400' : 'text-rose-400'
+                        isTitle
+                          ? titleTier?.text
+                          : isChest
+                          ? chestTier?.text
+                          : isPet
+                          ? petTier?.text
+                          : isRelic
+                          ? 'text-amber-400'
+                          : isCard
+                          ? 'text-purple-400'
+                          : 'text-rose-400'
                       }`}
                       title={isRelic ? item.affixEffect : undefined}
                     >
-                      {isRelic ? item.affixEffect || 'Relic' : isCard ? 'MVP ม่วง' : 'เครื่องประดับ'}
+                      {isTitle
+                        ? item.qualityBadge || titleTier?.label
+                        : isChest
+                        ? item.qualityBadge || chestTier?.label
+                        : isPet
+                        ? item.qualityBadge || petTier?.label
+                        : isRelic
+                        ? item.affixEffect || 'GVG Relic'
+                        : isCard
+                        ? 'MVP ม่วง'
+                        : 'เครื่องประดับ'}
                     </span>
 
                     {isSelected && (
                       <span
                         className={`absolute top-1 right-1 flex items-center justify-center px-1.5 py-0.2 rounded-full text-white text-[10px] font-bold shadow ${
-                          isRelic
+                          isTitle
+                            ? titleTier?.badgeBg
+                            : isChest
+                            ? chestTier?.badgeBg
+                            : isPet
+                            ? petTier?.badgeBg
+                            : isRelic
                             ? 'bg-amber-400 text-slate-950 font-black'
                             : isCard
                             ? 'bg-purple-600 text-white'
@@ -577,11 +831,23 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                 {selectedEntries.map((entry) => {
                   const isCard = entry.item.category === 'card';
                   const isRelic = entry.item.category === 'relic';
+                  const isTitle = entry.item.category === 'title';
+                  const isChest = entry.item.category === 'chest';
+                  const isPet = entry.item.category === 'pet';
+                  const titleTier = isTitle ? getTitleTierStyle(entry.item.icon || entry.item.name) : null;
+                  const chestTier = isChest ? getChestTierStyle(entry.item.name || entry.item.qualityBadge) : null;
+                  const petTier = isPet ? getPetTierStyle(entry.item.name || entry.item.qualityBadge) : null;
                   return (
                     <div
                       key={entry.entryKey}
                       className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2.5 rounded-2xl border transition ${
-                        isRelic
+                        isTitle
+                          ? `${titleTier?.border} bg-[#0c1220] hover:border-current`
+                          : isChest
+                          ? `${chestTier?.border} bg-[#0c1220] hover:border-current`
+                          : isPet
+                          ? `${petTier?.border} bg-[#0c1220] hover:border-current`
+                          : isRelic
                           ? 'border-amber-500/30 bg-[#161208] hover:border-amber-500/50'
                           : isCard
                           ? 'border-purple-500/30 bg-[#0e0c1f] hover:border-purple-500/50'
@@ -592,7 +858,13 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                       <div className="flex items-center gap-3 min-w-0">
                         <div
                           className={`relative w-11 h-11 shrink-0 rounded-xl border flex items-center justify-center ${
-                            isRelic
+                            isTitle
+                              ? `${titleTier?.border} ${titleTier?.bg}`
+                              : isChest
+                              ? `${chestTier?.border} ${chestTier?.bg}`
+                              : isPet
+                              ? `${petTier?.border} ${petTier?.bg}`
+                              : isRelic
                               ? 'border-amber-500/40 bg-amber-950/30'
                               : isCard
                               ? 'border-purple-500/40 bg-purple-950/30'
@@ -610,7 +882,19 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                               (e.target as HTMLImageElement).src = entry.item.remoteIcon;
                             }}
                           />
-                          {isRelic ? (
+                          {isTitle ? (
+                            <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
+                              {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
+                            </span>
+                          ) : isChest ? (
+                            <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${chestTier?.badgeBg}`}>
+                              {chestTier?.tier === 'purple' ? 'ม่วง' : chestTier?.tier === 'blue' ? 'ฟ้า' : 'ทอง'}
+                            </span>
+                          ) : isPet ? (
+                            <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${petTier?.badgeBg}`}>
+                              {entry.item.slot || (petTier?.tier === 'gold' ? 'SSR' : petTier?.tier === 'purple' ? 'SR' : petTier?.tier === 'blue' ? 'R' : 'N')}
+                            </span>
+                          ) : isRelic ? (
                             <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-amber-950/90 border border-amber-500/60 text-amber-200">
                               {entry.item.affixName || 'Sage'}
                             </span>
@@ -628,9 +912,24 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <h4 className="font-extrabold text-sm text-white truncate">{entry.item.name}</h4>
-                            {isRelic ? (
+                            {isTitle ? (
+                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border flex items-center gap-1 ${titleTier?.badgeBg}`}>
+                                <TitleSvgIcon className="w-3 h-3" />
+                                <span>{entry.item.qualityBadge || titleTier?.label}</span>
+                              </span>
+                            ) : isChest ? (
+                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border flex items-center gap-1 ${chestTier?.badgeBg}`}>
+                                <TitleChestSvgIcon className="w-3 h-3" variant={chestTier?.tier} />
+                                <span>{entry.item.qualityBadge || chestTier?.label}</span>
+                              </span>
+                            ) : isPet ? (
+                              <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border flex items-center gap-1 ${petTier?.badgeBg}`}>
+                                <PetSvgIcon className="w-3 h-3" variant={petTier?.tier} />
+                                <span>{entry.item.qualityBadge || petTier?.label}</span>
+                              </span>
+                            ) : isRelic ? (
                               <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
-                                🏺 Relic
+                                🏺 GVG Relic
                               </span>
                             ) : isCard ? (
                               <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/40">
@@ -686,8 +985,62 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                         </div>
                       </div>
 
-                      {/* Quantity Stepper & Remove */}
-                      <div className="flex items-center gap-3 shrink-0 self-end sm:self-center">
+                      {/* Quota & Quantity & Remove */}
+                      <div className="flex flex-wrap items-center gap-2.5 shrink-0 self-end sm:self-center">
+                        {/* Per-item Quota Setting */}
+                        <div className="flex items-center gap-1 bg-slate-950/80 rounded-xl border border-slate-700/80 px-2 py-1">
+                          <span className="text-[10px] text-slate-400 font-semibold">โควตา:</span>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateEntryMaxLimit(entry.entryKey, 1)}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer border ${
+                              entry.maxEntries === 1
+                                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow font-black'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                            }`}
+                            title="จำกัดคนลงชื่อ 1 คน (0/1)"
+                          >
+                            0/1
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateEntryMaxLimit(entry.entryKey, 24)}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer border ${
+                              entry.maxEntries === 24
+                                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow font-black'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                            }`}
+                            title="จำกัดคนลงชื่อ 24 คน (0/24 เหมาะสำหรับ Title)"
+                          >
+                            0/24
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateEntryMaxLimit(entry.entryKey, undefined)}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer border ${
+                              !entry.maxEntries
+                                ? 'bg-slate-700 text-white border-slate-600'
+                                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
+                            }`}
+                            title="ไม่จำกัดจำนวนคนลงชื่อ"
+                          >
+                            ไม่จำกัด
+                          </button>
+                          <input
+                            type="number"
+                            min={0}
+                            value={entry.maxEntries ?? ''}
+                            onChange={(e) => {
+                              const val = e.target.value === '' ? undefined : parseInt(e.target.value);
+                              handleUpdateEntryMaxLimit(entry.entryKey, val && val > 0 ? val : undefined);
+                            }}
+                            placeholder="ระบุ"
+                            className="w-10 text-center rounded border border-slate-700 bg-black/60 px-1 py-0.5 text-[10px] text-amber-300 font-bold focus:border-amber-400 focus:outline-none"
+                            title="ใส่ตัวเลขโควตา เช่น 1, 2, 3... หรือเว้นว่างเพื่อไม่จำกัด"
+                          />
+                        </div>
+
+                        {/* Quantity Stepper */}
                         <div className="flex items-center gap-1 bg-slate-950 rounded-xl border border-slate-700 p-0.5">
                           <button
                             type="button"

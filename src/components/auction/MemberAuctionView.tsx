@@ -7,7 +7,14 @@ import { useGuildStore } from '@/lib/guildStore';
 import { useAuth } from '@/lib/auth';
 import JobEmblem from '@/components/tactical/JobEmblem';
 import ThemeToggle from '@/components/layout/ThemeToggle';
-import { AuctionItem, AuctionRound } from '@/types/auction';
+import { AuctionItem, AuctionRound, formatRegistrationTime } from '@/types/auction';
+import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
+import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
+import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
+import PetSvgIcon from '@/components/icons/PetSvgIcon';
+import { getTitleTierStyle } from '@/constants/titleItems';
+import { getChestTierStyle } from '@/constants/chestItems';
+import { getPetTierStyle } from '@/constants/petItems';
 
 interface MemberAuctionViewProps {
   onSwitchToAdmin?: () => void;
@@ -21,6 +28,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
     auctionItems,
     addMemberToAuction,
     removeMemberFromAuction,
+    removeOneMemberEntryFromAuction,
   } = useGuildStore();
 
   const { isAuthenticated } = useAuth();
@@ -135,17 +143,30 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
       showToast('รายการนี้ยังไม่เปิดรับรายชื่อ หรือสุ่มเสร็จแล้ว', true);
       return;
     }
+    if (item.maxEntries && item.maxEntries > 0 && (item.entries || []).length >= item.maxEntries) {
+      showToast('ขออภัย รายการนี้มีคนลงชื่อครบตามโควตาแล้ว', true);
+      return;
+    }
 
+    const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
     addMemberToAuction(item.id, currentMember.id);
-    showToast(`ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`);
+    showToast(isTitle ? `กดรับสิทธิ์ "${item.accessoryName}" สำเร็จ! 👑` : `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`);
   };
 
-  // Leave item
+  // Leave one entry (or all if only 1)
+  const handleLeaveOne = (item: AuctionItem) => {
+    if (!currentMember) return;
+    const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
+    removeOneMemberEntryFromAuction(item.id, currentMember.id);
+    showToast(`ยกเลิกลด 1 สิทธิ์ของ "${item.accessoryName}" เรียบร้อยแล้ว`);
+  };
+
+  // Leave item (all)
   const handleLeave = (item: AuctionItem) => {
     if (!currentMember) return;
     if (
       window.confirm(
-        `คุณต้องการยกเลิกการลงชื่อลุ้น "${item.accessoryName}" ใช่หรือไม่?`
+        `คุณต้องการยกเลิกการลงชื่อทั้งหมดของ "${item.accessoryName}" ใช่หรือไม่?`
       )
     ) {
       removeMemberFromAuction(item.id, currentMember.id);
@@ -454,13 +475,29 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
               const isEnded = item.status === 'ended';
               const isPending = item.status === 'pending';
               const entries = item.entries || [];
-              const isRegistered = selectedMemberId
-                ? entries.some((e) => e.memberId === selectedMemberId)
-                : false;
+              const myEntries = selectedMemberId ? entries.filter((e) => e.memberId === selectedMemberId) : [];
+              const myCount = myEntries.length;
+              const isRegistered = myCount > 0;
+              const myIndices = selectedMemberId
+                ? entries.map((e, idx) => (e.memberId === selectedMemberId ? idx : -1)).filter((idx) => idx !== -1)
+                : [];
+              const isQuotaFull = !!(item.maxEntries && item.maxEntries > 0 && entries.length >= item.maxEntries);
               const isExpanded = expandedItemId === item.id;
-              const isCard = item.itemCategory === 'card' || item.cardQuality === 'Purple';
-              const isRelic = item.itemCategory === 'relic' || item.cardQuality === 'Sage';
-              const imageSrc = isRelic
+              const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
+              const isChest = !isTitle && (item.itemCategory === 'chest' || (item.cardSlot && (item.cardSlot.includes('หีบ') || item.cardSlot.includes('กล่อง') || item.cardSlot.includes('Pack'))));
+              const isPet = !isTitle && !isChest && (item.itemCategory === 'pet' || (item.cardSlot && item.cardSlot.includes('สัตว์เลี้ยง')) || (item.cardQuality && item.cardQuality.startsWith('Pet')));
+              const isRelic = !isTitle && !isChest && !isPet && (item.itemCategory === 'relic' || item.cardQuality === 'Sage');
+              const isCard = !isTitle && !isChest && !isPet && !isRelic && (item.itemCategory === 'card' || item.cardQuality === 'Purple');
+              const titleTier = isTitle ? getTitleTierStyle(item.accessoryIcon || item.accessoryName || item.cardQuality) : null;
+              const chestTier = isChest ? getChestTierStyle(item.accessoryName || item.cardQuality) : null;
+              const petTier = isPet ? getPetTierStyle(item.accessoryName || item.cardQuality) : null;
+              const imageSrc = isTitle
+                ? `/images/titles/${item.accessoryIcon}.webp`
+                : isChest
+                ? `/images/chests/${item.accessoryIcon}.webp`
+                : isPet
+                ? `/images/pets/${item.accessoryIcon}.webp`
+                : isRelic
                 ? `/images/relics/${item.accessoryIcon}.webp`
                 : isCard
                 ? `/images/cards/${item.accessoryIcon}.webp`
@@ -486,7 +523,13 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
 
                       {/* Icon */}
                       <div className={`relative w-13 h-13 shrink-0 rounded-xl border flex items-center justify-center shadow-md ${
-                        isRelic
+                        isTitle
+                          ? `${titleTier?.border} ${titleTier?.bg}`
+                          : isChest
+                          ? `${chestTier?.border} ${chestTier?.bg}`
+                          : isPet
+                          ? `${petTier?.border} ${petTier?.bg}`
+                          : isRelic
                           ? 'border-amber-500/50 bg-amber-950/20'
                           : isCard
                           ? 'border-purple-500/50 bg-purple-950/20'
@@ -500,13 +543,37 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                           unoptimized
                           className="object-contain drop-shadow"
                           onError={(e) => {
-                            const fallback = isRelic
+                            const fallback = isTitle
+                              ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
+                              : isChest
+                              ? (item.accessoryIcon.includes('title_chest')
+                                  ? `/images/chests/${item.accessoryIcon}.svg`
+                                  : item.accessoryIcon.includes('stonebox') || item.accessoryIcon.includes('gem')
+                                  ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                                  : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                              : isPet
+                              ? (item.accessoryIcon.includes('mfmm')
+                                  ? `https://roworlddb.com/media/images/icon/pet/${item.accessoryIcon}.webp`
+                                  : `https://roworlddb.com/media/images/pet/${item.accessoryIcon}.webp`)
+                              : isRelic
                               ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
                               : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
                             (e.target as HTMLImageElement).src = fallback;
                           }}
                         />
-                        {isRelic ? (
+                        {isTitle ? (
+                          <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
+                            {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
+                          </span>
+                        ) : isChest ? (
+                          <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${chestTier?.badgeBg}`}>
+                            {chestTier?.tier === 'purple' ? 'ม่วง' : chestTier?.tier === 'blue' ? 'ฟ้า' : 'ทอง'}
+                          </span>
+                        ) : isPet ? (
+                          <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${petTier?.badgeBg}`}>
+                            {petTier?.tier === 'gold' ? 'SSR' : petTier?.tier === 'purple' ? 'SR' : petTier?.tier === 'blue' ? 'R' : 'N'}
+                          </span>
+                        ) : isRelic ? (
                           <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-amber-950/90 border border-amber-500/60 text-amber-200">
                             Sage
                           </span>
@@ -530,9 +597,25 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                             {item.accessoryName}
                           </h4>
 
-                          {isRelic ? (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
-                              🏺 Relic · {item.cardSlot || 'Sage'}
+                          {isTitle ? (
+                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border flex items-center gap-1 ${titleTier?.badgeBg}`}>
+                              <TitleSvgIcon className="w-3 h-3" />
+                              <span>{item.cardQuality || titleTier?.label}</span>
+                            </span>
+                          ) : isChest ? (
+                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border flex items-center gap-1 ${chestTier?.badgeBg}`}>
+                              <TitleChestSvgIcon className="w-3 h-3" variant={chestTier?.tier} />
+                              <span>{item.cardQuality || chestTier?.label}</span>
+                            </span>
+                          ) : isPet ? (
+                            <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border flex items-center gap-1 ${petTier?.badgeBg}`}>
+                              <PetSvgIcon className="w-3 h-3" variant={petTier?.tier} />
+                              <span>{item.cardQuality || petTier?.label}</span>
+                            </span>
+                          ) : isRelic ? (
+                            <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                              <RelicSvgIcon className="w-3 h-3" />
+                              <span>Relic · {item.cardSlot || 'Sage'}</span>
                             </span>
                           ) : isCard ? (
                             <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/40">
@@ -546,10 +629,17 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
 
                           {/* Status */}
                           {isOpen && (
-                            <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                              <span>เปิดรับรายชื่อ</span>
-                            </span>
+                            isQuotaFull ? (
+                              <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                                <span>{isTitle ? `🔒 ได้ผู้รับสิทธิ์ครบแล้ว (${entries.length}/${item.maxEntries})` : `🔒 เต็มโควตา (${entries.length}/${item.maxEntries})`}</span>
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <span>{isTitle ? `⚡ เปิดรับสิทธิ์ ${item.maxEntries ? `(${entries.length}/${item.maxEntries})` : ''}` : `เปิดรับรายชื่อ ${item.maxEntries ? `(${entries.length}/${item.maxEntries})` : ''}`}</span>
+                              </span>
+                            )
                           )}
                           {isPending && (
                             <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40">
@@ -558,7 +648,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                           )}
                           {isEnded && (
                             <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-500/40">
-                              🏆 สุ่มเสร็จแล้ว
+                              🏆 สรุปผลแล้ว
                             </span>
                           )}
                         </div>
@@ -570,13 +660,27 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                           )}
 
                           {isEnded && item.winnerMemberName ? (
-                            <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
+                            <div className="flex flex-wrap items-center gap-1 text-emerald-600 dark:text-emerald-400 font-bold">
                               <span>ผู้ชนะ:</span>
-                              {item.winnerMemberJob && (
-                                <JobEmblem job={item.winnerMemberJob} size={15} />
+                              {item.winners && item.winners.length > 1 ? (
+                                <div className="flex flex-wrap items-center gap-1">
+                                  {item.winners.map((w) => (
+                                    <span key={w.memberId} className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 text-[11px] font-bold border border-emerald-500/30">
+                                      {w.memberJob && <JobEmblem job={w.memberJob} size={14} />}
+                                      <span>{w.memberName}</span>
+                                      <span className="text-amber-600 dark:text-amber-400 font-mono">x{w.count}</span>
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : (
+                                <span className="flex items-center gap-1">
+                                  {item.winnerMemberJob && (
+                                    <JobEmblem job={item.winnerMemberJob} size={15} />
+                                  )}
+                                  <span>{item.winnerMemberName}</span>
+                                </span>
                               )}
-                              <span>{item.winnerMemberName}</span>
-                            </span>
+                            </div>
                           ) : (
                             <button
                               type="button"
@@ -585,7 +689,21 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                               }
                               className="text-amber-600 dark:text-amber-400 font-semibold hover:underline cursor-pointer flex items-center gap-1"
                             >
-                              <span>👥 ผู้ลงชื่อ {entries.length} คน</span>
+                              <span>
+                                {isTitle ? '👑 ผู้ได้รับสิทธิ์ ' : '👥 ผู้ลงชื่อ '}
+                                {entries.length}
+                                {item.maxEntries ? `/${item.maxEntries}` : ''} รายการ
+                              </span>
+                              {isTitle && (
+                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                                  (กดก่อนได้ก่อน)
+                                </span>
+                              )}
+                              {isQuotaFull && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold border border-rose-500/30">
+                                  เต็ม
+                                </span>
+                              )}
                               <span className="text-[10px]">
                                 {isExpanded ? '▲ ซ่อน' : '▼ ดูรายชื่อ'}
                               </span>
@@ -599,21 +717,45 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
                       {isOpen ? (
                         isRegistered ? (
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 flex-wrap justify-end">
                             <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
-                              <span>✅</span>
-                              <span>ลงชื่อแล้ว</span>
+                              <span>{isTitle ? '👑' : '✅'}</span>
+                              <span>
+                                {isTitle ? `ได้สิทธิ์แล้ว x${myCount}` : `ลงชื่อแล้ว x${myCount}`}
+                              </span>
+                              {item.maxEntries && (
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                                  ({myIndices.map((i) => `#${i + 1}`).join(', ')})
+                                </span>
+                              )}
                             </span>
+
+                            {!isQuotaFull && (
+                              <button
+                                type="button"
+                                onClick={() => handleJoin(item)}
+                                className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow transition cursor-pointer flex items-center gap-1 active:scale-95"
+                                title="กดลงชื่อเพิ่มอีก 1 รายการ"
+                              >
+                                <span>+</span>
+                                <span>{isTitle ? 'รับสิทธิ์เพิ่ม (+1)' : 'ลงชื่อเพิ่ม (+1)'}</span>
+                              </button>
+                            )}
 
                             <button
                               type="button"
-                              onClick={() => handleLeave(item)}
+                              onClick={() => (myCount > 1 ? handleLeaveOne(item) : handleLeave(item))}
                               className="px-2.5 py-1.5 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition cursor-pointer"
-                              title="ยกเลิกการลงชื่อชิ้นนี้"
+                              title={myCount > 1 ? 'ยกเลิกลด 1 ชิ้น' : 'ยกเลิกรายการนี้'}
                             >
-                              ✕ ยกเลิก
+                              {myCount > 1 ? '✕ ลด 1 อัน' : '✕ ยกเลิก'}
                             </button>
                           </div>
+                        ) : isQuotaFull ? (
+                          <span className="px-3 py-1.5 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold flex items-center gap-1">
+                            <span>🔒</span>
+                            <span>{isTitle ? `ผู้รับสิทธิ์เต็มแล้ว (${entries.length}/${item.maxEntries})` : `เต็มโควตาแล้ว (${entries.length}/${item.maxEntries})`}</span>
+                          </span>
                         ) : (
                           <button
                             type="button"
@@ -621,7 +763,10 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                             className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-extrabold shadow-md shadow-emerald-950/40 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
                           >
                             <span>+</span>
-                            <span>ลงชื่อลุ้นรับชิ้นนี้</span>
+                            <span>
+                              {isTitle ? 'กดรับสิทธิ์ Title นี้' : 'ลงชื่อลุ้นรับชิ้นนี้'}
+                              {item.maxEntries ? ` (${entries.length}/${item.maxEntries})` : ''}
+                            </span>
                           </button>
                         )
                       ) : isPending ? (
@@ -639,26 +784,52 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                   {/* Expanded Participant List */}
                   {isExpanded && entries.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-800/80">
-                      <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
-                        รายชื่อสมาชิกที่ลงชื่อลุ้นชิ้นนี้ ({entries.length} คน):
+                      <div className="flex items-center justify-between gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
+                        <span>
+                          {isTitle
+                            ? `👑 รายชื่อผู้ได้รับสิทธิ์ Title ตามลำดับ (${entries.length}${item.maxEntries ? `/${item.maxEntries}` : ''} รายการ):`
+                            : `รายชื่อสมาชิกที่ลงชื่อลุ้นชิ้นนี้ (${entries.length}${item.maxEntries ? `/${item.maxEntries}` : ''} รายการ):`}
+                        </span>
+                        {item.maxEntries && (
+                          <span className="text-[10px] text-amber-500 font-semibold">
+                            โควตาสูงสุด {item.maxEntries} รายการ (ใครกดก่อนได้ก่อน)
+                          </span>
+                        )}
                       </div>
-                      <div className="flex flex-wrap gap-1.5">
-                        {entries.map((e) => {
+                      <div className="flex flex-wrap gap-2">
+                        {entries.map((e, eIdx) => {
                           const isMe = e.memberId === selectedMemberId;
+                          const regTime = formatRegistrationTime(e.registeredAt);
                           return (
                             <span
                               key={e.id}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold border ${
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold border ${
                                 isMe
                                   ? 'border-emerald-500 bg-emerald-500/20 text-emerald-800 dark:text-emerald-200 font-bold ring-1 ring-emerald-500'
                                   : 'border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-300'
                               }`}
                             >
+                              <span className="text-[10px] text-slate-400 font-mono font-bold">
+                                #{eIdx + 1}
+                              </span>
                               {e.memberJob && (
                                 <JobEmblem job={e.memberJob} size={15} />
                               )}
                               <span>{e.memberName}</span>
-                              {isMe && <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">(คุณ)</span>}
+                              {isMe && (
+                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                                  (คุณ)
+                                </span>
+                              )}
+                              {isTitle && (
+                                <span className="text-[10px] text-amber-500 font-bold">👑 ได้สิทธิ์</span>
+                              )}
+                              {regTime && (
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono flex items-center gap-0.5 ml-0.5">
+                                  <span>🕒</span>
+                                  <span>{regTime}</span>
+                                </span>
+                              )}
                             </span>
                           );
                         })}

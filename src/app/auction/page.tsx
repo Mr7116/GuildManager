@@ -14,6 +14,13 @@ import CreateRoundModal from '@/components/modals/CreateRoundModal';
 import RoundHistoryModal from '@/components/modals/RoundHistoryModal';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
+import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
+import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
+import PetSvgIcon from '@/components/icons/PetSvgIcon';
+import { getTitleTierStyle } from '@/constants/titleItems';
+import { getChestTierStyle } from '@/constants/chestItems';
+import { getPetTierStyle } from '@/constants/petItems';
 
 export default function AuctionPage() {
   const {
@@ -33,7 +40,11 @@ export default function AuctionPage() {
     startAllPendingAuctions,
     addMemberToAuction,
     removeMemberFromAuction,
+    removeOneMemberEntryFromAuction,
+    removeMemberEntryById,
+    updateAuctionMaxEntries,
     setAuctionWinner,
+    confirmAuctionWinners,
     resetAuctionWinner,
     deleteAuctionItem,
   } = useGuildStore();
@@ -634,10 +645,23 @@ export default function AuctionPage() {
             const isPending = item.status === 'pending';
             const isActive = item.status === 'active';
             const isEnded = item.status === 'ended';
-            const isCard = item.itemCategory === 'card' || item.cardQuality === 'Purple';
-            const isRelic = item.itemCategory === 'relic' || item.cardQuality === 'Sage';
+            const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
+            const isChest = !isTitle && (item.itemCategory === 'chest' || (item.cardSlot && (item.cardSlot.includes('หีบ') || item.cardSlot.includes('กล่อง') || item.cardSlot.includes('Pack'))));
+            const isPet = !isTitle && !isChest && (item.itemCategory === 'pet' || (item.cardSlot && item.cardSlot.includes('สัตว์เลี้ยง')) || (item.cardQuality && item.cardQuality.startsWith('Pet')));
+            const isRelic = !isTitle && !isChest && !isPet && (item.itemCategory === 'relic' || item.cardQuality === 'Sage');
+            const isCard = !isTitle && !isChest && !isPet && !isRelic && (item.itemCategory === 'card' || item.cardQuality === 'Purple');
+            const titleTier = isTitle ? getTitleTierStyle(item.accessoryIcon || item.accessoryName || item.cardQuality) : null;
+            const chestTier = isChest ? getChestTierStyle(item.accessoryName || item.cardQuality) : null;
+            const petTier = isPet ? getPetTierStyle(item.accessoryName || item.cardQuality) : null;
             const entryCount = (item.entries || []).length;
-            const imageSrc = isRelic
+            const isQuotaFull = !!(item.maxEntries && item.maxEntries > 0 && entryCount >= item.maxEntries);
+            const imageSrc = isTitle
+              ? `/images/titles/${item.accessoryIcon}.webp`
+              : isChest
+              ? `/images/chests/${item.accessoryIcon}.webp`
+              : isPet
+              ? `/images/pets/${item.accessoryIcon}.webp`
+              : isRelic
               ? `/images/relics/${item.accessoryIcon}.webp`
               : isCard
               ? `/images/cards/${item.accessoryIcon}.webp`
@@ -661,7 +685,13 @@ export default function AuctionPage() {
                   </span>
 
                   <div className={`relative w-13 h-13 shrink-0 rounded-xl border flex items-center justify-center shadow-md ${
-                    isRelic
+                    isTitle
+                      ? `${titleTier?.border} ${titleTier?.bg}`
+                      : isChest
+                      ? `${chestTier?.border} ${chestTier?.bg}`
+                      : isPet
+                      ? `${petTier?.border} ${petTier?.bg}`
+                      : isRelic
                       ? 'border-amber-500/50 bg-amber-950/20'
                       : isCard
                       ? 'border-purple-500/50 bg-purple-950/20'
@@ -673,15 +703,39 @@ export default function AuctionPage() {
                       width={44}
                       height={44}
                       unoptimized
-                      className="object-contain"
+                      className="object-contain drop-shadow"
                       onError={(e) => {
-                        const fallback = isRelic
+                        const fallback = isTitle
+                          ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
+                          : isChest
+                          ? (item.accessoryIcon.includes('title_chest')
+                              ? `/images/chests/${item.accessoryIcon}.svg`
+                              : item.accessoryIcon.includes('stonebox') || item.accessoryIcon.includes('gem')
+                              ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                              : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                          : isPet
+                          ? (item.accessoryIcon.includes('mfmm')
+                              ? `https://roworlddb.com/media/images/icon/pet/${item.accessoryIcon}.webp`
+                              : `https://roworlddb.com/media/images/pet/${item.accessoryIcon}.webp`)
+                          : isRelic
                           ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
                           : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
                         (e.target as HTMLImageElement).src = fallback;
                       }}
                     />
-                    {isRelic ? (
+                    {isTitle ? (
+                      <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
+                        {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
+                      </span>
+                    ) : isChest ? (
+                      <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${chestTier?.badgeBg}`}>
+                        {chestTier?.tier === 'purple' ? 'ม่วง' : chestTier?.tier === 'blue' ? 'ฟ้า' : 'ทอง'}
+                      </span>
+                    ) : isPet ? (
+                      <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${petTier?.badgeBg}`}>
+                        {petTier?.tier === 'gold' ? 'SSR' : petTier?.tier === 'purple' ? 'SR' : petTier?.tier === 'blue' ? 'R' : 'N'}
+                      </span>
+                    ) : isRelic ? (
                       <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-amber-950/90 border border-amber-500/60 text-amber-200">
                         Sage
                       </span>
@@ -704,9 +758,24 @@ export default function AuctionPage() {
                         {item.accessoryName}
                       </h4>
 
-                      {isRelic ? (
+                      {isTitle ? (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border flex items-center gap-1 ${titleTier?.badgeBg}`}>
+                          <TitleSvgIcon className="w-3 h-3" />
+                          <span>{item.cardQuality || titleTier?.label}</span>
+                        </span>
+                      ) : isChest ? (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border flex items-center gap-1 ${chestTier?.badgeBg}`}>
+                          <TitleChestSvgIcon className="w-3 h-3" variant={chestTier?.tier} />
+                          <span>{item.cardQuality || chestTier?.label}</span>
+                        </span>
+                      ) : isPet ? (
+                        <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold border flex items-center gap-1 ${petTier?.badgeBg}`}>
+                          <PetSvgIcon className="w-3 h-3" variant={petTier?.tier} />
+                          <span>{item.cardQuality || petTier?.label}</span>
+                        </span>
+                      ) : isRelic ? (
                         <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
-                          <span>🏺</span>
+                          <RelicSvgIcon className="w-3 h-3" />
                           <span>Relic</span>
                         </span>
                       ) : isCard ? (
@@ -727,9 +796,17 @@ export default function AuctionPage() {
                         </span>
                       )}
                       {isActive && (
-                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/40 flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                          <span>เปิดรับรายชื่อ / พร้อมหมุน</span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                          isQuotaFull
+                            ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300 border-amber-500/40'
+                            : 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/40'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${isQuotaFull ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+                          <span>
+                            {isTitle
+                              ? (isQuotaFull ? `🔒 ผู้รับสิทธิ์ครบ (${entryCount}/${item.maxEntries})` : `⚡ เปิดรับสิทธิ์ Title ${item.maxEntries ? `(${entryCount}/${item.maxEntries})` : ''}`)
+                              : (isQuotaFull ? `🔒 โควตาเต็ม (${entryCount}/${item.maxEntries})` : `เปิดรับรายชื่อ ${item.maxEntries ? `(${entryCount}/${item.maxEntries})` : '/ พร้อมหมุน'}`)}
+                          </span>
                         </span>
                       )}
                       {isEnded && (
@@ -753,36 +830,59 @@ export default function AuctionPage() {
                   <div className="text-left md:text-right">
                     {isEnded && item.winnerMemberName ? (
                       <div>
-                        <div className="text-[10px] font-semibold text-slate-400">ผู้ชนะที่สุ่มได้:</div>
-                        <div className="flex items-center md:justify-end gap-1.5 mt-0.5">
-                          {item.winnerMemberJob && (
-                            <JobEmblem job={item.winnerMemberJob} size={18} />
-                          )}
-                          <span className="text-base sm:text-lg font-black text-emerald-300 tracking-wide">
-                            {item.winnerMemberName}
-                          </span>
+                        <div className="text-[10px] font-semibold text-slate-400">
+                          {item.winners && item.winners.length > 1 ? `ผู้ได้รับสิทธิ์ทั้งหมด (${entryCount} ชิ้น):` : 'ผู้ชนะที่สุ่มได้:'}
                         </div>
-                        <div className="text-[10px] text-slate-500">
-                          จากผู้ลงชื่อทั้งหมด {entryCount} คน
+                        {item.winners && item.winners.length > 1 ? (
+                          <div className="flex flex-wrap items-center md:justify-end gap-1.5 mt-1 max-w-md">
+                            {item.winners.map((w) => (
+                              <span key={w.memberId} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold">
+                                {w.memberJob && <JobEmblem job={w.memberJob} size={15} />}
+                                <span>{w.memberName}</span>
+                                <span className="text-amber-300 font-mono">x{w.count}</span>
+                              </span>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="flex items-center md:justify-end gap-1.5 mt-0.5">
+                            {item.winnerMemberJob && (
+                              <JobEmblem job={item.winnerMemberJob} size={18} />
+                            )}
+                            <span className="text-base sm:text-lg font-black text-emerald-300 tracking-wide">
+                              {item.winnerMemberName}
+                            </span>
+                          </div>
+                        )}
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                          จากผู้ลงชื่อทั้งหมด {entryCount} รายการ
                         </div>
                       </div>
                     ) : (
                       <div>
                         <div className="text-[10px] font-semibold text-slate-400">
-                          {isPending ? 'สถานะ:' : 'สมาชิกที่ส่งรายชื่อเข้ามา:'}
+                          {isPending ? 'สถานะ:' : isTitle ? 'สมาชิกที่ขอรับสิทธิ์:' : 'สมาชิกที่ส่งรายชื่อเข้ามา:'}
                         </div>
                         <div className="text-base sm:text-lg font-extrabold font-mono text-amber-400">
                           {isPending ? (
                             <span className="text-sm font-sans text-amber-300/90 font-bold">รอเปิดรับ</span>
                           ) : (
-                            <>
-                              {entryCount} <span className="text-xs font-sans text-slate-400 font-normal">คน</span>
-                            </>
+                            <span className="inline-flex items-center gap-1">
+                              <span>{entryCount}</span>
+                              {item.maxEntries ? (
+                                <span className="text-xs font-mono text-slate-400">/{item.maxEntries}</span>
+                              ) : null}
+                              <span className="text-xs font-sans text-slate-400 font-normal">ชิ้น</span>
+                              {isQuotaFull && (
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-500 font-bold border border-rose-500/30">
+                                  เต็ม
+                                </span>
+                              )}
+                            </span>
                           )}
                         </div>
                         {isActive && entryCount > 0 && (
                           <div className="text-[10px] text-emerald-400 font-medium">
-                            พร้อมหมุนวงล้อสุ่ม 🎡
+                            {isTitle ? '⚡ กดปุ่มยืนยันผู้ชนะได้ทันที' : 'พร้อมหมุนวงล้อสุ่ม 🎡'}
                           </div>
                         )}
                         {isActive && entryCount === 0 && (
@@ -811,26 +911,54 @@ export default function AuctionPage() {
 
                   {/* Action 2: REGISTER MEMBERS (เมื่อ active) */}
                   {isActive && (
-                    <button
-                      type="button"
-                      onClick={() => setRegisterAuctionId(item.id)}
-                      className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
-                    >
-                      <span>👥</span>
-                      <span>ลงชื่อ ({entryCount})</span>
-                    </button>
-                  )}
+                    isTitle ? (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setRegisterAuctionId(item.id)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <span>👥</span>
+                          <span>จัดการรายชื่อ ({entryCount}{item.maxEntries ? `/${item.maxEntries}` : ''})</span>
+                        </button>
 
-                  {/* Action 3: LUCKY WHEEL (หมุนวงล้อ) */}
-                  {isActive && (
-                    <button
-                      type="button"
-                      onClick={() => setWheelAuctionId(item.id)}
-                      className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white text-xs font-extrabold shadow-md shadow-rose-950/40 flex items-center gap-1.5 transition cursor-pointer"
-                    >
-                      <span>🎡</span>
-                      <span>หมุนวงล้อสุ่ม</span>
-                    </button>
+                        {entryCount > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (window.confirm(`ยืนยันผู้ชนะ Title "${item.accessoryName}" ทั้งหมด ${entryCount} ชิ้นตามรายชื่อที่ขอเข้ามาใช่หรือไม่?`)) {
+                                confirmAuctionWinners(item.id);
+                              }
+                            }}
+                            className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-black shadow-md shadow-amber-950/40 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                            title="ยืนยันผู้ชนะตามจำนวนที่ขอเข้ามาทุกคน โดยไม่ต้องสุ่มวงล้อ"
+                          >
+                            <span>🏆</span>
+                            <span>กดยืนยันผู้ชนะ ({entryCount})</span>
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setRegisterAuctionId(item.id)}
+                          className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-300 dark:border-slate-700 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <span>👥</span>
+                          <span>ลงชื่อ ({entryCount}{item.maxEntries ? `/${item.maxEntries}` : ''})</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setWheelAuctionId(item.id)}
+                          className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white text-xs font-extrabold shadow-md shadow-rose-950/40 flex items-center gap-1.5 transition cursor-pointer"
+                        >
+                          <span>🎡</span>
+                          <span>หมุนวงล้อสุ่ม</span>
+                        </button>
+                      </>
+                    )
                   )}
 
                   {/* Re-roll or View Wheel (for ended) */}
@@ -877,10 +1005,23 @@ export default function AuctionPage() {
             const isPending = item.status === 'pending';
             const isActive = item.status === 'active';
             const isEnded = item.status === 'ended';
-            const isCard = item.itemCategory === 'card' || item.cardQuality === 'Purple';
-            const isRelic = item.itemCategory === 'relic' || item.cardQuality === 'Sage';
+            const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
+            const isChest = !isTitle && (item.itemCategory === 'chest' || (item.cardSlot && (item.cardSlot.includes('หีบ') || item.cardSlot.includes('กล่อง') || item.cardSlot.includes('Pack'))));
+            const isPet = !isTitle && !isChest && (item.itemCategory === 'pet' || (item.cardSlot && item.cardSlot.includes('สัตว์เลี้ยง')) || (item.cardQuality && item.cardQuality.startsWith('Pet')));
+            const isRelic = !isTitle && !isChest && !isPet && (item.itemCategory === 'relic' || item.cardQuality === 'Sage');
+            const isCard = !isTitle && !isChest && !isPet && !isRelic && (item.itemCategory === 'card' || item.cardQuality === 'Purple');
+            const titleTier = isTitle ? getTitleTierStyle(item.accessoryIcon || item.accessoryName || item.cardQuality) : null;
+            const chestTier = isChest ? getChestTierStyle(item.accessoryName || item.cardQuality) : null;
+            const petTier = isPet ? getPetTierStyle(item.accessoryName || item.cardQuality) : null;
             const entryCount = (item.entries || []).length;
-            const imageSrc = isRelic
+            const isQuotaFull = !!(item.maxEntries && item.maxEntries > 0 && entryCount >= item.maxEntries);
+            const imageSrc = isTitle
+              ? `/images/titles/${item.accessoryIcon}.webp`
+              : isChest
+              ? `/images/chests/${item.accessoryIcon}.webp`
+              : isPet
+              ? `/images/pets/${item.accessoryIcon}.webp`
+              : isRelic
               ? `/images/relics/${item.accessoryIcon}.webp`
               : isCard
               ? `/images/cards/${item.accessoryIcon}.webp`
@@ -906,9 +1047,17 @@ export default function AuctionPage() {
                         <span>รอเปิดรับรายชื่อ</span>
                       </span>
                     ) : isActive ? (
-                      <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        <span>เปิดรับรายชื่อ / พร้อมสุ่ม</span>
+                      <span className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                        isQuotaFull
+                          ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                          : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${isQuotaFull ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+                        <span>
+                          {isQuotaFull
+                            ? `🔒 เต็มโควตา (${entryCount}/${item.maxEntries})`
+                            : `เปิดรับรายชื่อ ${item.maxEntries ? `(${entryCount}/${item.maxEntries})` : '/ พร้อมสุ่ม'}`}
+                        </span>
                       </span>
                     ) : isEnded ? (
                       <span className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border border-indigo-500/30">
@@ -921,9 +1070,25 @@ export default function AuctionPage() {
                       </span>
                     )}
 
-                    {isRelic ? (
-                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
-                        Relic
+                    {isTitle ? (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${titleTier?.badgeBg}`}>
+                        <TitleSvgIcon className="w-3 h-3" />
+                        <span>{titleTier?.label}</span>
+                      </span>
+                    ) : isChest ? (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${chestTier?.badgeBg}`}>
+                        <TitleChestSvgIcon className="w-3 h-3" variant={chestTier?.tier} />
+                        <span>{chestTier?.label}</span>
+                      </span>
+                    ) : isPet ? (
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border flex items-center gap-1 ${petTier?.badgeBg}`}>
+                        <PetSvgIcon className="w-3 h-3" variant={petTier?.tier} />
+                        <span>{item.cardQuality || petTier?.label}</span>
+                      </span>
+                    ) : isRelic ? (
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                        <RelicSvgIcon className="w-3 h-3" />
+                        <span>Relic</span>
                       </span>
                     ) : isCard ? (
                       <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30">
@@ -962,7 +1127,13 @@ export default function AuctionPage() {
                 <div className="py-3.5 space-y-3 flex-1">
                   <div className="flex items-start gap-3">
                     <div className={`relative w-16 h-16 shrink-0 rounded-2xl border flex items-center justify-center shadow-lg group-hover:scale-105 transition ${
-                      isRelic
+                      isTitle
+                        ? `${titleTier?.border} ${titleTier?.bg} ${titleTier?.shadow}`
+                        : isChest
+                        ? `${chestTier?.border} ${chestTier?.bg} ${chestTier?.shadow}`
+                        : isPet
+                        ? `${petTier?.border} ${petTier?.bg} ${petTier?.shadow}`
+                        : isRelic
                         ? 'border-amber-500/50 bg-amber-950/20 shadow-amber-500/15'
                         : isCard
                         ? 'border-purple-500/50 bg-purple-950/20 shadow-purple-500/15'
@@ -976,13 +1147,37 @@ export default function AuctionPage() {
                         unoptimized
                         className="object-contain drop-shadow"
                         onError={(e) => {
-                          const fallback = isRelic
+                          const fallback = isTitle
+                            ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
+                            : isChest
+                            ? (item.accessoryIcon.includes('title_chest')
+                                ? `/images/chests/${item.accessoryIcon}.svg`
+                                : item.accessoryIcon.includes('stonebox') || item.accessoryIcon.includes('gem')
+                                ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                                : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                            : isPet
+                            ? (item.accessoryIcon.includes('mfmm')
+                                ? `https://roworlddb.com/media/images/icon/pet/${item.accessoryIcon}.webp`
+                                : `https://roworlddb.com/media/images/pet/${item.accessoryIcon}.webp`)
+                            : isRelic
                             ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
                             : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
                           (e.target as HTMLImageElement).src = fallback;
                         }}
                       />
-                      {isRelic ? (
+                      {isTitle ? (
+                        <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
+                          {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
+                        </span>
+                      ) : isChest ? (
+                        <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${chestTier?.badgeBg}`}>
+                          {chestTier?.tier === 'purple' ? 'ม่วง' : chestTier?.tier === 'blue' ? 'ฟ้า' : 'ทอง'}
+                        </span>
+                      ) : isPet ? (
+                        <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${petTier?.badgeBg}`}>
+                          {petTier?.tier === 'gold' ? 'SSR' : petTier?.tier === 'purple' ? 'SR' : petTier?.tier === 'blue' ? 'R' : 'N'}
+                        </span>
+                      ) : isRelic ? (
                         <span className="absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold bg-amber-950/90 border border-amber-500/60 text-amber-200">
                           Sage
                         </span>
@@ -1003,9 +1198,25 @@ export default function AuctionPage() {
                       <h4 className="font-extrabold text-base text-slate-900 dark:text-white tracking-wide truncate" title={item.accessoryName}>
                         {item.accessoryName}
                       </h4>
-                      {isRelic ? (
-                        <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-0.5">
-                          🏺 {item.cardSlot || 'Relic'}
+                      {isTitle ? (
+                        <div className={`text-[11px] font-semibold mt-0.5 flex items-center gap-1 ${titleTier?.text}`}>
+                          <TitleSvgIcon className="w-3.5 h-3.5 shrink-0" />
+                          <span>{item.cardQuality || item.cardSlot || titleTier?.label}</span>
+                        </div>
+                      ) : isChest ? (
+                        <div className={`text-[11px] font-semibold mt-0.5 flex items-center gap-1 ${chestTier?.text}`}>
+                          <TitleChestSvgIcon className="w-3.5 h-3.5 shrink-0" variant={chestTier?.tier} />
+                          <span>{item.cardQuality || item.cardSlot || chestTier?.label}</span>
+                        </div>
+                      ) : isPet ? (
+                        <div className={`text-[11px] font-semibold mt-0.5 flex items-center gap-1 ${petTier?.text}`}>
+                          <PetSvgIcon className="w-3.5 h-3.5 shrink-0" variant={petTier?.tier} />
+                          <span>{item.cardQuality || item.cardSlot || petTier?.label}</span>
+                        </div>
+                      ) : isRelic ? (
+                        <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-0.5 flex items-center gap-1">
+                          <RelicSvgIcon className="w-3.5 h-3.5 shrink-0" />
+                          <span>{item.cardSlot || 'Relic'}</span>
                         </div>
                       ) : isCard ? (
                         <div className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 mt-0.5">
@@ -1073,17 +1284,37 @@ export default function AuctionPage() {
                         className="flex-1 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold border border-slate-300 dark:border-slate-700 flex items-center justify-center gap-1.5 transition cursor-pointer"
                       >
                         <span>👥</span>
-                        <span>ลงชื่อ ({entryCount})</span>
+                        <span>ลงชื่อ ({entryCount}{item.maxEntries ? `/${item.maxEntries}` : ''})</span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setWheelAuctionId(item.id)}
-                        className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white text-xs font-extrabold shadow-md shadow-rose-950/40 flex items-center justify-center gap-1.5 transition cursor-pointer"
-                      >
-                        <span>🎡</span>
-                        <span>หมุนวงล้อ</span>
-                      </button>
+                      {isTitle ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (entryCount === 0) {
+                              setRegisterAuctionId(item.id);
+                              return;
+                            }
+                            if (window.confirm(`ยืนยันผู้ชนะ Title "${item.accessoryName}" ทั้งหมด ${entryCount} ชิ้นตามรายชื่อที่ขอเข้ามาใช่หรือไม่?`)) {
+                              confirmAuctionWinners(item.id);
+                            }
+                          }}
+                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-500 text-slate-950 text-xs font-black shadow-md shadow-amber-950/40 flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95"
+                          title="ยืนยันผู้ชนะตามจำนวนที่ขอเข้ามาทุกคน โดยไม่ต้องสุ่มวงล้อ"
+                        >
+                          <span>🏆</span>
+                          <span>ยืนยันผู้ชนะ ({entryCount})</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setWheelAuctionId(item.id)}
+                          className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white text-xs font-extrabold shadow-md shadow-rose-950/40 flex items-center justify-center gap-1.5 transition cursor-pointer"
+                        >
+                          <span>🎡</span>
+                          <span>หมุนวงล้อ</span>
+                        </button>
+                      )}
                     </>
                   ) : (
                     <button
@@ -1152,6 +1383,18 @@ export default function AuctionPage() {
         }}
         onRemoveMember={(auctionId, memberId) => {
           removeMemberFromAuction(auctionId, memberId);
+        }}
+        onRemoveOneMember={(auctionId, memberId) => {
+          removeOneMemberEntryFromAuction(auctionId, memberId);
+        }}
+        onRemoveEntry={(auctionId, entryId) => {
+          removeMemberEntryById(auctionId, entryId);
+        }}
+        onUpdateMaxEntries={(auctionId, maxEntries) => {
+          updateAuctionMaxEntries(auctionId, maxEntries);
+        }}
+        onConfirmWinners={(auctionId) => {
+          confirmAuctionWinners(auctionId);
         }}
         onOpenWheel={() => {
           if (registerAuction) {

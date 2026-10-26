@@ -29,7 +29,7 @@ export interface AuctionEntry {
 export interface AuctionItem {
   id: string;
   roundId?: string;
-  itemCategory?: 'accessory' | 'card' | 'relic';
+  itemCategory?: 'accessory' | 'card' | 'relic' | 'title' | 'chest' | 'pet';
   cardSlot?: string;
   cardQuality?: string;
   accessoryId: number;
@@ -47,11 +47,13 @@ export interface AuctionItem {
 
   // Registered Participants for Lucky Wheel
   entries: AuctionEntry[];
+  maxEntries?: number; // จำกัดจำนวนคนลงชื่อสูงสุด (undefined หรือ <= 0 คือไม่จำกัด เช่น 1 = 0/1)
 
   // Winner Information
   winnerMemberId?: string;
   winnerMemberName?: string;
   winnerMemberJob?: string;
+  winners?: Array<{ memberId: string; memberName: string; memberJob?: string; count: number }>;
   finalPrice?: number;
 
   // Metadata
@@ -64,4 +66,41 @@ export interface AuctionItem {
   // Bids
   bids: BidRecord[];
 }
+
+export function formatRegistrationTime(isoStr?: string): string {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    return (
+      d.toLocaleTimeString('th-TH', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+      }) + ' น.'
+    );
+  } catch {
+    return '';
+  }
+}
+
+export function formatRegistrationDateTime(isoStr?: string): string {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return '';
+    const datePart = d.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' });
+    const timePart = d.toLocaleTimeString('th-TH', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: false,
+    });
+    return `${datePart} ${timePart} น.`;
+  } catch {
+    return '';
+  }
+}
+
 

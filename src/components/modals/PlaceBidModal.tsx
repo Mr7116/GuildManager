@@ -6,6 +6,13 @@ import Image from 'next/image';
 import { AuctionItem } from '@/types/auction';
 import { Member } from '@/types/member';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
+import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
+import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
+import PetSvgIcon from '@/components/icons/PetSvgIcon';
+import { getTitleTierStyle } from '@/constants/titleItems';
+import { getChestTierStyle } from '@/constants/chestItems';
+import { getPetTierStyle } from '@/constants/petItems';
 
 interface PlaceBidModalProps {
   isOpen: boolean;
@@ -122,9 +129,21 @@ export default function PlaceBidModal({
 
         {/* Item Info Card */}
         {(() => {
-          const isCard = auction.itemCategory === 'card' || auction.cardQuality === 'Purple';
-          const isRelic = auction.itemCategory === 'relic' || auction.cardQuality === 'Sage';
-          const imageSrc = isRelic
+          const isTitle = auction.itemCategory === 'title' || (auction.cardSlot && auction.cardSlot.includes('Title')) || (auction.cardQuality && auction.cardQuality.includes('Title'));
+          const isChest = !isTitle && (auction.itemCategory === 'chest' || (auction.cardSlot && (auction.cardSlot.includes('หีบ') || auction.cardSlot.includes('กล่อง') || auction.cardSlot.includes('Pack'))));
+          const isPet = !isTitle && !isChest && (auction.itemCategory === 'pet' || (auction.cardSlot && auction.cardSlot.includes('สัตว์เลี้ยง')) || (auction.cardQuality && auction.cardQuality.startsWith('Pet')));
+          const isRelic = !isTitle && !isChest && !isPet && (auction.itemCategory === 'relic' || auction.cardQuality === 'Sage');
+          const isCard = !isTitle && !isChest && !isPet && !isRelic && (auction.itemCategory === 'card' || auction.cardQuality === 'Purple');
+          const titleTier = isTitle ? getTitleTierStyle(auction.accessoryIcon || auction.accessoryName || auction.cardQuality) : null;
+          const chestTier = isChest ? getChestTierStyle(auction.accessoryName || auction.cardQuality) : null;
+          const petTier = isPet ? getPetTierStyle(auction.accessoryName || auction.cardQuality) : null;
+          const imageSrc = isTitle
+            ? `/images/titles/${auction.accessoryIcon}.webp`
+            : isChest
+            ? `/images/chests/${auction.accessoryIcon}.webp`
+            : isPet
+            ? `/images/pets/${auction.accessoryIcon}.webp`
+            : isRelic
             ? `/images/relics/${auction.accessoryIcon}.webp`
             : isCard
             ? `/images/cards/${auction.accessoryIcon}.webp`
@@ -132,10 +151,10 @@ export default function PlaceBidModal({
 
           return (
             <div className={`flex items-center gap-3 p-3 rounded-2xl border shadow-inner ${
-              isRelic ? 'border-amber-500/30 bg-amber-950/20' : isCard ? 'border-purple-500/30 bg-purple-950/20' : 'border-rose-500/30 bg-rose-950/20'
+              isTitle ? `${titleTier?.border} ${titleTier?.bg}` : isChest ? `${chestTier?.border} ${chestTier?.bg}` : isPet ? `${petTier?.border} ${petTier?.bg}` : isRelic ? 'border-amber-500/30 bg-amber-950/20' : isCard ? 'border-purple-500/30 bg-purple-950/20' : 'border-rose-500/30 bg-rose-950/20'
             }`}>
               <div className={`relative w-14 h-14 shrink-0 rounded-xl border flex items-center justify-center ${
-                isRelic ? 'border-amber-500/40 bg-[#0c1220]' : isCard ? 'border-purple-500/40 bg-[#0c1220]' : 'border-rose-500/40 bg-[#0c1220]'
+                isTitle ? `${titleTier?.border} bg-[#0c1220]` : isChest ? `${chestTier?.border} bg-[#0c1220]` : isPet ? `${petTier?.border} bg-[#0c1220]` : isRelic ? 'border-amber-500/40 bg-[#0c1220]' : isCard ? 'border-purple-500/40 bg-[#0c1220]' : 'border-rose-500/40 bg-[#0c1220]'
               }`}>
                 <Image
                   src={imageSrc}
@@ -143,9 +162,21 @@ export default function PlaceBidModal({
                   width={48}
                   height={48}
                   unoptimized
-                  className="object-contain"
+                  className="object-contain drop-shadow"
                   onError={(e) => {
-                    const fallback = isRelic
+                    const fallback = isTitle
+                      ? `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`
+                      : isChest
+                      ? (auction.accessoryIcon.includes('title_chest')
+                          ? `/images/chests/${auction.accessoryIcon}.svg`
+                          : auction.accessoryIcon.includes('stonebox') || auction.accessoryIcon.includes('gem')
+                          ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                          : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                      : isPet
+                      ? (auction.accessoryIcon.includes('mfmm')
+                          ? `https://roworlddb.com/media/images/icon/pet/${auction.accessoryIcon}.webp`
+                          : `https://roworlddb.com/media/images/pet/${auction.accessoryIcon}.webp`)
+                      : isRelic
                       ? `https://roworlddb.com/media/images/hallows/${auction.accessoryIcon}.webp`
                       : `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`;
                     (e.target as HTMLImageElement).src = fallback;
@@ -155,9 +186,25 @@ export default function PlaceBidModal({
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
                   <h4 className="font-extrabold text-sm text-white truncate">{auction.accessoryName}</h4>
-                  {isRelic ? (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                      🏺 Relic
+                  {isTitle ? (
+                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border flex items-center gap-1 ${titleTier?.badgeBg}`}>
+                      <TitleSvgIcon className="w-3 h-3" />
+                      <span>{auction.cardQuality || titleTier?.label}</span>
+                    </span>
+                  ) : isChest ? (
+                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border flex items-center gap-1 ${chestTier?.badgeBg}`}>
+                      <TitleChestSvgIcon className="w-3 h-3" variant={chestTier?.tier} />
+                      <span>{auction.cardQuality || chestTier?.label}</span>
+                    </span>
+                  ) : isPet ? (
+                    <span className={`px-1.5 py-0.2 rounded text-[10px] font-bold border flex items-center gap-1 ${petTier?.badgeBg}`}>
+                      <PetSvgIcon className="w-3 h-3" variant={petTier?.tier} />
+                      <span>{auction.cardQuality || petTier?.label}</span>
+                    </span>
+                  ) : isRelic ? (
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                      <RelicSvgIcon className="w-3 h-3" />
+                      <span>Relic</span>
                     </span>
                   ) : isCard ? (
                     <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30">
