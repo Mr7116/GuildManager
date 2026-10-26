@@ -1,10 +1,12 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Member } from '@/types/member';
 import { Party, Team, LaneKey, FieldZoneKey } from '@/types/party';
-import { AuctionItem, AuctionEntry, AuctionRound, BidRecord } from '@/types/auction';
+import { AuctionItem, AuctionEntry, AuctionRound, BidRecord, isTitleItem } from '@/types/auction';
+import { QueueList, QueueEntry } from '@/types/queue';
 
 export interface GuildState {
   guildName: string;
@@ -89,6 +91,19 @@ export interface GuildState {
   closeAuction: (auctionId: string, winnerMemberId?: string) => void;
   deleteAuctionItem: (auctionId: string) => void;
   cancelAuctionItem: (auctionId: string) => void;
+
+  // Queue Management
+  queueLists: QueueList[];
+  createQueueList: (data: Omit<QueueList, 'id' | 'createdAt' | 'entries'>) => string;
+  updateQueueList: (id: string, updates: Partial<QueueList>) => void;
+  deleteQueueList: (id: string) => void;
+  addMemberToQueue: (queueId: string, memberId: string, note?: string) => { success: boolean; message: string };
+  removeMemberFromQueue: (queueId: string, entryId: string) => void;
+  removeMemberByMemberIdFromQueue: (queueId: string, memberId: string) => void;
+  reorderQueueEntries: (queueId: string, entries: QueueEntry[]) => void;
+  toggleQueueEntryCompleted: (queueId: string, entryId: string) => void;
+  clearQueueEntries: (queueId: string) => void;
+  setQueueStatus: (queueId: string, status: 'open' | 'in_progress' | 'closed') => void;
 }
 
 const DEFAULT_GVG_TEAMS: Team[] = [
@@ -210,6 +225,27 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     }
   }, [auctionRounds]);
 
+  const [queueLists, setQueueLists] = useState<QueueList[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('TUMDOOD_queue_lists');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed)) return parsed;
+        }
+      } catch (e) {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('TUMDOOD_queue_lists', JSON.stringify(queueLists));
+      } catch (e) {}
+    }
+  }, [queueLists]);
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
@@ -219,6 +255,14 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
 
   const isInitialLoadDone = useRef(false);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastRemoteUpdatedAtRef = useRef<string | null>(null);
+  const isRemoteSyncingRef = useRef(false);
+  const clientSessionId = useRef<string>(
+    typeof window !== 'undefined'
+      ? `client_${Math.random().toString(36).substring(2, 9)}_${Date.now()}`
+      : 'server'
+  );
+  const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
 
   // References to latest state to avoid stale closures in save
   const latestStateRef = useRef({
@@ -235,6 +279,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     auctionItems,
     auctionRounds,
     activeRoundId,
+    queueLists,
   });
 
   useEffect(() => {
@@ -252,10 +297,220 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       auctionItems,
       auctionRounds,
       activeRoundId,
+      queueLists,
     };
-  }, [guildName, fileTimestamp, members, gvgTeams, gvgParties, siegeTeams, siegeParties, polarityTeams, polarityParties, presetParties, auctionItems, auctionRounds, activeRoundId]);
+  }, [guildName, fileTimestamp, members, gvgTeams, gvgParties, siegeTeams, siegeParties, polarityTeams, polarityParties, presetParties, auctionItems, auctionRounds, activeRoundId, queueLists]);
 
-  // Fetch from Supabase
+  // Apply parsed database state to React state
+  const applyRemoteData = useCallback((data: any) => {
+    if (!data) return;
+    isRemoteSyncingRef.current = true;
+
+    if (data.updated_at) {
+      lastRemoteUpdatedAtRef.current = data.updated_at;
+    }
+
+    if (data.guild_name) setGuildName(data.guild_name);
+    if (data.file_timestamp) setFileTimestamp(data.file_timestamp);
+    if (Array.isArray(data.members)) setMembers(data.members);
+
+    if (Array.isArray(data.parties)) {
+      const rawParties = data.parties as (Party & {
+        category?: string;
+        teamName?: string;
+        teamField?: FieldZoneKey;
+        teamColor?: string;
+      })[];
+
+      // GVG
+      const gvgRaw = rawParties.filter((p) => !p.category || p.category === 'gvg');
+      if (gvgRaw.length > 0) {
+        const teamMap = new Map<string, Team>();
+        gvgRaw.forEach((p) => {
+          const tid = p.teamId || 'team_a';
+          if (!teamMap.has(tid)) {
+            teamMap.set(tid, {
+              id: tid,
+              name: p.teamName || (tid === 'team_a' ? 'ทีม A' : tid === 'team_b' ? 'ทีม B' : 'ทีม C'),
+              field: p.teamField === 'sub' ? 'sub' : 'main',
+              color: p.teamColor || 'rose',
+            });
+          }
+        });
+        const extractedTeams = Array.from(teamMap.values());
+        setGvgTeams(extractedTeams.length > 0 ? extractedTeams : DEFAULT_GVG_TEAMS);
+        setGvgParties(
+          gvgRaw.map((p) => ({
+            id: p.id,
+            name: p.name || 'ปาร์ตี้',
+            teamId: p.teamId || 'team_a',
+            lane: p.lane || 'lane_mid',
+            slots: Array.isArray(p.slots) ? p.slots.slice(0, 5) : [null, null, null, null, null],
+          }))
+        );
+      }
+
+      // Polarity
+      const polTeamsConfig = rawParties.find((p: any) => p.id === '__polarity_teams_config__') as { teams?: Team[] } | undefined;
+      if (polTeamsConfig && Array.isArray(polTeamsConfig.teams) && polTeamsConfig.teams.length > 0) {
+        setPolarityTeams(polTeamsConfig.teams);
+        try {
+          localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(polTeamsConfig.teams));
+        } catch (e) {}
+      }
+
+      const polRaw = rawParties.filter((p) => p.category === 'polarity' && p.id !== '__polarity_teams_config__');
+      if (polRaw.length > 0) {
+        setPolarityParties(polRaw);
+      } else {
+        setPolarityParties(
+          Array.from({ length: 8 }, (_, i) => ({
+            id: `pol_p${i + 1}`,
+            name: `ปาร์ตี้ ${i + 1}`,
+            teamId: 'pol_main',
+            slots: [null, null, null, null, null],
+          }))
+        );
+      }
+
+      // Siege
+      const siegeTeamsConfig = rawParties.find((p: any) => p.id === '__siege_teams_config__') as { teams?: Team[] } | undefined;
+      const siegeRaw = rawParties.filter((p) => p.category === 'siege' && p.id !== '__siege_teams_config__');
+
+      if (siegeTeamsConfig && Array.isArray(siegeTeamsConfig.teams) && siegeTeamsConfig.teams.length > 0) {
+        setSiegeTeams(siegeTeamsConfig.teams);
+        try {
+          localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
+        } catch (e) {}
+      } else if (siegeRaw.length > 0) {
+        const teamMap = new Map<string, Team>();
+        siegeRaw.forEach((p) => {
+          const tid = p.teamId || 'siege_team_1';
+          if (!teamMap.has(tid)) {
+            teamMap.set(tid, {
+              id: tid,
+              name: p.teamName || (tid === 'siege_team_1' ? 'ทีมปราสาท 1' : `ทีมปราสาท ${tid.replace('siege_team_', '')}`),
+              field: p.teamField === 'sub' ? 'sub' : 'main',
+              color: p.teamColor || 'sky',
+            });
+          }
+        });
+        const extracted = Array.from(teamMap.values());
+        if (extracted.length > 0) {
+          setSiegeTeams(extracted);
+          try {
+            localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(extracted));
+          } catch (e) {}
+        }
+      }
+
+      if (siegeRaw.length > 0) {
+        setSiegeParties(
+          siegeRaw.map((p) => ({
+            id: p.id,
+            name: p.name || 'ปาร์ตี้',
+            teamId: p.teamId || 'siege_team_1',
+            slots: Array.isArray(p.slots) ? p.slots.slice(0, 5) : [null, null, null, null, null],
+          }))
+        );
+      } else {
+        setSiegeParties(
+          Array.from({ length: 8 }, (_, i) => ({
+            id: `siege_p${i + 1}`,
+            name: `ปาร์ตี้ ${i + 1}`,
+            teamId: 'siege_team_1',
+            slots: [null, null, null, null, null],
+          }))
+        );
+      }
+
+      // Preset
+      const presetRaw = rawParties.filter((p) => p.category === 'preset');
+      if (presetRaw.length > 0) {
+        setPresetParties(presetRaw);
+      } else {
+        setPresetParties(
+          Array.from({ length: 8 }, (_, i) => ({
+            id: `preset_p${i + 1}`,
+            name: `ตี้ประจำ ${i + 1}`,
+            teamId: 'preset',
+            slots: [null, null, null, null, null],
+          }))
+        );
+      }
+
+      // Auction Items & Rounds
+      const auctionEntry = rawParties.find((p) => p.id === '__auction_items_config__');
+      if (auctionEntry) {
+        if (Array.isArray((auctionEntry as any).rounds)) {
+          setAuctionRounds((auctionEntry as any).rounds);
+          try {
+            localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify((auctionEntry as any).rounds));
+          } catch (e) {}
+        }
+        if (Array.isArray((auctionEntry as any).items)) {
+          const rawItems = (auctionEntry as any).items as AuctionItem[];
+          const sanitizedItems = rawItems.map((item) => {
+            if (!isTitleItem(item) && Array.isArray(item.entries) && item.entries.length > 0) {
+              const seen = new Set<string>();
+              const uniqueEntries = item.entries.filter((e) => {
+                if (!e.memberId) return true;
+                if (seen.has(e.memberId)) return false;
+                seen.add(e.memberId);
+                return true;
+              });
+              return { ...item, entries: uniqueEntries };
+            }
+            return item;
+          });
+          setAuctionItems(sanitizedItems);
+          try {
+            localStorage.setItem('TUMDOOD_auctions', JSON.stringify(sanitizedItems));
+          } catch (e) {}
+        }
+      }
+
+      // Queue Lists
+      const queueEntry = rawParties.find((p) => p.id === '__queue_lists_config__');
+      if (queueEntry && Array.isArray((queueEntry as any).lists)) {
+        setQueueLists((queueEntry as any).lists);
+        try {
+          localStorage.setItem('TUMDOOD_queue_lists', JSON.stringify((queueEntry as any).lists));
+        } catch (e) {}
+      }
+    }
+
+    setTimeout(() => {
+      isRemoteSyncingRef.current = false;
+    }, 400);
+  }, []);
+
+  // Silent reload from Supabase (without toggling full-page loading spinner)
+  const silentReloadFromCloud = useCallback(async () => {
+    // If pending local changes or saving, avoid overwriting local edits
+    if (autoSaveTimerRef.current) return;
+
+    try {
+      const { data, error: fetchErr } = await supabase
+        .from('guild_state')
+        .select('*')
+        .eq('id', 2)
+        .maybeSingle();
+
+      if (fetchErr) {
+        console.warn('Realtime sync fetch error:', fetchErr);
+        return;
+      }
+
+      if (data) {
+        applyRemoteData(data);
+      }
+    } catch (e) {
+      console.warn('Realtime silent reload error:', e);
+    }
+  }, [applyRemoteData]);
+
+  // Initial Fetch from Supabase
   const loadFromCloud = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -269,142 +524,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       if (fetchErr) throw fetchErr;
 
       if (data) {
-        if (data.guild_name) setGuildName(data.guild_name);
-        if (data.file_timestamp) setFileTimestamp(data.file_timestamp);
-        if (Array.isArray(data.members)) setMembers(data.members);
-
-        if (Array.isArray(data.parties)) {
-          const rawParties = data.parties as (Party & { category?: string; teamName?: string; teamField?: FieldZoneKey; teamColor?: string })[];
-
-          // GVG
-          const gvgRaw = rawParties.filter((p) => !p.category || p.category === 'gvg');
-          if (gvgRaw.length > 0) {
-            const teamMap = new Map<string, Team>();
-            gvgRaw.forEach((p) => {
-              const tid = p.teamId || 'team_a';
-              if (!teamMap.has(tid)) {
-                teamMap.set(tid, {
-                  id: tid,
-                  name: p.teamName || (tid === 'team_a' ? 'ทีม A' : tid === 'team_b' ? 'ทีม B' : 'ทีม C'),
-                  field: p.teamField === 'sub' ? 'sub' : 'main',
-                  color: p.teamColor || 'rose',
-                });
-              }
-            });
-            const extractedTeams = Array.from(teamMap.values());
-            setGvgTeams(extractedTeams.length > 0 ? extractedTeams : DEFAULT_GVG_TEAMS);
-            setGvgParties(
-              gvgRaw.map((p) => ({
-                id: p.id,
-                name: p.name || 'ปาร์ตี้',
-                teamId: p.teamId || 'team_a',
-                lane: p.lane || 'lane_mid',
-                slots: Array.isArray(p.slots) ? p.slots.slice(0, 5) : [null, null, null, null, null],
-              }))
-            );
-          }
-
-          // Polarity
-          const polTeamsConfig = rawParties.find((p: any) => p.id === '__polarity_teams_config__') as { teams?: Team[] } | undefined;
-          if (polTeamsConfig && Array.isArray(polTeamsConfig.teams) && polTeamsConfig.teams.length > 0) {
-            setPolarityTeams(polTeamsConfig.teams);
-            try {
-              localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(polTeamsConfig.teams));
-            } catch (e) {}
-          }
-
-          const polRaw = rawParties.filter((p) => p.category === 'polarity' && p.id !== '__polarity_teams_config__');
-          if (polRaw.length > 0) {
-            setPolarityParties(polRaw);
-          } else {
-            setPolarityParties(
-              Array.from({ length: 8 }, (_, i) => ({
-                id: `pol_p${i + 1}`,
-                name: `ปาร์ตี้ ${i + 1}`,
-                teamId: 'pol_main',
-                slots: [null, null, null, null, null],
-              }))
-            );
-          }
-
-          // Siege
-          const siegeTeamsConfig = rawParties.find((p: any) => p.id === '__siege_teams_config__') as { teams?: Team[] } | undefined;
-          const siegeRaw = rawParties.filter((p) => p.category === 'siege' && p.id !== '__siege_teams_config__');
-
-          if (siegeTeamsConfig && Array.isArray(siegeTeamsConfig.teams) && siegeTeamsConfig.teams.length > 0) {
-            setSiegeTeams(siegeTeamsConfig.teams);
-            try {
-              localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
-            } catch (e) {}
-          } else if (siegeRaw.length > 0) {
-            // Reconstruct teams from siege parties metadata if available
-            const teamMap = new Map<string, Team>();
-            siegeRaw.forEach((p) => {
-              const tid = p.teamId || 'siege_team_1';
-              if (!teamMap.has(tid)) {
-                teamMap.set(tid, {
-                  id: tid,
-                  name: p.teamName || (tid === 'siege_team_1' ? 'ทีมปราสาท 1' : `ทีมปราสาท ${tid.replace('siege_team_', '')}`),
-                  field: p.teamField === 'sub' ? 'sub' : 'main',
-                  color: p.teamColor || 'sky',
-                });
-              }
-            });
-            const extracted = Array.from(teamMap.values());
-            if (extracted.length > 0) {
-              setSiegeTeams(extracted);
-              try {
-                localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(extracted));
-              } catch (e) {}
-            }
-          }
-
-          if (siegeRaw.length > 0) {
-            setSiegeParties(
-              siegeRaw.map((p) => ({
-                id: p.id,
-                name: p.name || 'ปาร์ตี้',
-                teamId: p.teamId || 'siege_team_1',
-                slots: Array.isArray(p.slots) ? p.slots.slice(0, 5) : [null, null, null, null, null],
-              }))
-            );
-          } else {
-            setSiegeParties(
-              Array.from({ length: 8 }, (_, i) => ({
-                id: `siege_p${i + 1}`,
-                name: `ปาร์ตี้ ${i + 1}`,
-                teamId: 'siege_team_1',
-                slots: [null, null, null, null, null],
-              }))
-            );
-          }
-
-          // Preset
-          const presetRaw = rawParties.filter((p) => p.category === 'preset');
-          if (presetRaw.length > 0) {
-            setPresetParties(presetRaw);
-          } else {
-            setPresetParties(
-              Array.from({ length: 8 }, (_, i) => ({
-                id: `preset_p${i + 1}`,
-                name: `ตี้ประจำ ${i + 1}`,
-                teamId: 'preset',
-                slots: [null, null, null, null, null],
-              }))
-            );
-          }
-
-          // Auction Items & Rounds
-          const auctionEntry = rawParties.find((p) => p.id === '__auction_items_config__');
-          if (auctionEntry) {
-            if (Array.isArray((auctionEntry as any).rounds) && (auctionEntry as any).rounds.length > 0) {
-              setAuctionRounds((auctionEntry as any).rounds);
-            }
-            if (Array.isArray((auctionEntry as any).items)) {
-              setAuctionItems((auctionEntry as any).items);
-            }
-          }
-        }
+        applyRemoteData(data);
       }
     } catch (err: unknown) {
       console.error('Failed to load from Supabase:', err);
@@ -414,7 +534,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       setIsLoading(false);
       isInitialLoadDone.current = true;
     }
-  }, []);
+  }, [applyRemoteData]);
 
   // Save to Supabase (uses latestStateRef)
   const saveToCloud = useCallback(async () => {
@@ -464,18 +584,39 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         teams: state.polarityTeams,
       };
 
+      const sanitizedAuctionItems = state.auctionItems.map((item) => {
+        if (!isTitleItem(item) && Array.isArray(item.entries) && item.entries.length > 0) {
+          const seen = new Set<string>();
+          const uniqueEntries = item.entries.filter((e) => {
+            if (!e.memberId) return true;
+            if (seen.has(e.memberId)) return false;
+            seen.add(e.memberId);
+            return true;
+          });
+          return { ...item, entries: uniqueEntries };
+        }
+        return item;
+      });
+
       const auctionEntry = {
         id: '__auction_items_config__',
         category: '__system__',
-        items: state.auctionItems,
+        items: sanitizedAuctionItems,
         rounds: state.auctionRounds,
+      };
+
+      const queueListsEntry = {
+        id: '__queue_lists_config__',
+        category: '__system__',
+        lists: state.queueLists,
       };
 
       try {
         localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(state.siegeTeams));
         localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(state.polarityTeams));
-        localStorage.setItem('TUMDOOD_auctions', JSON.stringify(state.auctionItems));
+        localStorage.setItem('TUMDOOD_auctions', JSON.stringify(sanitizedAuctionItems));
         localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify(state.auctionRounds));
+        localStorage.setItem('TUMDOOD_queue_lists', JSON.stringify(state.queueLists));
       } catch (e) {}
 
       const combinedParties = [
@@ -487,7 +628,11 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         siegeTeamsEntry,
         polarityTeamsEntry,
         auctionEntry,
+        queueListsEntry,
       ];
+
+      const newUpdatedAt = new Date().toISOString();
+      lastRemoteUpdatedAtRef.current = newUpdatedAt;
 
       const { error: saveErr } = await supabase.from('guild_state').upsert({
         id: 2,
@@ -495,10 +640,23 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         file_timestamp: state.fileTimestamp,
         members: state.members,
         parties: combinedParties,
-        updated_at: new Date().toISOString(),
+        updated_at: newUpdatedAt,
       });
 
       if (saveErr) throw saveErr;
+
+      // Broadcast realtime event to all other open tabs/windows/devices
+      if (realtimeChannelRef.current) {
+        try {
+          realtimeChannelRef.current.send({
+            type: 'broadcast',
+            event: 'state_sync',
+            payload: { updated_at: newUpdatedAt, senderId: clientSessionId.current },
+          });
+        } catch (bcErr) {
+          console.warn('Realtime broadcast error:', bcErr);
+        }
+      }
 
       const nowStr = new Date().toLocaleTimeString('th-TH');
       setLastSavedAt(nowStr);
@@ -515,8 +673,8 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Debounced Auto Save trigger
-  const triggerAutoSave = useCallback((delayMs: number = 800) => {
-    if (!isInitialLoadDone.current) return;
+  const triggerAutoSave = useCallback((delayMs: number = 400) => {
+    if (!isInitialLoadDone.current || isRemoteSyncingRef.current) return;
     setHasUnsavedChanges(true);
     setSaveStatus('pending');
 
@@ -527,9 +685,9 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     }, delayMs);
   }, [saveToCloud]);
 
-  // Watch for state changes and auto-save
+  // Watch for state changes and auto-save (skip when sync is coming in from remote)
   useEffect(() => {
-    if (!isInitialLoadDone.current) return;
+    if (!isInitialLoadDone.current || isRemoteSyncingRef.current) return;
     triggerAutoSave(800);
   }, [gvgParties, gvgTeams, members, siegeParties, siegeTeams, polarityParties, polarityTeams, presetParties, triggerAutoSave]);
 
@@ -550,6 +708,97 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     loadFromCloud();
   }, [loadFromCloud]);
+
+  // Multi-tier Realtime Synchronization:
+  // 1. Supabase Realtime channel (postgres_changes + broadcast)
+  // 2. Browser StorageEvent (instant cross-tab update on same computer)
+  // 3. Fallback polling interval (3.5 seconds) ensuring updates even if WebSockets disconnect
+  useEffect(() => {
+    const channel = supabase
+      .channel('TUMDOOD_guild_realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'guild_state', filter: 'id=eq.2' },
+        (payload: any) => {
+          if (payload?.new) {
+            if (payload.new.updated_at && payload.new.updated_at === lastRemoteUpdatedAtRef.current) {
+              return;
+            }
+            applyRemoteData(payload.new);
+          } else {
+            silentReloadFromCloud();
+          }
+        }
+      )
+      .on('broadcast', { event: 'state_sync' }, (payload: any) => {
+        if (payload?.payload?.senderId === clientSessionId.current) {
+          return;
+        }
+        silentReloadFromCloud();
+      })
+      .subscribe();
+
+    realtimeChannelRef.current = channel;
+
+    // Cross-tab instant sync
+    const handleStorage = (e: StorageEvent) => {
+      if (!e.newValue) return;
+      if (e.key === 'TUMDOOD_queue_lists') {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            isRemoteSyncingRef.current = true;
+            setQueueLists(parsed);
+            setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          }
+        } catch (_) {}
+      } else if (e.key === 'TUMDOOD_auctions') {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            isRemoteSyncingRef.current = true;
+            setAuctionItems(parsed);
+            setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          }
+        } catch (_) {}
+      } else if (e.key === 'TUMDOOD_auction_rounds') {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (Array.isArray(parsed)) {
+            isRemoteSyncingRef.current = true;
+            setAuctionRounds(parsed);
+            setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          }
+        } catch (_) {}
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    // 3.5s Fallback heartbeat polling
+    const pollingInterval = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (autoSaveTimerRef.current || isRemoteSyncingRef.current) return;
+      try {
+        const { data, error } = await supabase
+          .from('guild_state')
+          .select('updated_at')
+          .eq('id', 2)
+          .maybeSingle();
+
+        if (!error && data?.updated_at && data.updated_at !== lastRemoteUpdatedAtRef.current) {
+          lastRemoteUpdatedAtRef.current = data.updated_at;
+          silentReloadFromCloud();
+        }
+      } catch (_) {}
+    }, 3500);
+
+    return () => {
+      supabase.removeChannel(channel);
+      realtimeChannelRef.current = null;
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(pollingInterval);
+    };
+  }, [applyRemoteData, silentReloadFromCloud]);
 
   // Helper actions for GVG
   const setPartyLane = (partyId: string, lane: LaneKey) => {
@@ -849,10 +1098,18 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       prev.map((item) => {
         if (item.id !== auctionId) return item;
         const currentEntries = item.entries || [];
+
         // Check maxEntries limit
         if (item.maxEntries && item.maxEntries > 0 && currentEntries.length >= item.maxEntries) {
           return item;
         }
+
+        // If not Title, member can only register once
+        const isTitle = isTitleItem(item);
+        if (!isTitle && currentEntries.some((e) => e.memberId === memberId)) {
+          return item;
+        }
+
         const newEntry: AuctionEntry = {
           id: `entry_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
           memberId: member.id,
@@ -876,9 +1133,14 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         const currentEntries = item.entries || [];
         const newEntries: AuctionEntry[] = [];
         const maxLimit = item.maxEntries && item.maxEntries > 0 ? item.maxEntries : Infinity;
+        const isTitle = isTitleItem(item);
 
         for (const mId of memberIds) {
           if (currentEntries.length + newEntries.length >= maxLimit) break;
+          // If not Title, member can only register once
+          if (!isTitle && (currentEntries.some((e) => e.memberId === mId) || newEntries.some((e) => e.memberId === mId))) {
+            continue;
+          }
           const member = latestStateRef.current.members.find((m) => m.id === mId);
           if (member) {
             newEntries.push({
@@ -1125,6 +1387,156 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     triggerAutoSave();
   };
 
+  // Queue Operations
+  const createQueueList = (data: Omit<QueueList, 'id' | 'createdAt' | 'entries'>): string => {
+    const newId = `queue_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    const newList: QueueList = {
+      ...data,
+      id: newId,
+      createdAt: new Date().toISOString(),
+      entries: [],
+    };
+    setQueueLists((prev) => [newList, ...prev]);
+    triggerAutoSave();
+    return newId;
+  };
+
+  const updateQueueList = (id: string, updates: Partial<QueueList>) => {
+    setQueueLists((prev) =>
+      prev.map((q) => (q.id === id ? { ...q, ...updates, updatedAt: new Date().toISOString() } : q))
+    );
+    triggerAutoSave();
+  };
+
+  const deleteQueueList = (id: string) => {
+    setQueueLists((prev) => prev.filter((q) => q.id !== id));
+    triggerAutoSave();
+  };
+
+  const addMemberToQueue = (queueId: string, memberId: string, note?: string): { success: boolean; message: string } => {
+    const member = latestStateRef.current.members.find((m) => m.id === memberId);
+    if (!member) return { success: false, message: 'ไม่พบข้อมูลสมาชิก' };
+
+    let added = false;
+    let errMessage = '';
+    let newPosition = 1;
+
+    setQueueLists((prev) =>
+      prev.map((q) => {
+        if (q.id !== queueId) return q;
+        if (q.status === 'closed') {
+          errMessage = 'คิวนี้ปิดรับแล้ว';
+          return q;
+        }
+        const currentEntries = q.entries || [];
+        if (q.maxCapacity && q.maxCapacity > 0 && currentEntries.length >= q.maxCapacity) {
+          errMessage = 'คิวเต็มตามจำนวนที่กำหนดแล้ว';
+          return q;
+        }
+
+        const newEntry: QueueEntry = {
+          id: `qentry_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          memberId: member.id,
+          memberName: member.name,
+          memberJob: member.job,
+          joinedAt: new Date().toISOString(),
+          note: note?.trim() || undefined,
+        };
+
+        newPosition = currentEntries.length + 1;
+        added = true;
+        return {
+          ...q,
+          entries: [...currentEntries, newEntry],
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+
+    if (added) {
+      triggerAutoSave();
+      return { success: true, message: `เข้าร่วมคิวสำเร็จ! (อันดับที่ #${newPosition})` };
+    }
+    return { success: false, message: errMessage || 'ไม่สามารถเข้าร่วมคิวได้' };
+  };
+
+  const removeMemberFromQueue = (queueId: string, entryId: string) => {
+    setQueueLists((prev) =>
+      prev.map((q) => {
+        if (q.id !== queueId) return q;
+        return {
+          ...q,
+          entries: (q.entries || []).filter((e) => e.id !== entryId),
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+    triggerAutoSave();
+  };
+
+  const removeMemberByMemberIdFromQueue = (queueId: string, memberId: string) => {
+    setQueueLists((prev) =>
+      prev.map((q) => {
+        if (q.id !== queueId) return q;
+        return {
+          ...q,
+          entries: (q.entries || []).filter((e) => e.memberId !== memberId),
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+    triggerAutoSave();
+  };
+
+  const reorderQueueEntries = (queueId: string, entries: QueueEntry[]) => {
+    setQueueLists((prev) =>
+      prev.map((q) => (q.id === queueId ? { ...q, entries, updatedAt: new Date().toISOString() } : q))
+    );
+    triggerAutoSave();
+  };
+
+  const toggleQueueEntryCompleted = (queueId: string, entryId: string) => {
+    setQueueLists((prev) =>
+      prev.map((q) => {
+        if (q.id !== queueId) return q;
+        const updatedEntries = q.entries.map((e) => {
+          if (e.id !== entryId) return e;
+          const willBeCompleted = !e.isCompleted;
+          return {
+            ...e,
+            isCompleted: willBeCompleted,
+            completedAt: willBeCompleted ? new Date().toISOString() : undefined,
+          };
+        });
+        return { ...q, entries: updatedEntries, updatedAt: new Date().toISOString() };
+      })
+    );
+    triggerAutoSave();
+  };
+
+  const clearQueueEntries = (queueId: string) => {
+    setQueueLists((prev) =>
+      prev.map((q) => (q.id === queueId ? { ...q, entries: [], updatedAt: new Date().toISOString() } : q))
+    );
+    triggerAutoSave();
+  };
+
+  const setQueueStatus = (queueId: string, status: 'open' | 'in_progress' | 'closed') => {
+    setQueueLists((prev) =>
+      prev.map((q) =>
+        q.id === queueId
+          ? {
+              ...q,
+              status,
+              closedAt: status === 'closed' ? new Date().toISOString() : undefined,
+              updatedAt: new Date().toISOString(),
+            }
+          : q
+      )
+    );
+    triggerAutoSave();
+  };
+
   return (
     <GuildContext.Provider
       value={{
@@ -1201,6 +1613,17 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         closeAuction,
         deleteAuctionItem,
         cancelAuctionItem,
+        queueLists,
+        createQueueList,
+        updateQueueList,
+        deleteQueueList,
+        addMemberToQueue,
+        removeMemberFromQueue,
+        removeMemberByMemberIdFromQueue,
+        reorderQueueEntries,
+        toggleQueueEntryCompleted,
+        clearQueueEntries,
+        setQueueStatus,
       }}
     >
       {children}

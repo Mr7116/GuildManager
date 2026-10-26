@@ -21,14 +21,23 @@ const navItems: NavItem[] = [
   { label: 'จัดการสมาชิก', href: '/roster', icon: '🛡️' },
   { label: 'กิจกรรมประจำสัปดาห์', href: '/events', icon: '📅' },
   { label: 'ประมูลไอเทม', href: '/auction', icon: '💎' },
+  { label: 'จัดการคิว', href: '/queue', icon: '📋' },
 ];
 
 export default function Navbar() {
   const pathname = usePathname();
   const { isAuthenticated, logout } = useAuth();
 
-  // Hide navbar on login, public viewer, leave request, and public auctions pages
-  if (pathname === '/login' || pathname === '/public' || pathname === '/leave' || pathname === '/auctions' || pathname === '/auction/join') {
+  // Hide navbar on login, public viewer, leave request, public auctions, and member queue pages
+  if (
+    pathname === '/login' ||
+    pathname === '/public' ||
+    pathname === '/leave' ||
+    pathname === '/auctions' ||
+    pathname === '/auction/join' ||
+    pathname === '/queues' ||
+    pathname === '/queue/join'
+  ) {
     return null;
   }
 

@@ -7,7 +7,9 @@ import { useGuildStore } from '@/lib/guildStore';
 import { useAuth } from '@/lib/auth';
 import JobEmblem from '@/components/tactical/JobEmblem';
 import ThemeToggle from '@/components/layout/ThemeToggle';
-import { AuctionItem, AuctionRound, formatRegistrationTime } from '@/types/auction';
+import AutoSaveBadge from '@/components/common/AutoSaveBadge';
+import LiveClock from '@/components/common/LiveClock';
+import { AuctionItem, AuctionRound, formatRegistrationTime, isTitleItem } from '@/types/auction';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
 import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
 import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
@@ -148,7 +150,15 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
       return;
     }
 
-    const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
+    const isTitle = isTitleItem(item);
+    if (!isTitle) {
+      const alreadyRegistered = (item.entries || []).some((e) => e.memberId === currentMember.id);
+      if (alreadyRegistered) {
+        showToast('ไอเทมนี้สามารถลงชื่อได้เพียงคนละ 1 ครั้งเท่านั้น', true);
+        return;
+      }
+    }
+
     addMemberToAuction(item.id, currentMember.id);
     showToast(isTitle ? `กดรับสิทธิ์ "${item.accessoryName}" สำเร็จ! 👑` : `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`);
   };
@@ -210,7 +220,9 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
           </div>
 
           {/* Quick Actions */}
-          <div className="flex items-center gap-2 self-start sm:self-center">
+          <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
+            <LiveClock variant="compact" />
+            <AutoSaveBadge />
             <ThemeToggle />
 
             {isAuthenticated ? (
@@ -721,34 +733,35 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                             <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
                               <span>{isTitle ? '👑' : '✅'}</span>
                               <span>
-                                {isTitle ? `ได้สิทธิ์แล้ว x${myCount}` : `ลงชื่อแล้ว x${myCount}`}
+                                {isTitle ? `ได้สิทธิ์แล้ว x${myCount}` : 'ลงชื่อแล้ว'}
                               </span>
-                              {item.maxEntries && (
+                              {isTitle && item.maxEntries && (
                                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
                                   ({myIndices.map((i) => `#${i + 1}`).join(', ')})
                                 </span>
                               )}
                             </span>
 
-                            {!isQuotaFull && (
+                            {/* ปุ่มเพิ่มสิทธิ์: อนุญาตเฉพาะไอเทมประเภท Title เท่านั้น */}
+                            {isTitle && !isQuotaFull && (
                               <button
                                 type="button"
                                 onClick={() => handleJoin(item)}
                                 className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow transition cursor-pointer flex items-center gap-1 active:scale-95"
-                                title="กดลงชื่อเพิ่มอีก 1 รายการ"
+                                title="กดรับสิทธิ์เพิ่มอีก 1 รายการ"
                               >
                                 <span>+</span>
-                                <span>{isTitle ? 'รับสิทธิ์เพิ่ม (+1)' : 'ลงชื่อเพิ่ม (+1)'}</span>
+                                <span>รับสิทธิ์เพิ่ม (+1)</span>
                               </button>
                             )}
 
                             <button
                               type="button"
-                              onClick={() => (myCount > 1 ? handleLeaveOne(item) : handleLeave(item))}
+                              onClick={() => (isTitle && myCount > 1 ? handleLeaveOne(item) : handleLeave(item))}
                               className="px-2.5 py-1.5 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition cursor-pointer"
-                              title={myCount > 1 ? 'ยกเลิกลด 1 ชิ้น' : 'ยกเลิกรายการนี้'}
+                              title={isTitle && myCount > 1 ? 'ยกเลิกลด 1 ชิ้น' : 'ยกเลิกการลงชื่อ'}
                             >
-                              {myCount > 1 ? '✕ ลด 1 อัน' : '✕ ยกเลิก'}
+                              {isTitle && myCount > 1 ? '✕ ลด 1 อัน' : '✕ ยกเลิก'}
                             </button>
                           </div>
                         ) : isQuotaFull ? (

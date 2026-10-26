@@ -745,7 +745,10 @@ export default function AddAuctionModal({ isOpen, onClose, onConfirm }: AddAucti
                       )}
                     </div>
 
-                    <span className="text-[11px] font-bold text-slate-200 line-clamp-1 w-full" title={item.name}>
+                    <span
+                      className="text-[10.5px] font-bold text-slate-200 line-clamp-2 h-7 leading-tight flex items-center justify-center w-full"
+                      title={item.name}
+                    >
                       {item.name}
                     </span>
 

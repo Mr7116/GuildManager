@@ -13,6 +13,7 @@ import LuckyWheelModal from '@/components/modals/LuckyWheelModal';
 import CreateRoundModal from '@/components/modals/CreateRoundModal';
 import RoundHistoryModal from '@/components/modals/RoundHistoryModal';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
+import LiveClock from '@/components/common/LiveClock';
 import JobEmblem from '@/components/tactical/JobEmblem';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
 import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
@@ -264,6 +265,11 @@ export default function AuctionPage() {
               )}
             </div>
           )}
+        </div>
+
+        {/* Center: Live Date & Time Clock (วัน เดือน ปี เวลา ที่เดินไปเรื่อยๆ) */}
+        <div className="flex items-center justify-center my-1 md:my-0">
+          <LiveClock />
         </div>
 
         {/* Right: Round Operations */}

@@ -103,4 +103,41 @@ export function formatRegistrationDateTime(isoStr?: string): string {
   }
 }
 
+export function isTitleItem(item?: Partial<AuctionItem> | null): boolean {
+  if (!item) return false;
+  if (item.itemCategory === 'title') return true;
+  const name = item.accessoryName || '';
+  const slot = item.cardSlot || '';
+  const quality = item.cardQuality || '';
+  const icon = item.accessoryIcon || '';
+
+  if (slot.includes('Title') || quality.includes('Title')) return true;
+  if (icon.includes('touxian')) return true;
+  if (
+    name.includes('Adventure Scrap') ||
+    name.includes('Pioneer Certificate') ||
+    name.includes('Adventure Journal') ||
+    name.includes("Traveler's Note")
+  ) {
+    return true;
+  }
+  return false;
+}
+
+export function isChestItem(item?: Partial<AuctionItem> | null): boolean {
+  if (!item) return false;
+  if (isTitleItem(item)) return false;
+  if (item.itemCategory === 'chest') return true;
+  const name = item.accessoryName || '';
+  const slot = item.cardSlot || '';
+  const quality = item.cardQuality || '';
+  const icon = item.accessoryIcon || '';
+
+  if (slot.includes('หีบ') || slot.includes('กล่อง') || slot.includes('Pack')) return true;
+  if (quality.includes('Pack')) return true;
+  if (icon.includes('title_chest') || icon.includes('stonebox') || icon.includes('gem')) return true;
+  if (name.includes('หีบ') || name.includes('กล่อง')) return true;
+  return false;
+}
+
 
