@@ -143,40 +143,47 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-          <LiveClock variant="compact" />
-          <AutoSaveBadge />
-          <ThemeToggle />
+        {/* Quick Actions & Status */}
+        <div className="flex flex-col sm:items-end justify-center gap-2 shrink-0">
+          {/* Row 1: Live Clock & Auto-Sync Status */}
+          <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+            <LiveClock variant="compact" />
+            <AutoSaveBadge />
+          </div>
 
-          {isAuthenticated ? (
-            onSwitchToAdmin ? (
-              <button
-                type="button"
-                onClick={onSwitchToAdmin}
-                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-950/40 transition cursor-pointer"
-              >
-                <span>👑</span>
-                <span>โหมดแอดมิน</span>
-              </button>
+          {/* Row 2: Mode & Theme Controls */}
+          <div className="flex items-center gap-2 sm:justify-end">
+            {isAuthenticated ? (
+              onSwitchToAdmin ? (
+                <button
+                  type="button"
+                  onClick={onSwitchToAdmin}
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-950/40 transition cursor-pointer"
+                >
+                  <span>👑</span>
+                  <span>โหมดแอดมิน</span>
+                </button>
+              ) : (
+                <Link
+                  href="/queue"
+                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-950/40 transition cursor-pointer"
+                >
+                  <span>👑</span>
+                  <span>โหมดแอดมิน</span>
+                </Link>
+              )
             ) : (
               <Link
-                href="/queue"
-                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-indigo-950/40 transition cursor-pointer"
+                href="/login?redirect=/queue"
+                className="flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition"
               >
-                <span>👑</span>
-                <span>โหมดแอดมิน</span>
+                <span>🔑</span>
+                <span>แอดมิน Login</span>
               </Link>
-            )
-          ) : (
-            <Link
-              href="/login?redirect=/queue"
-              className="flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition"
-            >
-              <span>🔑</span>
-              <span>แอดมิน Login</span>
-            </Link>
-          )}
+            )}
+
+            <ThemeToggle />
+          </div>
         </div>
       </div>
 

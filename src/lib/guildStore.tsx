@@ -5,7 +5,7 @@ import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
 import { Member } from '@/types/member';
 import { Party, Team, LaneKey, FieldZoneKey } from '@/types/party';
-import { AuctionItem, AuctionEntry, AuctionRound, BidRecord, isTitleItem } from '@/types/auction';
+import { AuctionItem, AuctionEntry, AuctionRound, BidRecord, isTitleItem, isChestItem, isMultiEntryItem } from '@/types/auction';
 import { QueueList, QueueEntry } from '@/types/queue';
 
 export interface GuildState {
@@ -451,7 +451,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray((auctionEntry as any).items)) {
           const rawItems = (auctionEntry as any).items as AuctionItem[];
           const sanitizedItems = rawItems.map((item) => {
-            if (!isTitleItem(item) && Array.isArray(item.entries) && item.entries.length > 0) {
+            if (!isMultiEntryItem(item) && Array.isArray(item.entries) && item.entries.length > 0) {
               const seen = new Set<string>();
               const uniqueEntries = item.entries.filter((e) => {
                 if (!e.memberId) return true;
@@ -585,7 +585,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       };
 
       const sanitizedAuctionItems = state.auctionItems.map((item) => {
-        if (!isTitleItem(item) && Array.isArray(item.entries) && item.entries.length > 0) {
+        if (!isMultiEntryItem(item) && Array.isArray(item.entries) && item.entries.length > 0) {
           const seen = new Set<string>();
           const uniqueEntries = item.entries.filter((e) => {
             if (!e.memberId) return true;
@@ -1104,9 +1104,9 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           return item;
         }
 
-        // If not Title, member can only register once
-        const isTitle = isTitleItem(item);
-        if (!isTitle && currentEntries.some((e) => e.memberId === memberId)) {
+        // If not Multi-Entry (Title or Chest/Pack), member can only register once
+        const allowMultiple = isMultiEntryItem(item);
+        if (!allowMultiple && currentEntries.some((e) => e.memberId === memberId)) {
           return item;
         }
 
@@ -1133,12 +1133,12 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         const currentEntries = item.entries || [];
         const newEntries: AuctionEntry[] = [];
         const maxLimit = item.maxEntries && item.maxEntries > 0 ? item.maxEntries : Infinity;
-        const isTitle = isTitleItem(item);
+        const allowMultiple = isMultiEntryItem(item);
 
         for (const mId of memberIds) {
           if (currentEntries.length + newEntries.length >= maxLimit) break;
-          // If not Title, member can only register once
-          if (!isTitle && (currentEntries.some((e) => e.memberId === mId) || newEntries.some((e) => e.memberId === mId))) {
+          // If not Multi-Entry, member can only register once
+          if (!allowMultiple && (currentEntries.some((e) => e.memberId === mId) || newEntries.some((e) => e.memberId === mId))) {
             continue;
           }
           const member = latestStateRef.current.members.find((m) => m.id === mId);

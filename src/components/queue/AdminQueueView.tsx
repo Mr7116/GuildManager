@@ -156,43 +156,49 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
         </div>
 
         {/* Action Controls */}
-        <div className="flex flex-wrap items-center gap-2 self-start md:self-center">
-          <LiveClock variant="compact" />
-          <AutoSaveBadge />
-          <ThemeToggle />
+        <div className="flex flex-col md:items-end justify-center gap-2 shrink-0">
+          {/* Row 1: Status & Time */}
+          <div className="flex items-center gap-2 flex-wrap md:justify-end">
+            <LiveClock variant="compact" />
+            <AutoSaveBadge />
+            <ThemeToggle />
+          </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              const url = `${window.location.origin}/queue/join`;
-              navigator.clipboard.writeText(url);
-              showToast(`คัดลอกลิงก์หน้าสมาชิกแล้ว: ${url} 📋`);
-            }}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-bold transition cursor-pointer"
-            title="คัดลอกลิงก์หน้าลงชื่อสำหรับสมาชิก เพื่อส่งลง Discord หรือ LINE"
-          >
-            <span>🔗</span>
-            <span>คัดลอกลิงก์ให้สมาชิก</span>
-          </button>
+          {/* Row 2: Action Buttons */}
+          <div className="flex items-center gap-2 flex-wrap md:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                const url = `${window.location.origin}/queue/join`;
+                navigator.clipboard.writeText(url);
+                showToast(`คัดลอกลิงก์หน้าสมาชิกแล้ว: ${url} 📋`);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-300 text-xs font-bold transition cursor-pointer"
+              title="คัดลอกลิงก์หน้าลงชื่อสำหรับสมาชิก เพื่อส่งลง Discord หรือ LINE"
+            >
+              <span>🔗</span>
+              <span>คัดลอกลิงก์ให้สมาชิก</span>
+            </button>
 
-          <Link
-            href="/queue/join"
-            target="_blank"
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold transition cursor-pointer"
-            title="เปิดหน้าจอสมาชิกที่ไม่ได้ Login ในแท็บใหม่"
-          >
-            <span>👁️</span>
-            <span>ดูหน้าสมาชิก ↗</span>
-          </Link>
+            <Link
+              href="/queue/join"
+              target="_blank"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-white text-xs font-bold transition cursor-pointer"
+              title="เปิดหน้าจอสมาชิกที่ไม่ได้ Login ในแท็บใหม่"
+            >
+              <span>👁️</span>
+              <span>ดูหน้าสมาชิก ↗</span>
+            </Link>
 
-          <button
-            type="button"
-            onClick={() => setIsCreateModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs sm:text-sm font-extrabold shadow-lg shadow-indigo-950/50 transition cursor-pointer active:scale-95"
-          >
-            <span>+</span>
-            <span>สร้าง List คิวใหม่</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-white text-xs font-extrabold shadow-md shadow-indigo-950/50 transition cursor-pointer active:scale-95"
+            >
+              <span>+</span>
+              <span>สร้าง List คิวใหม่</span>
+            </button>
+          </div>
         </div>
       </div>
 

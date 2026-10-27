@@ -9,7 +9,7 @@ import JobEmblem from '@/components/tactical/JobEmblem';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import LiveClock from '@/components/common/LiveClock';
-import { AuctionItem, AuctionRound, formatRegistrationTime, isTitleItem } from '@/types/auction';
+import { AuctionItem, AuctionRound, formatRegistrationTime, isTitleItem, isChestItem, isMultiEntryItem } from '@/types/auction';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
 import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
 import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
@@ -151,7 +151,10 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
     }
 
     const isTitle = isTitleItem(item);
-    if (!isTitle) {
+    const isChest = isChestItem(item);
+    const allowMultiple = isTitle || isChest;
+
+    if (!allowMultiple) {
       const alreadyRegistered = (item.entries || []).some((e) => e.memberId === currentMember.id);
       if (alreadyRegistered) {
         showToast('ไอเทมนี้สามารถลงชื่อได้เพียงคนละ 1 ครั้งเท่านั้น', true);
@@ -160,7 +163,13 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
     }
 
     addMemberToAuction(item.id, currentMember.id);
-    showToast(isTitle ? `กดรับสิทธิ์ "${item.accessoryName}" สำเร็จ! 👑` : `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`);
+    showToast(
+      isTitle
+        ? `กดรับสิทธิ์ "${item.accessoryName}" สำเร็จ! 👑`
+        : isChest
+        ? `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 📦`
+        : `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`
+    );
   };
 
   // Leave one entry (or all if only 1)
@@ -219,40 +228,47 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="flex items-center gap-2 self-start sm:self-center flex-wrap">
-            <LiveClock variant="compact" />
-            <AutoSaveBadge />
-            <ThemeToggle />
+          {/* Quick Actions & Status */}
+          <div className="flex flex-col sm:items-end justify-center gap-2 shrink-0">
+            {/* Row 1: Live Clock & Auto-Sync Status */}
+            <div className="flex items-center gap-2 flex-wrap sm:justify-end">
+              <LiveClock variant="compact" />
+              <AutoSaveBadge />
+            </div>
 
-            {isAuthenticated ? (
-              onSwitchToAdmin ? (
-                <button
-                  type="button"
-                  onClick={onSwitchToAdmin}
-                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 transition cursor-pointer"
-                >
-                  <span>👑</span>
-                  <span>โหมดแอดมิน</span>
-                </button>
+            {/* Row 2: Mode & Theme Controls */}
+            <div className="flex items-center gap-2 sm:justify-end">
+              {isAuthenticated ? (
+                onSwitchToAdmin ? (
+                  <button
+                    type="button"
+                    onClick={onSwitchToAdmin}
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 transition cursor-pointer"
+                  >
+                    <span>👑</span>
+                    <span>โหมดแอดมิน</span>
+                  </button>
+                ) : (
+                  <Link
+                    href="/auction"
+                    className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 transition cursor-pointer"
+                  >
+                    <span>👑</span>
+                    <span>โหมดแอดมิน</span>
+                  </Link>
+                )
               ) : (
                 <Link
-                  href="/auction"
-                  className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-950/40 transition cursor-pointer"
+                  href="/login?redirect=/auction"
+                  className="flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition"
                 >
-                  <span>👑</span>
-                  <span>โหมดแอดมิน</span>
+                  <span>🔑</span>
+                  <span>แอดมิน</span>
                 </Link>
-              )
-            ) : (
-              <Link
-                href="/login?redirect=/auction"
-                className="flex items-center gap-1 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 transition"
-              >
-                <span>🔑</span>
-                <span>แอดมิน</span>
-              </Link>
-            )}
+              )}
+
+              <ThemeToggle />
+            </div>
           </div>
         </div>
 
@@ -495,8 +511,9 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                 : [];
               const isQuotaFull = !!(item.maxEntries && item.maxEntries > 0 && entries.length >= item.maxEntries);
               const isExpanded = expandedItemId === item.id;
-              const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
-              const isChest = !isTitle && (item.itemCategory === 'chest' || (item.cardSlot && (item.cardSlot.includes('หีบ') || item.cardSlot.includes('กล่อง') || item.cardSlot.includes('Pack'))));
+              const isTitle = isTitleItem(item);
+              const isChest = isChestItem(item);
+              const allowMultiple = isTitle || isChest;
               const isPet = !isTitle && !isChest && (item.itemCategory === 'pet' || (item.cardSlot && item.cardSlot.includes('สัตว์เลี้ยง')) || (item.cardQuality && item.cardQuality.startsWith('Pet')));
               const isRelic = !isTitle && !isChest && !isPet && (item.itemCategory === 'relic' || item.cardQuality === 'Sage');
               const isCard = !isTitle && !isChest && !isPet && !isRelic && (item.itemCategory === 'card' || item.cardQuality === 'Purple');
@@ -731,37 +748,41 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                         isRegistered ? (
                           <div className="flex items-center gap-1.5 flex-wrap justify-end">
                             <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
-                              <span>{isTitle ? '👑' : '✅'}</span>
+                              <span>{isTitle ? '👑' : isChest ? '📦' : '✅'}</span>
                               <span>
-                                {isTitle ? `ได้สิทธิ์แล้ว x${myCount}` : 'ลงชื่อแล้ว'}
+                                {allowMultiple
+                                  ? isTitle
+                                    ? `ได้สิทธิ์แล้ว x${myCount}`
+                                    : `ลงชื่อแล้ว x${myCount}`
+                                  : 'ลงชื่อแล้ว'}
                               </span>
-                              {isTitle && item.maxEntries && (
+                              {allowMultiple && item.maxEntries && (
                                 <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
                                   ({myIndices.map((i) => `#${i + 1}`).join(', ')})
                                 </span>
                               )}
                             </span>
 
-                            {/* ปุ่มเพิ่มสิทธิ์: อนุญาตเฉพาะไอเทมประเภท Title เท่านั้น */}
-                            {isTitle && !isQuotaFull && (
+                            {/* ปุ่มเพิ่มสิทธิ์: แสดงสำหรับ Title และ กล่อง/หีบ (Chest/Pack) เมื่อยังไม่เต็มโควตา */}
+                            {allowMultiple && !isQuotaFull && (
                               <button
                                 type="button"
                                 onClick={() => handleJoin(item)}
                                 className="px-2.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow transition cursor-pointer flex items-center gap-1 active:scale-95"
-                                title="กดรับสิทธิ์เพิ่มอีก 1 รายการ"
+                                title={isTitle ? 'กดรับสิทธิ์เพิ่มอีก 1 รายการ' : 'กดลงชื่อเพิ่มอีก 1 สิทธิ์'}
                               >
                                 <span>+</span>
-                                <span>รับสิทธิ์เพิ่ม (+1)</span>
+                                <span>{isTitle ? 'รับสิทธิ์เพิ่ม (+1)' : 'ลงชื่อเพิ่ม (+1)'}</span>
                               </button>
                             )}
 
                             <button
                               type="button"
-                              onClick={() => (isTitle && myCount > 1 ? handleLeaveOne(item) : handleLeave(item))}
+                              onClick={() => (allowMultiple && myCount > 1 ? handleLeaveOne(item) : handleLeave(item))}
                               className="px-2.5 py-1.5 rounded-xl border border-rose-300 dark:border-rose-500/40 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/20 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold transition cursor-pointer"
-                              title={isTitle && myCount > 1 ? 'ยกเลิกลด 1 ชิ้น' : 'ยกเลิกการลงชื่อ'}
+                              title={allowMultiple && myCount > 1 ? 'ยกเลิกลด 1 ชิ้น' : 'ยกเลิกการลงชื่อ'}
                             >
-                              {isTitle && myCount > 1 ? '✕ ลด 1 อัน' : '✕ ยกเลิก'}
+                              {allowMultiple && myCount > 1 ? '✕ ลด 1 อัน' : '✕ ยกเลิก'}
                             </button>
                           </div>
                         ) : isQuotaFull ? (

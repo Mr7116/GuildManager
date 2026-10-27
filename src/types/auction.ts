@@ -128,16 +128,25 @@ export function isChestItem(item?: Partial<AuctionItem> | null): boolean {
   if (!item) return false;
   if (isTitleItem(item)) return false;
   if (item.itemCategory === 'chest') return true;
-  const name = item.accessoryName || '';
-  const slot = item.cardSlot || '';
-  const quality = item.cardQuality || '';
-  const icon = item.accessoryIcon || '';
+  const name = (item.accessoryName || '').toLowerCase();
+  const slot = (item.cardSlot || '').toLowerCase();
+  const quality = (item.cardQuality || '').toLowerCase();
+  const icon = (item.accessoryIcon || '').toLowerCase();
 
-  if (slot.includes('หีบ') || slot.includes('กล่อง') || slot.includes('Pack')) return true;
-  if (quality.includes('Pack')) return true;
-  if (icon.includes('title_chest') || icon.includes('stonebox') || icon.includes('gem')) return true;
-  if (name.includes('หีบ') || name.includes('กล่อง')) return true;
+  if (slot.includes('หีบ') || slot.includes('กล่อง') || slot.includes('pack') || slot.includes('chest') || slot.includes('box')) return true;
+  if (quality.includes('pack') || quality.includes('chest') || quality.includes('box')) return true;
+  if (icon.includes('title_chest') || icon.includes('stonebox') || icon.includes('gem') || icon.includes('chest') || icon.includes('box')) return true;
+  if (name.includes('หีบ') || name.includes('กล่อง') || name.includes('pack') || name.includes('chest') || name.includes('box')) return true;
   return false;
+}
+
+/**
+ * Returns true if an item allows multiple registrations/entries per member.
+ * Title (ฉายา) and Chest / Box / Pack (กล่อง / หีบสมบัติ) allow multiple entries up to quota.
+ * Other items (Weapons, Red Accessories, MVP/Purple Cards, Relics, Pets) are restricted to 1 entry per member.
+ */
+export function isMultiEntryItem(item?: Partial<AuctionItem> | null): boolean {
+  return isTitleItem(item) || isChestItem(item);
 }
 
 
