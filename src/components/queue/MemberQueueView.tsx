@@ -542,7 +542,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                           return (
                             <div
                               key={entry.id}
-                              className={`p-3 sm:p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3 text-xs sm:text-sm transition ${
+                              className={`p-3 sm:p-3.5 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-xs sm:text-sm transition ${
                                 isDone
                                   ? 'border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/30 shadow-sm'
                                   : isMe
@@ -550,7 +550,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                                   : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900/90 text-slate-900 dark:text-slate-100 shadow-sm hover:border-slate-400'
                               }`}
                             >
-                              <div className="flex items-center gap-3 min-w-0">
+                              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                                 <span
                                   className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-black text-xs shrink-0 ${
                                     isDone
@@ -567,35 +567,37 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                                   {isDone ? '✓' : `#${idx + 1}`}
                                 </span>
                                 {entry.memberJob && (
-                                  <JobEmblem job={entry.memberJob} size={28} />
+                                  <div className="shrink-0">
+                                    <JobEmblem job={entry.memberJob} size={28} />
+                                  </div>
                                 )}
-                                <div className="min-w-0">
+                                <div className="min-w-0 flex-1">
                                   <div className="flex items-center gap-2 font-black truncate text-slate-900 dark:text-white">
                                     <span className={`text-sm sm:text-base truncate ${isDone ? 'text-emerald-700 dark:text-emerald-300 font-black' : ''}`}>
                                       {entry.memberName}
                                     </span>
                                     {isMe && (
-                                      <span className="px-2 py-0.5 rounded-lg text-[11px] font-black bg-indigo-600 text-white shadow-sm shrink-0">
+                                      <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-indigo-600 text-white shadow-sm shrink-0">
                                         (คุณ)
                                       </span>
                                     )}
                                     {isDone && (
-                                      <span className="px-2.5 py-0.5 rounded-lg text-[11px] font-black bg-emerald-600 text-white shadow-sm shrink-0 flex items-center gap-1">
+                                      <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-emerald-600 text-white shadow-sm shrink-0 flex items-center gap-1">
                                         ✓ ผ่านแล้ว
                                       </span>
                                     )}
                                   </div>
                                   {entry.memberJob && (
-                                    <div className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                    <div className="text-xs font-bold text-slate-600 dark:text-slate-400 truncate">
                                       {entry.memberJob}
                                     </div>
                                   )}
                                 </div>
                               </div>
 
-                              <div className="flex items-center gap-2 shrink-0">
+                              <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
                                 {timeStr && (
-                                  <span className="text-xs text-slate-800 dark:text-slate-200 font-bold font-mono flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 px-3 py-1.5 rounded-xl border-2 border-slate-300 dark:border-slate-700 shadow-sm">
+                                  <span className="text-[11px] sm:text-xs text-slate-800 dark:text-slate-200 font-bold font-mono flex items-center gap-1 bg-slate-100 dark:bg-slate-950 px-2.5 sm:px-3 py-1.5 rounded-xl border-2 border-slate-300 dark:border-slate-700 shadow-sm shrink-0">
                                     <span>🕒</span>
                                     <span>{timeStr}</span>
                                   </span>
@@ -604,7 +606,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                                   <button
                                     type="button"
                                     onClick={() => handleLeave(queue)}
-                                    className="px-3 py-1.5 rounded-xl border-2 border-rose-400 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black shadow-sm transition cursor-pointer active:scale-95"
+                                    className="px-3 py-1.5 rounded-xl border-2 border-rose-400 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-black shadow-sm transition cursor-pointer active:scale-95 shrink-0"
                                     title="ยกเลิกการต่อคิวนี้"
                                   >
                                     ✕ ออกจากคิว

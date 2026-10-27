@@ -549,13 +549,13 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                         return (
                           <div
                             key={entry.id}
-                            className={`p-3 sm:p-3.5 rounded-2xl border-2 flex items-center justify-between gap-3 text-xs sm:text-sm transition ${
+                            className={`p-3 sm:p-3.5 rounded-2xl border-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 text-xs sm:text-sm transition ${
                               isDone
                                 ? 'border-emerald-500 bg-emerald-50/90 dark:bg-emerald-950/30 shadow-md shadow-emerald-500/10'
                                 : 'border-slate-300 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm hover:border-slate-400 dark:hover:border-slate-700'
                             }`}
                           >
-                            <div className="flex items-center gap-3 min-w-0">
+                            <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
                               <span
                                 className={`w-8 h-8 rounded-xl flex items-center justify-center font-mono font-black text-xs shrink-0 ${
                                   isDone
@@ -572,28 +572,30 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                                 {isDone ? '✓' : `#${idx + 1}`}
                               </span>
                               {entry.memberJob && (
-                                <JobEmblem job={entry.memberJob} size={28} />
+                                <div className="shrink-0">
+                                  <JobEmblem job={entry.memberJob} size={28} />
+                                </div>
                               )}
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2 font-bold truncate text-slate-900 dark:text-white" title={entry.memberName}>
-                                  <span className={`text-sm ${isDone ? 'text-emerald-700 dark:text-emerald-300 font-black' : 'font-extrabold'}`}>
+                                  <span className={`text-sm sm:text-base truncate ${isDone ? 'text-emerald-700 dark:text-emerald-300 font-black' : 'font-extrabold'}`}>
                                     {entry.memberName}
                                   </span>
                                   {isDone && (
-                                    <span className="px-2 py-0.5 rounded-lg text-[11px] font-black bg-emerald-600 text-white shadow-sm shrink-0">
+                                    <span className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-emerald-600 text-white shadow-sm shrink-0">
                                       ✓ ผ่านแล้ว
                                     </span>
                                   )}
                                 </div>
                                 {entry.memberJob && (
-                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold">
+                                  <div className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold truncate">
                                     {entry.memberJob}
                                   </div>
                                 )}
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2.5 shrink-0">
+                            <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100 dark:border-slate-800/80">
                               {/* ปุ่มติ๊กถูก (คนนี้ผ่านเรียบร้อย) - High Contrast & Clearly Visible */}
                               <button
                                 type="button"
@@ -605,7 +607,7 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                                       : `บันทึก "${entry.memberName}" ผ่านเรียบร้อยแล้ว! ✅`
                                   );
                                 }}
-                                className={`flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl border-2 text-xs font-black transition cursor-pointer active:scale-95 shadow-sm group ${
+                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 text-xs font-black transition cursor-pointer active:scale-95 shadow-sm group shrink-0 ${
                                   isDone
                                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500 shadow-emerald-500/30'
                                     : 'bg-white hover:bg-emerald-50 dark:bg-slate-900 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-300 border-slate-300 hover:border-emerald-500 dark:border-slate-700 dark:hover:border-emerald-500'
@@ -613,10 +615,10 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                                 title={isDone ? 'ผ่านเรียบร้อยแล้ว (คลิกเพื่อยกเลิก)' : 'คลิกเพื่อติ๊กถูก: คนนี้ผ่านเรียบร้อยแล้ว'}
                               >
                                 <span
-                                  className={`w-5 h-5 rounded-lg flex items-center justify-center text-xs font-black transition ${
+                                  className={`w-4 h-4 rounded-md flex items-center justify-center text-[10px] font-black transition ${
                                     isDone
                                       ? 'bg-white text-emerald-700 shadow-inner'
-                                      : 'border-2 border-slate-400 group-hover:border-emerald-500 bg-slate-50 dark:bg-slate-800 text-transparent group-hover:text-emerald-600'
+                                      : 'border border-slate-400 group-hover:border-emerald-500 bg-slate-50 dark:bg-slate-800 text-transparent group-hover:text-emerald-600'
                                   }`}
                                 >
                                   ✓
@@ -627,14 +629,14 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                               </button>
 
                               {timeStr && (
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 font-mono flex items-center gap-1.5 bg-slate-100 dark:bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm">
+                                <span className="text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 font-mono flex items-center gap-1 bg-slate-100 dark:bg-slate-950 px-2 sm:px-2.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm shrink-0">
                                   <span>🕒</span>
                                   <span>{timeStr}</span>
                                 </span>
                               )}
 
                               {/* Entry Controls: Move / Delete */}
-                              <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm">
+                              <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-300 dark:border-slate-700 shadow-sm shrink-0">
                                 <button
                                   type="button"
                                   disabled={idx === 0}
