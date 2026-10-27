@@ -144,6 +144,11 @@ export default function Navbar() {
                 </Link>
               )}
             </div>
+
+            {/* Mobile Dev Credits */}
+            <div className="text-center pt-1 text-[11px] font-mono text-slate-800 dark:text-slate-400">
+              Dev By : Mr7116,xZeNox
+            </div>
           </div>
         )}
 
@@ -182,26 +187,34 @@ export default function Navbar() {
             </div>
           </div>
 
-          {/* Row 2: Navigation Tabs */}
-          <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap pt-2">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href || (item.href === '/gvg' && pathname === '/');
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
-                    isActive
-                      ? 'bg-indigo-500/15 dark:bg-indigo-600/30 border border-indigo-400 dark:border-indigo-500/50 text-indigo-700 dark:text-white shadow-sm'
-                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent'
-                  }`}
-                >
-                  <span className="text-sm">{item.icon}</span>
-                  <span>{item.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Row 2: Navigation Tabs & Dev Credits */}
+          <div className="flex items-center justify-between gap-3 pt-2">
+            <nav className="flex items-center gap-1 sm:gap-1.5 flex-wrap">
+              {navItems.map((item) => {
+                const isActive = pathname === item.href || (item.href === '/gvg' && pathname === '/');
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs sm:text-sm font-semibold transition-all ${
+                      isActive
+                        ? 'bg-indigo-500/15 dark:bg-indigo-600/30 border border-indigo-400 dark:border-indigo-500/50 text-indigo-700 dark:text-white shadow-sm'
+                        : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 border border-transparent'
+                    }`}
+                  >
+                    <span className="text-sm">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+            </nav>
+
+            {/* Dev Credits */}
+            <div className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100/90 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 text-xs font-mono shadow-xs">
+              <span className="font-bold text-slate-800 dark:text-slate-200">Dev By :</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">Mr7116,xZeNox</span>
+            </div>
+          </div>
         </div>
 
       </div>
