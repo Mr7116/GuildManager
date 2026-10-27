@@ -31,6 +31,13 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
   const [memberSearch, setMemberSearch] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'my' | 'vanished' | 'apocalypse'>('open');
   const [toastMsg, setToastMsg] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [, setTick] = useState(0);
+
+  // Live ticker for countdown update every second
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Restore saved member
   useEffect(() => {
@@ -70,17 +77,21 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
     }, 3000);
   };
 
-  // Lists where current member is joined
+  // Lists where current member is joined or pre-registered
   const myQueueLists = useMemo(() => {
     if (!selectedMemberId) return [];
-    return queueLists.filter((q) => (q.entries || []).some((e) => e.memberId === selectedMemberId));
+    return queueLists.filter(
+      (q) =>
+        (q.entries || []).some((e) => e.memberId === selectedMemberId) ||
+        (q.status === 'scheduled' && (q.preRegisteredMemberIds || []).includes(selectedMemberId))
+    );
   }, [queueLists, selectedMemberId]);
 
   // Filtered queue lists
   const displayLists = useMemo(() => {
     let lists = [...queueLists];
     if (activeTab === 'open') {
-      lists = lists.filter((q) => q.status === 'open');
+      lists = lists.filter((q) => q.status === 'open' || q.status === 'scheduled');
     } else if (activeTab === 'my') {
       lists = myQueueLists;
     } else if (activeTab === 'vanished') {
@@ -95,6 +106,10 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
     if (!currentMember) {
       showToast('กรุณาเลือกชื่อตัวละครของคุณก่อน', true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+    if (queue.status === 'scheduled') {
+      showToast('คิวนี้ยังไม่เปิดรับ กรุณารอเวลาเปิดตามที่กำหนด', true);
       return;
     }
     const res = addMemberToQueue(queue.id, currentMember.id);
@@ -293,7 +308,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
         {/* Filter Tabs */}
         <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-2xl border-2 border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0c101d] shadow-sm">
           {[
-            { id: 'open', label: '🟢 เปิดรับคิวอยู่', count: queueLists.filter((q) => q.status === 'open').length },
+            { id: 'open', label: '🟢 เปิดรับคิวอยู่', count: queueLists.filter((q) => q.status === 'open' || q.status === 'scheduled').length },
             { id: 'vanished', label: '🌀 มายาสิ้นสูญ', count: queueLists.filter((q) => q.dungeonCategory === 'vanished').length },
             { id: 'apocalypse', label: '⚔️ Apocalypse', count: queueLists.filter((q) => q.dungeonCategory === 'apocalypse').length },
             { id: 'my', label: '📌 คิวของฉัน', count: myQueueLists.length },
@@ -340,6 +355,11 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
               const isOpen = queue.status === 'open';
               const isInProgress = queue.status === 'in_progress';
               const isClosed = queue.status === 'closed';
+              const isScheduled = queue.status === 'scheduled';
+
+              const msUntilOpen = queue.scheduledOpenAt ? new Date(queue.scheduledOpenAt).getTime() - Date.now() : 0;
+              const minsUntilOpen = Math.max(0, Math.ceil(msUntilOpen / 60000));
+              const isPreRegistered = selectedMemberId && queue.preRegisteredMemberIds ? queue.preRegisteredMemberIds.includes(selectedMemberId) : false;
 
               const myEntries = selectedMemberId ? entries.filter((e) => e.memberId === selectedMemberId) : [];
               const myCount = myEntries.length;
@@ -354,8 +374,10 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                 <div
                   key={queue.id}
                   className={`rounded-3xl border-2 p-4 sm:p-5 transition shadow-md space-y-4 ${
-                    isJoined
+                    isJoined || isPreRegistered
                       ? 'border-indigo-500 bg-indigo-50/80 dark:bg-[#0d1322] shadow-indigo-500/10'
+                      : isScheduled
+                      ? 'border-amber-400 dark:border-amber-500/40 bg-amber-50/40 dark:bg-[#13110d]'
                       : isOpen
                       ? 'border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0c101d] hover:border-slate-400'
                       : 'border-slate-300 dark:border-slate-800/80 bg-slate-100/90 dark:bg-[#0a0e18]'
@@ -381,7 +403,12 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                           )}
 
                           {/* Status Badge */}
-                          {isOpen ? (
+                          {isScheduled ? (
+                            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-2 border-amber-500 flex items-center gap-1 shadow-sm">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>⏰ รอเปิดรับคิว (ในอีก ~{minsUntilOpen} นาที)</span>
+                            </span>
+                          ) : isOpen ? (
                             isCapacityFull ? (
                               <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-amber-100 text-amber-900 border-2 border-amber-400 flex items-center gap-1 shadow-sm">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
@@ -412,13 +439,30 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                             {queue.maxCapacity ? `/${queue.maxCapacity}` : ''} คน
                           </span>
                           {queue.note && <span>💬 หมายเหตุ: <strong className="text-slate-900 dark:text-white">{queue.note}</strong></span>}
+                          {isScheduled && queue.scheduledOpenAt && (
+                            <span className="text-amber-700 dark:text-amber-300 font-semibold">
+                              ⏰ เปิดเวลา: {new Date(queue.scheduledOpenAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
                     {/* Action Button for Member */}
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                      {isOpen ? (
+                      {isScheduled ? (
+                        isPreRegistered ? (
+                          <span className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white text-xs font-black flex items-center gap-1.5 shadow-md">
+                            <span>👑</span>
+                            <span>อยู่ในรายชื่อลงชื่ออัตโนมัติแล้ว!</span>
+                          </span>
+                        ) : (
+                          <span className="px-3.5 py-2 rounded-xl border-2 border-amber-500/50 bg-amber-500/10 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 text-xs font-black flex items-center gap-1.5 shadow-sm">
+                            <span>⏰</span>
+                            <span>รอเปิดรับ (ในอีก ~{minsUntilOpen} นาที)</span>
+                          </span>
+                        )
+                      ) : isOpen ? (
                         isJoined ? (
                           <div className="flex items-center gap-2">
                             <span className="px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-xs font-black flex items-center gap-1.5 shadow-md">
@@ -462,9 +506,21 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
 
                   {/* QUEUE ENTRIES AS A CLEAN LIST */}
                   {entries.length === 0 ? (
-                    <div className="p-8 text-center text-xs font-bold text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-transparent">
-                      ยังไม่มีคนกดต่อคิวในรายการนี้ เป็นคนแรกที่กดเข้าร่วมได้เลย! 🚀
-                    </div>
+                    isScheduled ? (
+                      <div className="p-6 text-center text-xs font-bold text-amber-700 dark:text-amber-300 border-2 border-dashed border-amber-400/50 rounded-2xl bg-amber-500/5 space-y-1">
+                        <div className="text-sm">⏰ คิวนี้ตั้งเวลาเปิดอัตโนมัติ</div>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
+                          จะเปิดรับคิวในอีก ~{minsUntilOpen} นาที ({queue.scheduledOpenAt ? new Date(queue.scheduledOpenAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''} น.)
+                          {queue.preRegisteredMemberIds && queue.preRegisteredMemberIds.length > 0
+                            ? ` · มีสมาชิกลงชื่ออัตโนมัติล่วงหน้า ${queue.preRegisteredMemberIds.length} คน`
+                            : ''}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="p-8 text-center text-xs font-bold text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-transparent">
+                        ยังไม่มีคนกดต่อคิวในรายการนี้ เป็นคนแรกที่กดเข้าร่วมได้เลย! 🚀
+                      </div>
+                    )
                   ) : (
                     <div className="space-y-2">
                       <div className="flex items-center justify-between text-xs font-black text-slate-800 dark:text-slate-200 px-1 pb-1">

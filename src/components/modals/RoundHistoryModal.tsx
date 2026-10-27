@@ -94,6 +94,10 @@ export default function RoundHistoryModal({
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40">
                           🏆 จบแล้ว
                         </span>
+                      ) : round.status === 'scheduled' ? (
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          ⏰ ตั้งเวลาเปิด
+                        </span>
                       ) : (
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
                           🟢 ดำเนินการ

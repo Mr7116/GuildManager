@@ -13,9 +13,11 @@ export default function LiveClock({
   showDayOfWeek = true,
   variant = 'badge',
 }: LiveClockProps) {
+  const [mounted, setMounted] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
+    setMounted(true);
     setNow(new Date());
     const interval = setInterval(() => {
       setNow(new Date());
@@ -23,11 +25,23 @@ export default function LiveClock({
     return () => clearInterval(interval);
   }, []);
 
-  if (!now) {
+  if (!mounted || !now) {
+    if (variant === 'compact') {
+      return (
+        <div
+          suppressHydrationWarning
+          className={`inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700/80 bg-white dark:bg-[#070b14] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm ${className}`}
+        >
+          <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+          <span suppressHydrationWarning className="font-bold text-slate-400 dark:text-slate-500">กำลังโหลด...</span>
+        </div>
+      );
+    }
     // Skeleton placeholder to prevent Next.js SSR hydration mismatch
     return (
       <div
-        className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 px-3.5 py-1.5 text-xs text-slate-400 animate-pulse ${className}`}
+        suppressHydrationWarning
+        className={`inline-flex items-center gap-2 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/60 px-3.5 py-1.5 text-xs text-slate-400 ${className}`}
       >
         <span className="h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-700" />
         <span>กำลังโหลดเวลา...</span>
@@ -47,16 +61,18 @@ export default function LiveClock({
   ];
   const dayName = thaiDays[now.getDay()];
 
-  // Date formatted in Thai: วันที่ เดือน ปี พ.ศ.
+  // Date formatted in Thai: วันที่ เดือน ปี พ.ศ. (Bangkok timezone)
   const dateStr = now.toLocaleDateString('th-TH', {
+    timeZone: 'Asia/Bangkok',
     day: 'numeric',
     month: 'short',
     year: 'numeric',
   });
 
-  // Time formatted in Thai: HH:mm:ss น.
+  // Time formatted in Thai: HH:mm:ss น. (Bangkok timezone)
   const timeStr =
     now.toLocaleTimeString('th-TH', {
+      timeZone: 'Asia/Bangkok',
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
@@ -66,15 +82,13 @@ export default function LiveClock({
   if (variant === 'compact') {
     return (
       <div
+        suppressHydrationWarning
         className={`inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700/80 bg-white dark:bg-[#070b14] px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300 shadow-sm ${className}`}
       >
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span className="font-bold text-slate-800 dark:text-white">{dateStr}</span>
+        <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+        <span suppressHydrationWarning className="font-bold text-slate-800 dark:text-white">{dateStr}</span>
         <span className="text-slate-400 dark:text-slate-600">•</span>
-        <span className="font-mono font-extrabold text-amber-600 dark:text-amber-400 tracking-wider">
+        <span suppressHydrationWarning className="font-mono font-extrabold text-amber-600 dark:text-amber-400 tracking-wider">
           {timeStr}
         </span>
       </div>
@@ -83,14 +97,11 @@ export default function LiveClock({
 
   return (
     <div
+      suppressHydrationWarning
       className={`inline-flex items-center gap-2.5 rounded-2xl border-2 border-slate-300 dark:border-slate-700/90 bg-white/95 dark:bg-gradient-to-r dark:from-[#0b101c] dark:to-[#0f172a] px-3.5 py-1.5 shadow-sm dark:shadow-md transition-all ${className}`}
-      title="วัน เดือน ปี และเวลาปัจจุบัน (อัปเดตแบบเรียลไทม์วินาทีต่อวินาที)"
+      title="วัน เดือน ปี และเวลาปัจจุบัน"
     >
-      {/* Live Pulsing Indicator */}
-      <span className="relative flex h-2.5 w-2.5 shrink-0">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-      </span>
+      <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500 shrink-0"></span>
 
       {/* Date Part */}
       <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">

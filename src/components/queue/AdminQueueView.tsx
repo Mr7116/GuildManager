@@ -28,13 +28,21 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
     toggleQueueEntryCompleted,
     clearQueueEntries,
     setQueueStatus,
+    openScheduledQueueNow,
   } = useGuildStore();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'all' | 'open' | 'in_progress' | 'vanished' | 'apocalypse'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'open' | 'scheduled' | 'in_progress' | 'vanished' | 'apocalypse'>('all');
   const [manualAddQueueId, setManualAddQueueId] = useState<string | null>(null);
   const [memberSearch, setMemberSearch] = useState('');
   const [toastMsg, setToastMsg] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [, setTick] = useState(0);
+
+  // Live ticker for countdown update every second
+  React.useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const showToast = (text: string, isError = false) => {
     setToastMsg({ text, isError });
@@ -48,6 +56,8 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
     let lists = [...queueLists];
     if (activeTab === 'open') {
       lists = lists.filter((q) => q.status === 'open');
+    } else if (activeTab === 'scheduled') {
+      lists = lists.filter((q) => q.status === 'scheduled');
     } else if (activeTab === 'in_progress') {
       lists = lists.filter((q) => q.status === 'in_progress');
     } else if (activeTab === 'vanished') {
@@ -65,6 +75,10 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
 
   const activeQueuesCount = useMemo(() => {
     return queueLists.filter((q) => q.status === 'open').length;
+  }, [queueLists]);
+
+  const scheduledQueuesCount = useMemo(() => {
+    return queueLists.filter((q) => q.status === 'scheduled').length;
   }, [queueLists]);
 
   // Move queue entry up/down
@@ -239,6 +253,7 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
           {[
             { id: 'all', label: 'ทั้งหมด', count: queueLists.length },
             { id: 'open', label: '🟢 เปิดรับคิว', count: queueLists.filter((q) => q.status === 'open').length },
+            { id: 'scheduled', label: '⏰ ตั้งเวลาเปิด', count: scheduledQueuesCount },
             { id: 'in_progress', label: '⏳ กำลังลงดัน', count: queueLists.filter((q) => q.status === 'in_progress').length },
             { id: 'vanished', label: '🌀 มายาสิ้นสูญ', count: queueLists.filter((q) => q.dungeonCategory === 'vanished').length },
             { id: 'apocalypse', label: '⚔️ Apocalypse', count: queueLists.filter((q) => q.dungeonCategory === 'apocalypse').length },
@@ -288,6 +303,11 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
             const isOpen = queue.status === 'open';
             const isInProgress = queue.status === 'in_progress';
             const isClosed = queue.status === 'closed';
+            const isScheduled = queue.status === 'scheduled';
+
+            const msUntilOpen = queue.scheduledOpenAt ? new Date(queue.scheduledOpenAt).getTime() - Date.now() : 0;
+            const minsUntilOpen = Math.max(0, Math.ceil(msUntilOpen / 60000));
+            const preRegCount = queue.preRegisteredMemberIds?.length || 0;
 
             const partySize = queue.maxPartySize || 5;
             const partiesCount = Math.max(1, Math.ceil(entries.length / partySize));
@@ -319,6 +339,12 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
 
                         {/* Status Switcher */}
                         <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-0.5 rounded-xl border border-slate-300 dark:border-slate-700">
+                          {isScheduled && (
+                            <span className="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-600 text-white shadow flex items-center gap-1">
+                              <span>⏰</span>
+                              <span>ตั้งเวลา</span>
+                            </span>
+                          )}
                           <button
                             type="button"
                             onClick={() => setQueueStatus(queue.id, 'open')}
@@ -352,6 +378,20 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                           >
                             🔒 ปิดคิว
                           </button>
+                          {isScheduled && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                openScheduledQueueNow(queue.id);
+                                showToast('⚡ เปิดคิวและลงชื่อสมาชิกอัตโนมัติเรียบร้อยแล้ว!');
+                              }}
+                              className="px-2 py-0.5 rounded-lg text-[10px] font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white shadow flex items-center gap-1 cursor-pointer active:scale-95 transition"
+                              title="เปิดรับคิวและลงชื่อสมาชิกล่วงหน้าทันที"
+                            >
+                              <span>⚡</span>
+                              <span>เปิดทันที</span>
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -417,6 +457,72 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
                     </button>
                   </div>
                 </div>
+
+                {/* SCHEDULED INFO BANNER (ตั้งเวลาเปิด & สมาชิกลงชื่อล่วงหน้า) */}
+                {isScheduled && (
+                  <div className="rounded-2xl border border-amber-500/40 bg-amber-500/10 dark:bg-amber-950/20 p-3.5 space-y-2.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-2xl shrink-0 p-2 rounded-xl bg-amber-500/20 border border-amber-500/30">
+                          ⏰
+                        </span>
+                        <div>
+                          <div className="text-xs sm:text-sm font-extrabold text-amber-700 dark:text-amber-300 flex items-center gap-1.5">
+                            <span>จะเปิดรับคิวอัตโนมัติในอีก ~{minsUntilOpen} นาที</span>
+                            {queue.scheduledOpenAt && (
+                              <span className="text-[11px] font-normal text-slate-500 dark:text-slate-400">
+                                ({new Date(queue.scheduledOpenAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.)
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                            เมื่อถึงเวลา ระบบจะเปิดรับคิวและลงชื่อสมาชิกที่เลือกไว้ให้อัตโนมัติทันที
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          openScheduledQueueNow(queue.id);
+                          showToast('⚡ เปิดคิวและลงชื่อสมาชิกอัตโนมัติเรียบร้อยแล้ว!');
+                        }}
+                        className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white text-xs font-black shadow-md flex items-center gap-1.5 transition cursor-pointer self-start sm:self-center active:scale-95 shrink-0"
+                      >
+                        <span>⚡</span>
+                        <span>เปิดคิวทันที (Open Now)</span>
+                      </button>
+                    </div>
+
+                    {/* Pre-registered members preview */}
+                    {preRegCount > 0 && (
+                      <div className="pt-2 border-t border-amber-500/20 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-amber-800 dark:text-amber-300">
+                          <span>👥 สมาชิกที่ลงชื่ออัตโนมัติล่วงหน้า ({preRegCount} คน):</span>
+                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-normal">
+                            จะเข้าคิวอันดับ #{entries.length + 1} - #{entries.length + preRegCount} ทันทีที่เปิด
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5">
+                          {queue.preRegisteredMemberIds?.map((mId, idx) => {
+                            const mem = members.find((m) => m.id === mId);
+                            return (
+                              <span
+                                key={mId}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-amber-500/40 bg-amber-500/10 dark:bg-slate-900 text-xs font-bold text-slate-800 dark:text-slate-200"
+                              >
+                                <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400">
+                                  #{idx + 1}
+                                </span>
+                                <JobEmblem job={mem?.job} size={13} />
+                                <span>{mem?.name || 'ไม่ทราบชื่อ'}</span>
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* QUEUE ENTRIES AS A CLEAN LIST */}
                 {entries.length === 0 ? (

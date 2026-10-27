@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { AuctionItem, AuctionEntry } from '@/types/auction';
+import { AuctionItem, AuctionEntry, isTitleItem, isChestItem, getAuctionItemImageSrc } from '@/types/auction';
 import JobEmblem from '@/components/tactical/JobEmblem';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
 import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
@@ -267,7 +267,7 @@ export default function LuckyWheelModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85 p-3 sm:p-5 backdrop-blur-md overflow-y-auto">
-      <div className="relative w-full max-w-2xl rounded-3xl border border-rose-500/40 bg-[#0d121f] p-5 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[95vh] flex flex-col items-center">
+      <div className="relative w-full max-w-2xl rounded-3xl border border-rose-500/40 bg-[#0d121f] p-4 sm:p-6 shadow-2xl space-y-4 my-auto max-h-[92vh] overflow-y-auto flex flex-col items-center">
         {/* Header */}
         <div className="w-full flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
           <div className="flex items-center gap-3">
@@ -295,25 +295,15 @@ export default function LuckyWheelModal({
 
         {/* Item Banner Bar */}
         {(() => {
-          const isTitle = auction.itemCategory === 'title' || (auction.cardSlot && auction.cardSlot.includes('Title')) || (auction.cardQuality && auction.cardQuality.includes('Title'));
-          const isChest = !isTitle && (auction.itemCategory === 'chest' || (auction.cardSlot && (auction.cardSlot.includes('หีบ') || auction.cardSlot.includes('กล่อง') || auction.cardSlot.includes('Pack'))));
+          const isTitle = isTitleItem(auction);
+          const isChest = isChestItem(auction);
           const isPet = !isTitle && !isChest && (auction.itemCategory === 'pet' || (auction.cardSlot && auction.cardSlot.includes('สัตว์เลี้ยง')) || (auction.cardQuality && auction.cardQuality.startsWith('Pet')));
           const isRelic = !isTitle && !isChest && !isPet && (auction.itemCategory === 'relic' || auction.cardQuality === 'Sage');
           const isCard = !isTitle && !isChest && !isPet && !isRelic && (auction.itemCategory === 'card' || auction.cardQuality === 'Purple');
           const titleTier = isTitle ? getTitleTierStyle(auction.accessoryIcon || auction.accessoryName || auction.cardQuality) : null;
           const chestTier = isChest ? getChestTierStyle(auction.accessoryName || auction.cardQuality) : null;
           const petTier = isPet ? getPetTierStyle(auction.accessoryName || auction.cardQuality) : null;
-          const imageSrc = isTitle
-            ? `/images/titles/${auction.accessoryIcon}.webp`
-            : isChest
-            ? `/images/chests/${auction.accessoryIcon}.webp`
-            : isPet
-            ? `/images/pets/${auction.accessoryIcon}.webp`
-            : isRelic
-            ? `/images/relics/${auction.accessoryIcon}.webp`
-            : isCard
-            ? `/images/cards/${auction.accessoryIcon}.webp`
-            : `/images/accessories/${auction.accessoryIcon}.webp`;
+          const imageSrc = getAuctionItemImageSrc(auction);
 
           return (
             <div className={`w-full flex items-center justify-between gap-3 p-3 rounded-2xl border shadow-inner shrink-0 ${
@@ -323,32 +313,41 @@ export default function LuckyWheelModal({
                 <div className={`relative w-12 h-12 shrink-0 rounded-xl border flex items-center justify-center shadow ${
                   isTitle ? `${titleTier?.border} bg-[#0c1220]` : isChest ? `${chestTier?.border} bg-[#0c1220]` : isPet ? `${petTier?.border} bg-[#0c1220]` : isRelic ? 'border-amber-500/40 bg-[#0c1220]' : isCard ? 'border-purple-500/40 bg-[#0c1220]' : 'border-rose-500/40 bg-[#0c1220]'
                 }`}>
-                  <Image
-                    src={imageSrc}
-                    alt={auction.accessoryName}
-                    width={40}
-                    height={40}
-                    unoptimized
-                    className="object-contain drop-shadow"
-                    onError={(e) => {
-                      const fallback = isTitle
-                        ? `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`
-                        : isChest
-                        ? (auction.accessoryIcon.includes('title_chest')
-                            ? `/images/chests/${auction.accessoryIcon}.svg`
-                            : auction.accessoryIcon.includes('stonebox') || auction.accessoryIcon.includes('gem')
-                            ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
-                            : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
-                        : isPet
-                        ? (auction.accessoryIcon.includes('mfmm')
-                            ? `https://roworlddb.com/media/images/icon/pet/${auction.accessoryIcon}.webp`
-                            : `https://roworlddb.com/media/images/pet/${auction.accessoryIcon}.webp`)
-                        : isRelic
-                        ? `https://roworlddb.com/media/images/hallows/${auction.accessoryIcon}.webp`
-                        : `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`;
-                      (e.target as HTMLImageElement).src = fallback;
-                    }}
-                  />
+                  {auction.accessoryIcon.includes('title_chest') ? (
+                    <TitleChestSvgIcon
+                      variant={chestTier?.tier || 'gold'}
+                      className="w-10 h-10 drop-shadow"
+                    />
+                  ) : (
+                    <Image
+                      src={imageSrc}
+                      alt={auction.accessoryName}
+                      width={40}
+                      height={40}
+                      unoptimized
+                      className="object-contain drop-shadow"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        const fallback = isTitle
+                          ? `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`
+                          : isChest
+                          ? (auction.accessoryIcon.includes('title_chest')
+                              ? `/images/chests/${auction.accessoryIcon}.svg`
+                              : auction.accessoryIcon.includes('stonebox') || auction.accessoryIcon.includes('gem')
+                              ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                              : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                          : isPet
+                          ? (auction.accessoryIcon.includes('mfmm')
+                              ? `https://roworlddb.com/media/images/icon/pet/${auction.accessoryIcon}.webp`
+                              : `https://roworlddb.com/media/images/pet/${auction.accessoryIcon}.webp`)
+                          : isRelic
+                          ? `https://roworlddb.com/media/images/hallows/${auction.accessoryIcon}.webp`
+                          : `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`;
+                        target.src = fallback;
+                      }}
+                    />
+                  )}
                   {isTitle ? (
                     <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
                       {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
@@ -457,7 +456,7 @@ export default function LuckyWheelModal({
               ref={canvasRef}
               width={380}
               height={380}
-              className="rounded-full max-w-[320px] max-h-[320px] sm:max-w-[380px] sm:max-h-[380px]"
+              className="rounded-full max-w-[270px] max-h-[270px] sm:max-w-[360px] sm:max-h-[360px]"
             />
           </div>
         </div>

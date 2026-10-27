@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
 import { useGuildStore } from '@/lib/guildStore';
 import MemberAuctionView from '@/components/auction/MemberAuctionView';
-import { AuctionItem, AuctionRound } from '@/types/auction';
+import { AuctionItem, AuctionRound, isTitleItem, isChestItem, getAuctionItemImageSrc } from '@/types/auction';
 import AddAuctionModal from '@/components/modals/AddAuctionModal';
 import RegisterMembersModal from '@/components/modals/RegisterMembersModal';
 import LuckyWheelModal from '@/components/modals/LuckyWheelModal';
@@ -36,6 +36,8 @@ export default function AuctionPage() {
     completeAuctionRound,
     reopenAuctionRound,
     deleteAuctionRound,
+    openScheduledRoundNow,
+    setRoundSchedule,
     addAuctionItems,
     startAuction,
     startAllPendingAuctions,
@@ -238,9 +240,10 @@ export default function AuctionPage() {
                   auctionRounds.map((r) => {
                     const rItems = auctionItems.filter((i) => (i.roundId || auctionRounds[0]?.id || 'round_default') === r.id);
                     const isComp = r.status === 'completed';
+                    const isSched = r.status === 'scheduled';
                     return (
                       <option key={r.id} value={r.id}>
-                        {isComp ? '🏆 [จบแล้ว]' : '🟢 [เปิดอยู่]'} {r.name} ({r.date}) — {rItems.length} ชิ้น
+                        {isComp ? '🏆 [จบแล้ว]' : isSched ? '⏰ [ตั้งเวลาเปิด]' : '🟢 [เปิดอยู่]'} {r.name} ({r.date}) — {rItems.length} ชิ้น
                       </option>
                     );
                   })
@@ -257,6 +260,30 @@ export default function AuctionPage() {
                   <span>🏆</span>
                   <span>รอบนี้จบการประมูลแล้ว</span>
                 </span>
+              ) : currentRound.status === 'scheduled' ? (
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1.5">
+                    <span>⏰</span>
+                    <span>
+                      รอเปิดอัตโนมัติ:{' '}
+                      {currentRound.scheduledOpenAt
+                        ? new Date(currentRound.scheduledOpenAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) + ' น.'
+                        : ''}
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`ต้องการเปิดรอบ "${currentRound.name}" ทันทีตอนนี้เลยหรือไม่?`)) {
+                        openScheduledRoundNow(currentRound.id);
+                      }
+                    }}
+                    className="px-2.5 py-1 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-[11px] font-bold shadow transition cursor-pointer"
+                    title="เปิดให้สมาชิกลงชื่อทันทีโดยไม่ต้องรอเวลา"
+                  >
+                    <span>⚡ เปิดทันที</span>
+                  </button>
+                </div>
               ) : (
                 <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -651,8 +678,8 @@ export default function AuctionPage() {
             const isPending = item.status === 'pending';
             const isActive = item.status === 'active';
             const isEnded = item.status === 'ended';
-            const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
-            const isChest = !isTitle && (item.itemCategory === 'chest' || (item.cardSlot && (item.cardSlot.includes('หีบ') || item.cardSlot.includes('กล่อง') || item.cardSlot.includes('Pack'))));
+            const isTitle = isTitleItem(item);
+            const isChest = isChestItem(item);
             const isPet = !isTitle && !isChest && (item.itemCategory === 'pet' || (item.cardSlot && item.cardSlot.includes('สัตว์เลี้ยง')) || (item.cardQuality && item.cardQuality.startsWith('Pet')));
             const isRelic = !isTitle && !isChest && !isPet && (item.itemCategory === 'relic' || item.cardQuality === 'Sage');
             const isCard = !isTitle && !isChest && !isPet && !isRelic && (item.itemCategory === 'card' || item.cardQuality === 'Purple');
@@ -661,17 +688,7 @@ export default function AuctionPage() {
             const petTier = isPet ? getPetTierStyle(item.accessoryName || item.cardQuality) : null;
             const entryCount = (item.entries || []).length;
             const isQuotaFull = !!(item.maxEntries && item.maxEntries > 0 && entryCount >= item.maxEntries);
-            const imageSrc = isTitle
-              ? `/images/titles/${item.accessoryIcon}.webp`
-              : isChest
-              ? `/images/chests/${item.accessoryIcon}.webp`
-              : isPet
-              ? `/images/pets/${item.accessoryIcon}.webp`
-              : isRelic
-              ? `/images/relics/${item.accessoryIcon}.webp`
-              : isCard
-              ? `/images/cards/${item.accessoryIcon}.webp`
-              : `/images/accessories/${item.accessoryIcon}.webp`;
+            const imageSrc = getAuctionItemImageSrc(item);
 
             return (
               <div
@@ -703,32 +720,41 @@ export default function AuctionPage() {
                       ? 'border-purple-500/50 bg-purple-950/20'
                       : 'border-rose-500/40 bg-slate-100 dark:bg-[#080d19]'
                   }`}>
-                    <Image
-                      src={imageSrc}
-                      alt={item.accessoryName}
-                      width={44}
-                      height={44}
-                      unoptimized
-                      className="object-contain drop-shadow"
-                      onError={(e) => {
-                        const fallback = isTitle
-                          ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
-                          : isChest
-                          ? (item.accessoryIcon.includes('title_chest')
-                              ? `/images/chests/${item.accessoryIcon}.svg`
-                              : item.accessoryIcon.includes('stonebox') || item.accessoryIcon.includes('gem')
-                              ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
-                              : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
-                          : isPet
-                          ? (item.accessoryIcon.includes('mfmm')
-                              ? `https://roworlddb.com/media/images/icon/pet/${item.accessoryIcon}.webp`
-                              : `https://roworlddb.com/media/images/pet/${item.accessoryIcon}.webp`)
-                          : isRelic
-                          ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
-                          : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
-                        (e.target as HTMLImageElement).src = fallback;
-                      }}
-                    />
+                    {item.accessoryIcon.includes('title_chest') ? (
+                      <TitleChestSvgIcon
+                        variant={chestTier?.tier || 'gold'}
+                        className="w-10 h-10 drop-shadow"
+                      />
+                    ) : (
+                      <Image
+                        src={imageSrc}
+                        alt={item.accessoryName}
+                        width={44}
+                        height={44}
+                        unoptimized
+                        className="object-contain drop-shadow"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          const fallback = isTitle
+                            ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
+                            : isChest
+                            ? (item.accessoryIcon.includes('title_chest')
+                                ? `/images/chests/${item.accessoryIcon}.svg`
+                                : item.accessoryIcon.includes('stonebox') || item.accessoryIcon.includes('gem')
+                                ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                                : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                            : isPet
+                            ? (item.accessoryIcon.includes('mfmm')
+                                ? `https://roworlddb.com/media/images/icon/pet/${item.accessoryIcon}.webp`
+                                : `https://roworlddb.com/media/images/pet/${item.accessoryIcon}.webp`)
+                            : isRelic
+                            ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
+                            : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
+                          target.src = fallback;
+                        }}
+                      />
+                    )}
                     {isTitle ? (
                       <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
                         {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
@@ -1011,8 +1037,8 @@ export default function AuctionPage() {
             const isPending = item.status === 'pending';
             const isActive = item.status === 'active';
             const isEnded = item.status === 'ended';
-            const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
-            const isChest = !isTitle && (item.itemCategory === 'chest' || (item.cardSlot && (item.cardSlot.includes('หีบ') || item.cardSlot.includes('กล่อง') || item.cardSlot.includes('Pack'))));
+            const isTitle = isTitleItem(item);
+            const isChest = isChestItem(item);
             const isPet = !isTitle && !isChest && (item.itemCategory === 'pet' || (item.cardSlot && item.cardSlot.includes('สัตว์เลี้ยง')) || (item.cardQuality && item.cardQuality.startsWith('Pet')));
             const isRelic = !isTitle && !isChest && !isPet && (item.itemCategory === 'relic' || item.cardQuality === 'Sage');
             const isCard = !isTitle && !isChest && !isPet && !isRelic && (item.itemCategory === 'card' || item.cardQuality === 'Purple');
@@ -1021,17 +1047,7 @@ export default function AuctionPage() {
             const petTier = isPet ? getPetTierStyle(item.accessoryName || item.cardQuality) : null;
             const entryCount = (item.entries || []).length;
             const isQuotaFull = !!(item.maxEntries && item.maxEntries > 0 && entryCount >= item.maxEntries);
-            const imageSrc = isTitle
-              ? `/images/titles/${item.accessoryIcon}.webp`
-              : isChest
-              ? `/images/chests/${item.accessoryIcon}.webp`
-              : isPet
-              ? `/images/pets/${item.accessoryIcon}.webp`
-              : isRelic
-              ? `/images/relics/${item.accessoryIcon}.webp`
-              : isCard
-              ? `/images/cards/${item.accessoryIcon}.webp`
-              : `/images/accessories/${item.accessoryIcon}.webp`;
+            const imageSrc = getAuctionItemImageSrc(item);
 
             return (
               <div
@@ -1145,6 +1161,12 @@ export default function AuctionPage() {
                         ? 'border-purple-500/50 bg-purple-950/20 shadow-purple-500/15'
                         : 'border-rose-500/50 bg-slate-100 dark:bg-[#080d19] shadow-rose-500/15'
                     }`}>
+                    {item.accessoryIcon.includes('title_chest') ? (
+                      <TitleChestSvgIcon
+                        variant={chestTier?.tier || 'gold'}
+                        className="w-12 h-12 drop-shadow"
+                      />
+                    ) : (
                       <Image
                         src={imageSrc}
                         alt={item.accessoryName}
@@ -1153,6 +1175,8 @@ export default function AuctionPage() {
                         unoptimized
                         className="object-contain drop-shadow"
                         onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
                           const fallback = isTitle
                             ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
                             : isChest
@@ -1168,9 +1192,10 @@ export default function AuctionPage() {
                             : isRelic
                             ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
                             : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
-                          (e.target as HTMLImageElement).src = fallback;
+                          target.src = fallback;
                         }}
                       />
+                    )}
                       {isTitle ? (
                         <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
                           {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
@@ -1354,8 +1379,8 @@ export default function AuctionPage() {
       <CreateRoundModal
         isOpen={isCreateRoundOpen}
         onClose={() => setIsCreateRoundOpen(false)}
-        onCreateRound={(name, date, note) => {
-          createAuctionRound(name, date, note);
+        onCreateRound={(name, date, note, scheduledOpenAt, scheduledCloseAt) => {
+          createAuctionRound(name, date, note, scheduledOpenAt, scheduledCloseAt);
         }}
       />
 

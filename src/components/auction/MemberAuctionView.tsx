@@ -9,7 +9,7 @@ import JobEmblem from '@/components/tactical/JobEmblem';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import LiveClock from '@/components/common/LiveClock';
-import { AuctionItem, AuctionRound, formatRegistrationTime, isTitleItem, isChestItem, isMultiEntryItem } from '@/types/auction';
+import { AuctionItem, AuctionRound, formatRegistrationTime, isTitleItem, isChestItem, isMultiEntryItem, getAuctionItemImageSrc } from '@/types/auction';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
 import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
 import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
@@ -41,7 +41,11 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
   const [itemSearch, setItemSearch] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'active' | 'my' | 'all'>('active');
   const [expandedItemId, setExpandedItemId] = useState<string | null>(null);
-  const [toastMsg, setToastMsg] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [isMounted, setIsMounted] = useState<boolean>(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Restore saved member from localStorage
   useEffect(() => {
@@ -69,8 +73,35 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
   // Current active round (or newest)
   const currentRound: AuctionRound | null = useMemo(() => {
     if (auctionRounds.length === 0) return null;
-    return auctionRounds.find((r) => r.status === 'active') || auctionRounds[0];
+    return auctionRounds.find((r) => r.status === 'active' || r.status === 'scheduled') || auctionRounds[0];
   }, [auctionRounds]);
+
+  // Live timer tick for scheduled countdown
+  const [nowTick, setNowTick] = useState<number>(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const isRoundScheduled = Boolean(
+    currentRound &&
+    currentRound.status === 'scheduled' &&
+    currentRound.scheduledOpenAt &&
+    new Date(currentRound.scheduledOpenAt).getTime() > nowTick
+  );
+
+  const scheduledCountdownStr = useMemo(() => {
+    if (!isRoundScheduled || !currentRound?.scheduledOpenAt) return '';
+    const diff = new Date(currentRound.scheduledOpenAt).getTime() - nowTick;
+    if (diff <= 0) return '00:00:00';
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    if (hours > 0) {
+      return `${hours} ชม. ${String(minutes).padStart(2, '0')} นาที ${String(seconds).padStart(2, '0')} วิ`;
+    }
+    return `${String(minutes).padStart(2, '0')} นาที ${String(seconds).padStart(2, '0')} วิ`;
+  }, [isRoundScheduled, currentRound, nowTick]);
 
   // Items for this round
   const roundItems: AuctionItem[] = useMemo(() => {
@@ -98,7 +129,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
   const displayItems = useMemo(() => {
     let list = roundItems;
     if (activeTab === 'active') {
-      list = activeItems;
+      list = isRoundScheduled ? roundItems : activeItems;
     } else if (activeTab === 'my') {
       list = myRegisteredItems;
     }
@@ -126,27 +157,23 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
     );
   }, [members, memberSearch]);
 
-  // Show temporary toast message
-  const showToast = (text: string, isError = false) => {
-    setToastMsg({ text, isError });
-    setTimeout(() => {
-      setToastMsg((prev) => (prev?.text === text ? null : prev));
-    }, 3000);
-  };
-
   // Join item
   const handleJoin = (item: AuctionItem) => {
+    if (isRoundScheduled) {
+      alert(`รอบนี้ยังไม่ถึงเวลาเปิดรับรายชื่อ จะเปิดอัตโนมัติในอีก ${scheduledCountdownStr}`);
+      return;
+    }
     if (!currentMember) {
-      showToast('กรุณาเลือกชื่อของคุณด้านบนก่อน', true);
+      alert('กรุณาเลือกชื่อของคุณด้านบนก่อน');
       window.scrollTo({ top: 0, behavior: 'smooth' });
       return;
     }
     if (item.status !== 'active') {
-      showToast('รายการนี้ยังไม่เปิดรับรายชื่อ หรือสุ่มเสร็จแล้ว', true);
+      alert('รายการนี้ยังไม่เปิดรับรายชื่อ หรือสุ่มเสร็จแล้ว');
       return;
     }
     if (item.maxEntries && item.maxEntries > 0 && (item.entries || []).length >= item.maxEntries) {
-      showToast('ขออภัย รายการนี้มีคนลงชื่อครบตามโควตาแล้ว', true);
+      alert('ขออภัย รายการนี้มีคนลงชื่อครบตามโควตาแล้ว');
       return;
     }
 
@@ -157,27 +184,18 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
     if (!allowMultiple) {
       const alreadyRegistered = (item.entries || []).some((e) => e.memberId === currentMember.id);
       if (alreadyRegistered) {
-        showToast('ไอเทมนี้สามารถลงชื่อได้เพียงคนละ 1 ครั้งเท่านั้น', true);
+        alert('ไอเทมนี้สามารถลงชื่อได้เพียงคนละ 1 ครั้งเท่านั้น');
         return;
       }
     }
 
     addMemberToAuction(item.id, currentMember.id);
-    showToast(
-      isTitle
-        ? `กดรับสิทธิ์ "${item.accessoryName}" สำเร็จ! 👑`
-        : isChest
-        ? `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 📦`
-        : `ลงชื่อลุ้นรับ "${item.accessoryName}" สำเร็จ! 🎉`
-    );
   };
 
   // Leave one entry (or all if only 1)
   const handleLeaveOne = (item: AuctionItem) => {
     if (!currentMember) return;
-    const isTitle = item.itemCategory === 'title' || (item.cardSlot && item.cardSlot.includes('Title')) || (item.cardQuality && item.cardQuality.includes('Title'));
     removeOneMemberEntryFromAuction(item.id, currentMember.id);
-    showToast(`ยกเลิกลด 1 สิทธิ์ของ "${item.accessoryName}" เรียบร้อยแล้ว`);
   };
 
   // Leave item (all)
@@ -189,25 +207,11 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
       )
     ) {
       removeMemberFromAuction(item.id, currentMember.id);
-      showToast(`ยกเลิกการลงชื่อ "${item.accessoryName}" เรียบร้อยแล้ว`);
     }
   };
 
   return (
-    <div className="mx-auto max-w-4xl px-3 py-4 sm:px-6 space-y-5 pb-16">
-      {/* Toast Notification */}
-      {toastMsg && (
-        <div
-          className={`fixed bottom-5 right-5 z-50 max-w-md rounded-2xl p-4 text-xs sm:text-sm font-bold shadow-2xl transition-all border animate-bounce ${
-            toastMsg.isError
-              ? 'bg-rose-900/90 text-rose-100 border-rose-500/60'
-              : 'bg-emerald-900/90 text-emerald-100 border-emerald-500/60'
-          }`}
-        >
-          {toastMsg.text}
-        </div>
-      )}
-
+    <div suppressHydrationWarning className="mx-auto max-w-4xl px-3 py-4 sm:px-6 space-y-5 pb-16">
       {/* Top Bar / Header */}
       <div className="flex flex-col gap-3 rounded-3xl border border-rose-300 dark:border-rose-500/30 bg-white dark:bg-[#0d121f] p-4 sm:p-5 shadow-sm dark:shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -274,14 +278,19 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
 
         {/* Current Round Banner */}
         {currentRound ? (
-          <div className="mt-1 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
+          <div suppressHydrationWarning className="mt-1 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+            <div suppressHydrationWarning className="flex flex-wrap items-center gap-2">
+              <span suppressHydrationWarning className="font-extrabold text-slate-900 dark:text-white text-sm flex items-center gap-1.5">
                 <span>🎯</span>
-                <span>{currentRound.name}</span>
+                <span suppressHydrationWarning>{currentRound.name}</span>
               </span>
 
-              {currentRound.status === 'active' ? (
+              {isRoundScheduled ? (
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1.5 animate-pulse">
+                  <span>⏰</span>
+                  <span>รอเปิดรับรายชื่ออัตโนมัติ ({scheduledCountdownStr})</span>
+                </span>
+              ) : currentRound.status === 'active' ? (
                 <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                   <span>กำลังเปิดให้สมาชิกลงชื่อ</span>
@@ -308,6 +317,36 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
           </div>
         )}
       </div>
+
+      {/* SCHEDULED COUNTDOWN BANNER (เมื่อรอบถูกตั้งเวลาเปิดล่วงหน้า) */}
+      {isRoundScheduled && currentRound?.scheduledOpenAt && (
+        <div className="p-3.5 sm:p-4 rounded-3xl border-2 border-amber-500/50 bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/15 shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-500/20 text-2xl border border-amber-500/40 text-amber-500 dark:text-amber-300">
+              ⏰
+            </span>
+            <div>
+              <h3 className="text-sm sm:text-base font-extrabold text-amber-900 dark:text-amber-200">
+                รอบนี้ตั้งเวลาเปิดรับรายชื่อล่วงหน้า
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                กำหนดเปิดระบบเวลา{' '}
+                <strong className="text-amber-700 dark:text-amber-300">
+                  {new Date(currentRound.scheduledOpenAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })} น.
+                </strong>{' '}
+                (สมาชิกรอกดลงชื่อพร้อมกันเมื่อเวลานับถอยหลังสิ้นสุด)
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-end sm:self-center">
+            <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">เหลือเวลา:</span>
+            <div className="font-mono text-base sm:text-lg font-black px-3.5 py-1.5 rounded-2xl bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/50 shadow-inner">
+              {scheduledCountdownStr}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* STEP 1: MEMBER SELECTOR BOX */}
       <div className="rounded-3xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-[#0d121f] p-4 sm:p-5 shadow-sm space-y-3">
@@ -520,17 +559,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
               const titleTier = isTitle ? getTitleTierStyle(item.accessoryIcon || item.accessoryName || item.cardQuality) : null;
               const chestTier = isChest ? getChestTierStyle(item.accessoryName || item.cardQuality) : null;
               const petTier = isPet ? getPetTierStyle(item.accessoryName || item.cardQuality) : null;
-              const imageSrc = isTitle
-                ? `/images/titles/${item.accessoryIcon}.webp`
-                : isChest
-                ? `/images/chests/${item.accessoryIcon}.webp`
-                : isPet
-                ? `/images/pets/${item.accessoryIcon}.webp`
-                : isRelic
-                ? `/images/relics/${item.accessoryIcon}.webp`
-                : isCard
-                ? `/images/cards/${item.accessoryIcon}.webp`
-                : `/images/accessories/${item.accessoryIcon}.webp`;
+              const imageSrc = getAuctionItemImageSrc(item);
 
               return (
                 <div
@@ -564,32 +593,49 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                           ? 'border-purple-500/50 bg-purple-950/20'
                           : 'border-rose-500/40 bg-slate-100 dark:bg-[#080d19]'
                       }`}>
-                        <Image
-                          src={imageSrc}
-                          alt={item.accessoryName}
-                          width={44}
-                          height={44}
-                          unoptimized
-                          className="object-contain drop-shadow"
-                          onError={(e) => {
-                            const fallback = isTitle
-                              ? `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`
-                              : isChest
-                              ? (item.accessoryIcon.includes('title_chest')
-                                  ? `/images/chests/${item.accessoryIcon}.svg`
-                                  : item.accessoryIcon.includes('stonebox') || item.accessoryIcon.includes('gem')
-                                  ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
-                                  : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
-                              : isPet
-                              ? (item.accessoryIcon.includes('mfmm')
-                                  ? `https://roworlddb.com/media/images/icon/pet/${item.accessoryIcon}.webp`
-                                  : `https://roworlddb.com/media/images/pet/${item.accessoryIcon}.webp`)
-                              : isRelic
-                              ? `https://roworlddb.com/media/images/hallows/${item.accessoryIcon}.webp`
-                              : `https://roworlddb.com/media/images/item/${item.accessoryIcon}.webp`;
-                            (e.target as HTMLImageElement).src = fallback;
-                          }}
-                        />
+                        {item.accessoryIcon.includes('title_chest') ? (
+                          <TitleChestSvgIcon
+                            variant={chestTier?.tier || 'gold'}
+                            className="w-10 h-10 drop-shadow"
+                          />
+                        ) : (
+                          <Image
+                            src={imageSrc}
+                            alt={item.accessoryName}
+                            width={44}
+                            height={44}
+                            unoptimized
+                            className="object-contain drop-shadow"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.onerror = null;
+                              const icon = item.accessoryIcon || '';
+                              if (icon.includes('title_chest')) {
+                                target.src = `/images/chests/${icon}.svg`;
+                                return;
+                              }
+                              if (isChest) {
+                                target.src = `/images/chests/icon_item_bx_fy.webp`;
+                                return;
+                              }
+                              if (isTitle) {
+                                target.src = `/images/titles/${icon}.webp`;
+                                return;
+                              }
+                              if (isPet) {
+                                target.src = icon.includes('mfmm')
+                                  ? `https://roworlddb.com/media/images/icon/pet/${icon}.webp`
+                                  : `https://roworlddb.com/media/images/pet/${icon}.webp`;
+                                return;
+                              }
+                              if (isRelic) {
+                                target.src = `https://roworlddb.com/media/images/hallows/${icon}.webp`;
+                                return;
+                              }
+                              target.src = `https://roworlddb.com/media/images/item/${icon}.webp`;
+                            }}
+                          />
+                        )}
                         {isTitle ? (
                           <span className={`absolute bottom-0 right-0 px-1 py-0.2 rounded text-[7px] font-bold border ${titleTier?.badgeBg}`}>
                             {titleTier?.tier === 'gold' ? 'ทอง' : titleTier?.tier === 'purple' ? 'ม่วง' : titleTier?.tier === 'blue' ? 'ฟ้า' : 'เขียว'}
@@ -657,7 +703,12 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                           )}
 
                           {/* Status */}
-                          {isOpen && (
+                          {isRoundScheduled ? (
+                            <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
+                              <span>⏰</span>
+                              <span>รอเปิดตามเวลา ({scheduledCountdownStr})</span>
+                            </span>
+                          ) : isOpen && (
                             isQuotaFull ? (
                               <span className="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 flex items-center gap-1">
                                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
@@ -744,7 +795,15 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
 
                     {/* Right: Action Button */}
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
-                      {isOpen ? (
+                      {isRoundScheduled ? (
+                        <div
+                          className="px-3.5 py-2 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5 shadow-xs select-none"
+                          title="รอบนี้ตั้งเวลาเปิดรับรายชื่อล่วงหน้า สมาชิกจะสามารถกดลงชื่อได้พร้อมกันเมื่อถึงเวลา"
+                        >
+                          <span className="animate-pulse">⏰</span>
+                          <span>รอเปิดรับ ({scheduledCountdownStr})</span>
+                        </div>
+                      ) : isOpen ? (
                         isRegistered ? (
                           <div className="flex items-center gap-1.5 flex-wrap justify-end">
                             <span className="px-3 py-1.5 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold flex items-center gap-1">
@@ -756,11 +815,6 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
                                     : `ลงชื่อแล้ว x${myCount}`
                                   : 'ลงชื่อแล้ว'}
                               </span>
-                              {allowMultiple && item.maxEntries && (
-                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
-                                  ({myIndices.map((i) => `#${i + 1}`).join(', ')})
-                                </span>
-                              )}
                             </span>
 
                             {/* ปุ่มเพิ่มสิทธิ์: แสดงสำหรับ Title และ กล่อง/หีบ (Chest/Pack) เมื่อยังไม่เต็มโควตา */}

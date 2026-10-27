@@ -209,9 +209,9 @@ export default function GvgPage() {
         </div>
 
         {/* Global Action Buttons */}
-        <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-2.5 lg:justify-end">
           {/* Status & Date */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="bg-indigo-50 dark:bg-slate-900/90 border border-indigo-200 dark:border-indigo-500/40 rounded-xl px-2.5 py-1.5 flex items-center gap-2 shadow-xs text-xs">
               <span className="text-indigo-800 dark:text-indigo-200 font-semibold flex items-center gap-1">
                 <span>📅</span>
@@ -237,12 +237,12 @@ export default function GvgPage() {
           </div>
 
           {/* Action Buttons Toolbar */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
             <button
               type="button"
               onClick={loadFromCloud}
               disabled={isLoading}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/80 px-2.5 sm:px-3 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 hover:text-slate-900 dark:hover:text-white transition cursor-pointer whitespace-nowrap"
             >
               <span>🔄</span>
               <span>ดึงข้อมูล</span>
@@ -251,7 +251,7 @@ export default function GvgPage() {
             <button
               type="button"
               onClick={() => setIsExportImageModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 px-3.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-200 transition shadow-sm cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 px-2.5 sm:px-3.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-200 transition shadow-sm cursor-pointer whitespace-nowrap"
               title="ส่งออกรูปภาพผังทัพที่จัด (PNG)"
             >
               <span>📸</span>
@@ -262,19 +262,19 @@ export default function GvgPage() {
               type="button"
               onClick={saveToCloud}
               disabled={isSaving}
-              className="flex items-center gap-1.5 rounded-xl border border-indigo-300 dark:border-indigo-500/40 bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition shadow-sm cursor-pointer whitespace-nowrap disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-indigo-300 dark:border-indigo-500/40 bg-indigo-600 px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition shadow-sm cursor-pointer whitespace-nowrap disabled:opacity-50"
             >
               <span>💾</span>
-              <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึก Cloud'}</span>
+              <span>{isSaving ? 'บันทึก...' : 'บันทึก'}<span className="hidden sm:inline"> Cloud</span></span>
             </button>
 
             <button
               type="button"
               onClick={() => setIsCreateTeamModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-emerald-500 bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-sm cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-emerald-500 bg-emerald-600 hover:bg-emerald-500 px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-white transition shadow-sm cursor-pointer whitespace-nowrap"
             >
               <span>+</span>
-              <span>สร้างทีมใหม่</span>
+              <span>สร้างทีม<span className="hidden sm:inline">ใหม่</span></span>
             </button>
           </div>
         </div>

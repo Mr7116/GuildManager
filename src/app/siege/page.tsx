@@ -390,21 +390,21 @@ export default function SiegePage() {
           </div>
 
           {/* Action Buttons Toolbar */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setIsCreateTeamModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-sky-400 bg-sky-600 hover:bg-sky-500 px-3.5 py-1.5 text-xs font-bold text-white transition shadow-sm cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-sky-400 bg-sky-600 hover:bg-sky-500 px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-white transition shadow-sm cursor-pointer whitespace-nowrap"
               title="สร้างทีมปราสาทใหม่"
             >
               <span className="text-white font-extrabold text-sm">+</span>
-              <span>สร้างทีมใหม่</span>
+              <span>สร้างทีม<span className="hidden sm:inline">ใหม่</span></span>
             </button>
 
             <button
               type="button"
               onClick={() => handleAddParty()}
-              className="flex items-center gap-1.5 rounded-xl border border-sky-300 dark:border-sky-500/40 bg-sky-50 dark:bg-sky-600/25 px-3 py-1.5 text-xs font-semibold text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-600/40 transition cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-sky-300 dark:border-sky-500/40 bg-sky-50 dark:bg-sky-600/25 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-sky-700 dark:text-sky-200 hover:bg-sky-100 dark:hover:bg-sky-600/40 transition cursor-pointer whitespace-nowrap"
             >
               <span>➕</span>
               <span>เพิ่มปาร์ตี้</span>
@@ -413,7 +413,7 @@ export default function SiegePage() {
             <button
               type="button"
               onClick={() => setIsExportImageModalOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shadow-sm cursor-pointer whitespace-nowrap"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-700 px-2.5 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition shadow-sm cursor-pointer whitespace-nowrap"
               title="ส่งออกรูปภาพผังทัพปราสาท (PNG)"
             >
               <span>📸</span>
@@ -424,10 +424,10 @@ export default function SiegePage() {
               type="button"
               onClick={saveToCloud}
               disabled={isSaving}
-              className="flex items-center gap-1.5 rounded-xl border border-indigo-400 dark:border-indigo-500/50 bg-indigo-600 px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition shadow-sm cursor-pointer whitespace-nowrap disabled:opacity-50"
+              className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 rounded-xl border border-indigo-400 dark:border-indigo-500/50 bg-indigo-600 px-2.5 sm:px-3.5 py-1.5 text-xs font-bold text-white hover:bg-indigo-500 transition shadow-sm cursor-pointer whitespace-nowrap disabled:opacity-50"
             >
               <span>💾</span>
-              <span>{isSaving ? 'กำลังบันทึก...' : 'บันทึก Cloud'}</span>
+              <span>{isSaving ? 'บันทึก...' : 'บันทึก'}<span className="hidden sm:inline"> Cloud</span></span>
             </button>
           </div>
         </div>

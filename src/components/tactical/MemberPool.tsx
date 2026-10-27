@@ -123,7 +123,7 @@ export default function MemberPool({
       </div>
 
       {/* Member List Grid / Scroll */}
-      <div className="max-h-[560px] overflow-y-auto space-y-1.5 pr-1 pt-1 scrollbar-thin">
+      <div className="max-h-[260px] sm:max-h-[360px] lg:max-h-[560px] overflow-y-auto space-y-1.5 pr-1 pt-1 scrollbar-thin">
         {filteredList.length === 0 ? (
           <div className="py-12 text-center text-xs text-slate-500">
             {unassignedMembers.length === 0

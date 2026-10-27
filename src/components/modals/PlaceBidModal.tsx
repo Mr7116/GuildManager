@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
-import { AuctionItem } from '@/types/auction';
+import { AuctionItem, isTitleItem, isChestItem, getAuctionItemImageSrc } from '@/types/auction';
 import { Member } from '@/types/member';
 import JobEmblem from '@/components/tactical/JobEmblem';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
@@ -129,25 +129,15 @@ export default function PlaceBidModal({
 
         {/* Item Info Card */}
         {(() => {
-          const isTitle = auction.itemCategory === 'title' || (auction.cardSlot && auction.cardSlot.includes('Title')) || (auction.cardQuality && auction.cardQuality.includes('Title'));
-          const isChest = !isTitle && (auction.itemCategory === 'chest' || (auction.cardSlot && (auction.cardSlot.includes('หีบ') || auction.cardSlot.includes('กล่อง') || auction.cardSlot.includes('Pack'))));
+          const isTitle = isTitleItem(auction);
+          const isChest = isChestItem(auction);
           const isPet = !isTitle && !isChest && (auction.itemCategory === 'pet' || (auction.cardSlot && auction.cardSlot.includes('สัตว์เลี้ยง')) || (auction.cardQuality && auction.cardQuality.startsWith('Pet')));
           const isRelic = !isTitle && !isChest && !isPet && (auction.itemCategory === 'relic' || auction.cardQuality === 'Sage');
           const isCard = !isTitle && !isChest && !isPet && !isRelic && (auction.itemCategory === 'card' || auction.cardQuality === 'Purple');
           const titleTier = isTitle ? getTitleTierStyle(auction.accessoryIcon || auction.accessoryName || auction.cardQuality) : null;
           const chestTier = isChest ? getChestTierStyle(auction.accessoryName || auction.cardQuality) : null;
           const petTier = isPet ? getPetTierStyle(auction.accessoryName || auction.cardQuality) : null;
-          const imageSrc = isTitle
-            ? `/images/titles/${auction.accessoryIcon}.webp`
-            : isChest
-            ? `/images/chests/${auction.accessoryIcon}.webp`
-            : isPet
-            ? `/images/pets/${auction.accessoryIcon}.webp`
-            : isRelic
-            ? `/images/relics/${auction.accessoryIcon}.webp`
-            : isCard
-            ? `/images/cards/${auction.accessoryIcon}.webp`
-            : `/images/accessories/${auction.accessoryIcon}.webp`;
+          const imageSrc = getAuctionItemImageSrc(auction);
 
           return (
             <div className={`flex items-center gap-3 p-3 rounded-2xl border shadow-inner ${
@@ -156,32 +146,41 @@ export default function PlaceBidModal({
               <div className={`relative w-14 h-14 shrink-0 rounded-xl border flex items-center justify-center ${
                 isTitle ? `${titleTier?.border} bg-[#0c1220]` : isChest ? `${chestTier?.border} bg-[#0c1220]` : isPet ? `${petTier?.border} bg-[#0c1220]` : isRelic ? 'border-amber-500/40 bg-[#0c1220]' : isCard ? 'border-purple-500/40 bg-[#0c1220]' : 'border-rose-500/40 bg-[#0c1220]'
               }`}>
-                <Image
-                  src={imageSrc}
-                  alt={auction.accessoryName}
-                  width={48}
-                  height={48}
-                  unoptimized
-                  className="object-contain drop-shadow"
-                  onError={(e) => {
-                    const fallback = isTitle
-                      ? `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`
-                      : isChest
-                      ? (auction.accessoryIcon.includes('title_chest')
-                          ? `/images/chests/${auction.accessoryIcon}.svg`
-                          : auction.accessoryIcon.includes('stonebox') || auction.accessoryIcon.includes('gem')
-                          ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
-                          : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
-                      : isPet
-                      ? (auction.accessoryIcon.includes('mfmm')
-                          ? `https://roworlddb.com/media/images/icon/pet/${auction.accessoryIcon}.webp`
-                          : `https://roworlddb.com/media/images/pet/${auction.accessoryIcon}.webp`)
-                      : isRelic
-                      ? `https://roworlddb.com/media/images/hallows/${auction.accessoryIcon}.webp`
-                      : `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`;
-                    (e.target as HTMLImageElement).src = fallback;
-                  }}
-                />
+                {auction.accessoryIcon.includes('title_chest') ? (
+                  <TitleChestSvgIcon
+                    variant={chestTier?.tier || 'gold'}
+                    className="w-12 h-12 drop-shadow"
+                  />
+                ) : (
+                  <Image
+                    src={imageSrc}
+                    alt={auction.accessoryName}
+                    width={48}
+                    height={48}
+                    unoptimized
+                    className="object-contain drop-shadow"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.onerror = null;
+                      const fallback = isTitle
+                        ? `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`
+                        : isChest
+                        ? (auction.accessoryIcon.includes('title_chest')
+                            ? `/images/chests/${auction.accessoryIcon}.svg`
+                            : auction.accessoryIcon.includes('stonebox') || auction.accessoryIcon.includes('gem')
+                            ? `https://roworlddb.com/media/images/item/icon_item_stonebox_14.webp`
+                            : `https://roworlddb.com/media/images/item/icon_item_bx_fy.webp`)
+                        : isPet
+                        ? (auction.accessoryIcon.includes('mfmm')
+                            ? `https://roworlddb.com/media/images/icon/pet/${auction.accessoryIcon}.webp`
+                            : `https://roworlddb.com/media/images/pet/${auction.accessoryIcon}.webp`)
+                        : isRelic
+                        ? `https://roworlddb.com/media/images/hallows/${auction.accessoryIcon}.webp`
+                        : `https://roworlddb.com/media/images/item/${auction.accessoryIcon}.webp`;
+                      target.src = fallback;
+                    }}
+                  />
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">

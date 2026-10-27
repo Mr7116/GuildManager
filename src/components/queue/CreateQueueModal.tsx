@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { QueueDungeonType, QueueList } from '@/types/queue';
 import { QUEUE_PRESETS, QueuePreset } from '@/constants/queuePresets';
+import { useGuildStore } from '@/lib/guildStore';
+import JobEmblem from '@/components/tactical/JobEmblem';
 
 interface CreateQueueModalProps {
   isOpen: boolean;
@@ -12,15 +14,60 @@ interface CreateQueueModalProps {
 }
 
 export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQueueModalProps) {
+  const { members } = useGuildStore();
+
   const [selectedPresetId, setSelectedPresetId] = useState<QueueDungeonType>('vanished_95');
   const [customTitle, setCustomTitle] = useState('');
   const [maxPartySize, setMaxPartySize] = useState<number>(5);
   const [maxCapacity, setMaxCapacity] = useState<number | undefined>(undefined);
   const [note, setNote] = useState('');
 
-  if (!isOpen) return null;
+  // Helper to format local date YYYY-MM-DD
+  const formatLocalDate = (d: Date = new Date()) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const initialDate = formatLocalDate(new Date());
+
+  // Schedule timer states
+  const [scheduleMode, setScheduleMode] = useState<'immediate' | 'scheduled'>('immediate');
+  const [openDate, setOpenDate] = useState<string>(initialDate);
+  const [openTime, setOpenTime] = useState<string>(() => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 15);
+    const h = String(now.getHours()).padStart(2, '0');
+    const m = String(now.getMinutes()).padStart(2, '0');
+    return `${h}:${m}`;
+  });
+
+  // Pre-registered members state (รายชื่อลงชื่ออัตโนมัติล่วงหน้า)
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
+  const [memberSearch, setMemberSearch] = useState('');
 
   const currentPreset = QUEUE_PRESETS.find((p) => p.id === selectedPresetId);
+
+  // Filtered members for pre-register selection
+  const filteredAvailableMembers = useMemo(() => {
+    const q = memberSearch.trim().toLowerCase();
+    const unselected = members.filter((m) => !selectedMemberIds.includes(m.id));
+    if (!q) return unselected.slice(0, 15);
+    return unselected.filter((m) => {
+      const matchName = m.name.toLowerCase().includes(q);
+      const matchJob = m.job ? m.job.toLowerCase().includes(q) : false;
+      return matchName || matchJob;
+    }).slice(0, 20);
+  }, [members, selectedMemberIds, memberSearch]);
+
+  const selectedMembers = useMemo(() => {
+    return selectedMemberIds
+      .map((id) => members.find((m) => m.id === id))
+      .filter((m): m is NonNullable<typeof m> => !!m);
+  }, [members, selectedMemberIds]);
+
+  if (!isOpen) return null;
 
   const handleSelectPreset = (preset: QueuePreset) => {
     setSelectedPresetId(preset.id);
@@ -28,10 +75,61 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
     setMaxPartySize(preset.defaultPartySize || 5);
   };
 
+  const handleAddMember = (mId: string) => {
+    if (!selectedMemberIds.includes(mId)) {
+      setSelectedMemberIds((prev) => [...prev, mId]);
+    }
+  };
+
+  const handleRemoveMember = (mId: string) => {
+    setSelectedMemberIds((prev) => prev.filter((id) => id !== mId));
+  };
+
+  const handleQuickAddMinutes = (mins: number) => {
+    const dt = new Date();
+    dt.setMinutes(dt.getMinutes() + mins);
+    const h = String(dt.getHours()).padStart(2, '0');
+    const m = String(dt.getMinutes()).padStart(2, '0');
+    setOpenTime(`${h}:${m}`);
+    setOpenDate(formatLocalDate(dt));
+    setScheduleMode('scheduled');
+  };
+
+  const handleQuickSetHour = (hour: number, minute: number = 0) => {
+    const h = String(hour).padStart(2, '0');
+    const m = String(minute).padStart(2, '0');
+    setOpenTime(`${h}:${m}`);
+    setOpenDate(formatLocalDate(new Date()));
+    setScheduleMode('scheduled');
+  };
+
+  const getScheduledOpenIso = (): string | undefined => {
+    if (scheduleMode !== 'scheduled' || !openTime) return undefined;
+    try {
+      const [hours, minutes] = openTime.split(':').map(Number);
+      const [year, month, day] = openDate.split('-').map(Number);
+      const dt = new Date(year, month - 1, day, hours, minutes, 0, 0);
+      return dt.toISOString();
+    } catch {
+      return undefined;
+    }
+  };
+
+  const scheduledIso = getScheduledOpenIso();
+  const minutesUntil = scheduledIso
+    ? Math.round((new Date(scheduledIso).getTime() - Date.now()) / 60000)
+    : null;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const isCustom = selectedPresetId === 'custom';
     const finalTitle = customTitle.trim() || currentPreset?.name || 'รายการคิว';
+
+    const openIso = getScheduledOpenIso();
+    if (scheduleMode === 'scheduled' && openIso && new Date(openIso).getTime() <= Date.now()) {
+      alert('เวลาที่ตั้งเปิดคิวต้องเป็นเวลาในอนาคต กรุณาเลือกเวลาใหม่อีกครั้ง');
+      return;
+    }
 
     onCreate({
       title: finalTitle,
@@ -41,7 +139,9 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
       difficultyLabel: currentPreset?.difficulty,
       maxPartySize: maxPartySize > 0 ? maxPartySize : 5,
       maxCapacity: maxCapacity && maxCapacity > 0 ? maxCapacity : undefined,
-      status: 'open',
+      status: scheduleMode === 'scheduled' ? 'scheduled' : 'open',
+      scheduledOpenAt: openIso,
+      preRegisteredMemberIds: selectedMemberIds,
       note: note.trim() || undefined,
     });
 
@@ -62,7 +162,7 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
                 สร้าง List จัดการคิวใหม่ (Create Queue List)
               </h3>
               <p className="text-xs text-slate-400">
-                เลือกดันเจี้ยนที่ต้องการเปิดคิว เช่น มายาสิ้นสูญ หรือ Apocalypse ให้สมาชิกในกิลด์มากดต่อคิว
+                เลือกดันเจี้ยน ตั้งเวลาเปิดอัตโนมัติ และเลือกลงชื่อสมาชิกล่วงหน้าได้
               </p>
             </div>
           </div>
@@ -233,6 +333,235 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
             </div>
           </div>
 
+          {/* ============================================================ */}
+          {/* SECTION 4: SCHEDULE TIMER (ตั้งเวลาเปิดคิวอัตโนมัติ)          */}
+          {/* ============================================================ */}
+          <div className="rounded-2xl border border-amber-500/30 bg-amber-950/20 p-3.5 space-y-3 pt-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-amber-300 flex items-center gap-1.5">
+                <span>⏰</span>
+                <span>4. ตั้งเวลาเปิดคิว (Schedule Open)</span>
+              </span>
+              <span className="text-[10px] text-amber-400/80 font-mono">
+                {scheduleMode === 'scheduled' ? 'เปิดตามเวลา' : 'เปิดรับคิวทันที'}
+              </span>
+            </div>
+
+            {/* Toggle Mode */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setScheduleMode('immediate')}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  scheduleMode === 'immediate'
+                    ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-950/40'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>⚡</span>
+                <span>เปิดรับคิวทันที</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setScheduleMode('scheduled')}
+                className={`py-2 px-3 rounded-xl border text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
+                  scheduleMode === 'scheduled'
+                    ? 'bg-amber-600 text-white border-amber-500 shadow-md shadow-amber-950/40'
+                    : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <span>⏰</span>
+                <span>ตั้งเวลาเปิดล่วงหน้า</span>
+              </button>
+            </div>
+
+            {/* Scheduled Time Inputs */}
+            {scheduleMode === 'scheduled' && (
+              <div className="space-y-2.5 pt-1 animate-in fade-in duration-150">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      วันที่เปิด:
+                    </label>
+                    <input
+                      type="date"
+                      value={openDate}
+                      onChange={(e) => setOpenDate(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-white focus:border-amber-500 focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 mb-1">
+                      เวลาที่เปิด (น.):
+                    </label>
+                    <input
+                      type="time"
+                      value={openTime}
+                      onChange={(e) => setOpenTime(e.target.value)}
+                      className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-2 text-xs font-bold text-white focus:border-amber-500 focus:outline-none cursor-pointer"
+                    />
+                  </div>
+                </div>
+
+                {/* Quick Time Buttons */}
+                <div>
+                  <span className="block text-[10px] text-slate-400 mb-1">ตั้งเวลาด่วน:</span>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleQuickAddMinutes(15)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-amber-300 cursor-pointer"
+                    >
+                      +15 นาที
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickAddMinutes(30)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-amber-300 cursor-pointer"
+                    >
+                      +30 นาที
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickAddMinutes(60)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-amber-300 cursor-pointer"
+                    >
+                      +1 ชม.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickSetHour(20, 0)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer"
+                    >
+                      20:00 น.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickSetHour(21, 0)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer"
+                    >
+                      21:00 น.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickSetHour(21, 30)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer"
+                    >
+                      21:30 น.
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickSetHour(22, 0)}
+                      className="px-2 py-1 rounded-lg border border-slate-700 bg-slate-850 hover:bg-slate-700 text-[10px] font-bold text-slate-300 cursor-pointer"
+                    >
+                      22:00 น.
+                    </button>
+                  </div>
+                </div>
+
+                {/* Live Countdown Badge */}
+                {minutesUntil !== null && (
+                  <div className="rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-2 text-xs font-bold text-amber-300 flex items-center gap-2">
+                    <span className="text-sm">⏰</span>
+                    <span>
+                      {minutesUntil > 0
+                        ? `จะเปิดรับคิวอัตโนมัติในอีก ~${minutesUntil} นาที (${openDate} เวลา ${openTime} น.)`
+                        : minutesUntil === 0
+                        ? 'กำลังจะเปิดในอีกไม่กี่วินาทีนี้'
+                        : `เวลาที่เลือกผ่านไปแล้ว (${Math.abs(minutesUntil)} นาทีที่แล้ว)`}
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* ============================================================ */}
+          {/* SECTION 5: PRE-REGISTERED MEMBERS (ลงชื่ออัตโนมัติเมื่อเปิด)  */}
+          {/* ============================================================ */}
+          <div className="rounded-2xl border border-indigo-500/30 bg-indigo-950/20 p-3.5 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-indigo-300 flex items-center gap-1.5">
+                <span>👥</span>
+                <span>5. รายชื่อลงชื่ออัตโนมัติล่วงหน้า (Pre-registered Members)</span>
+              </span>
+              <span className="text-[11px] text-indigo-400 font-mono font-bold">
+                เลือกแล้ว: {selectedMemberIds.length} คน
+              </span>
+            </div>
+
+            <p className="text-[11px] text-slate-400">
+              สมาชิกที่เลือกไว้จะถูกลงชื่อเข้าคิวให้โดยอัตโนมัติทันทีเมื่อคิวเปิดใช้งาน (ลำดับตามที่จัดไว้)
+            </p>
+
+            {/* Selected Members Chips */}
+            {selectedMembers.length > 0 && (
+              <div className="space-y-1.5 p-2 rounded-xl border border-indigo-500/40 bg-slate-950/70">
+                <div className="flex items-center justify-between text-[11px] text-slate-400 pb-1 border-b border-slate-800">
+                  <span className="font-semibold text-indigo-300">
+                    ลำดับคิวที่จะได้อัตโนมัติ:
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedMemberIds([])}
+                    className="text-[10px] text-rose-400 hover:underline cursor-pointer"
+                  >
+                    ล้างทั้งหมด
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-1">
+                  {selectedMembers.map((m, idx) => (
+                    <span
+                      key={m.id}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-indigo-500/60 bg-indigo-950/70 text-white text-xs font-bold shadow-sm"
+                    >
+                      <span className="text-[10px] font-mono text-amber-300">#{idx + 1}</span>
+                      <JobEmblem job={m.job} size={14} />
+                      <span>{m.name}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMember(m.id)}
+                        className="text-slate-400 hover:text-rose-400 text-xs ml-0.5 cursor-pointer font-bold"
+                        title="เอาออก"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Member Search & Quick Selection */}
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={memberSearch}
+                onChange={(e) => setMemberSearch(e.target.value)}
+                placeholder="🔍 ค้นหาชื่อสมาชิกหรืออาชีพเพื่อเลือกลงชื่อ..."
+                className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              />
+
+              {filteredAvailableMembers.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto p-1">
+                  {filteredAvailableMembers.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => handleAddMember(m.id)}
+                      className="px-2 py-1 rounded-lg border border-slate-800 bg-slate-900 hover:border-indigo-500 hover:bg-indigo-950/50 text-[11px] text-slate-300 hover:text-white flex items-center gap-1.5 transition cursor-pointer"
+                    >
+                      <span>+</span>
+                      <JobEmblem job={m.job} size={13} />
+                      <span className="font-semibold">{m.name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Footer Actions */}
           <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-slate-800">
             <button
@@ -244,10 +573,18 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
             </button>
             <button
               type="submit"
-              className="px-6 py-2 rounded-xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 text-xs font-black text-white shadow-lg shadow-indigo-950/50 flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+              className={`px-6 py-2 rounded-xl text-xs font-black text-white shadow-lg flex items-center gap-1.5 transition cursor-pointer active:scale-95 ${
+                scheduleMode === 'scheduled'
+                  ? 'bg-gradient-to-r from-amber-600 via-orange-600 to-rose-600 hover:from-amber-500 hover:to-rose-500 shadow-amber-950/50'
+                  : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-500 hover:to-pink-500 shadow-indigo-950/50'
+              }`}
             >
-              <span>+</span>
-              <span>สร้าง List คิวนี้เลย</span>
+              <span>{scheduleMode === 'scheduled' ? '⏰' : '+'}</span>
+              <span>
+                {scheduleMode === 'scheduled'
+                  ? `สร้างและตั้งเวลาเปิด (${openTime} น.)`
+                  : 'สร้าง List คิวนี้เลย'}
+              </span>
             </button>
           </div>
         </form>
@@ -256,4 +593,3 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
     document.body
   );
 }
-

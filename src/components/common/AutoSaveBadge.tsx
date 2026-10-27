@@ -8,50 +8,39 @@ export default function AutoSaveBadge({ className = '' }: { className?: string }
 
   if (isSaving || saveStatus === 'saving') {
     return (
-      <div className={`flex items-center gap-1.5 rounded-xl border border-indigo-500/40 bg-indigo-950/40 px-3 py-1.5 text-xs font-semibold text-indigo-300 shadow-sm animate-pulse ${className}`}>
-        <span>💾</span>
-        <span>กำลังบันทึกอัตโนมัติ...</span>
-      </div>
-    );
-  }
-
-  if (saveStatus === 'pending') {
-    return (
-      <div className={`flex items-center gap-1.5 rounded-xl border border-amber-500/40 bg-amber-950/40 px-3 py-1.5 text-xs font-semibold text-amber-300 shadow-sm animate-pulse ${className}`}>
-        <span>⏳</span>
-        <span>รอเซฟอัตโนมัติ...</span>
+      <div
+        suppressHydrationWarning
+        className={`flex items-center gap-1.5 rounded-xl border border-indigo-400/40 bg-indigo-50 dark:bg-indigo-950/40 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 shadow-sm ${className}`}
+      >
+        <span className="inline-block h-2 w-2 rounded-full bg-indigo-500 shrink-0"></span>
+        <span>กำลังบันทึก...</span>
       </div>
     );
   }
 
   if (saveStatus === 'error') {
     return (
-      <div className={`flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-950/40 px-3 py-1.5 text-xs font-semibold text-rose-300 shadow-sm ${className}`}>
+      <div
+        suppressHydrationWarning
+        className={`flex items-center gap-1.5 rounded-xl border border-rose-500/40 bg-rose-50 dark:bg-rose-950/40 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-300 shadow-sm ${className}`}
+      >
         <span>⚠️</span>
         <span>บันทึกไม่สำเร็จ</span>
       </div>
     );
   }
 
-  if (lastSavedAt) {
-    return (
-      <div className={`flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 shadow-sm ${className}`}>
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-        </span>
-        <span>Sync ({lastSavedAt})</span>
-      </div>
-    );
-  }
-
+  // Calm, stable status badge (syncs every 10s without layout jumping)
   return (
-    <div className={`flex items-center gap-1.5 rounded-xl border border-emerald-500/30 bg-emerald-50/80 dark:bg-slate-900/80 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ${className}`}>
-      <span className="relative flex h-2 w-2">
-        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+    <div
+      suppressHydrationWarning
+      className={`flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-300 shadow-sm ${className}`}
+      title="รีเฟรชข้อมูลอัตโนมัติทุกๆ 10 วินาที"
+    >
+      <span className="inline-block h-2 w-2 rounded-full bg-emerald-500 shrink-0"></span>
+      <span suppressHydrationWarning>
+        {lastSavedAt ? `Sync (${lastSavedAt})` : 'Sync (10s)'}
       </span>
-      <span>Active</span>
     </div>
   );
 }

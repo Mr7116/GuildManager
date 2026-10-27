@@ -8,7 +8,12 @@ import ImportCsvModal from '@/components/modals/ImportCsvModal';
 import ChangePinModal from '@/components/modals/ChangePinModal';
 import ExportImageModal from '@/components/modals/ExportImageModal';
 
-export default function AdminNavActions() {
+interface AdminNavActionsProps {
+  layout?: 'desktop' | 'mobile';
+  onActionClick?: () => void;
+}
+
+export default function AdminNavActions({ layout = 'desktop', onActionClick }: AdminNavActionsProps) {
   const pathname = usePathname();
   const { isAuthenticated, logout } = useAuth();
   const { guildName, members, gvgTeams, gvgParties } = useGuildStore();
@@ -84,62 +89,138 @@ export default function AdminNavActions() {
 
   return (
     <>
-      <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-        {/* 1. นำเข้า .CSV */}
-        <button
-          type="button"
-          onClick={() => setIsImportModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/20 transition cursor-pointer"
-          title="นำเข้าสมาชิกจากไฟล์ .CSV"
-        >
-          <span>📥</span>
-          <span>นำเข้า .CSV</span>
-        </button>
+      {layout === 'mobile' ? (
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              🛠️ เครื่องมือผู้ดูแล (Admin Tools)
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            {/* 1. นำเข้า .CSV */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsImportModalOpen(true);
+                onActionClick?.();
+              }}
+              className="flex items-center justify-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-3 py-2 text-xs font-bold text-white shadow-sm cursor-pointer"
+            >
+              <span>📥</span>
+              <span>นำเข้า .CSV</span>
+            </button>
 
-        {/* 2. ส่งออก CSV */}
-        <button
-          type="button"
-          onClick={handleExportCSV}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700/90 px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
-          title="ส่งออกรายชื่อสมาชิกและข้อมูลเป็นไฟล์ CSV"
-        >
-          <span>📊</span>
-          <span>ส่งออก CSV</span>
-        </button>
+            {/* 2. ส่งออก CSV */}
+            <button
+              type="button"
+              onClick={() => {
+                handleExportCSV();
+                onActionClick?.();
+              }}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 cursor-pointer"
+            >
+              <span>📊</span>
+              <span>ส่งออก CSV</span>
+            </button>
 
-        {/* 3. ส่งออกรูปผังทัพ (PNG) */}
-        <button
-          type="button"
-          onClick={() => setIsExportImageModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 px-3.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-200 transition cursor-pointer"
-          title="ส่งออกรูปภาพผังทัพที่จัด (PNG)"
-        >
-          <span>📸</span>
-          <span>ส่งออกรูปผังทัพ</span>
-        </button>
+            {/* 3. ส่งออกรูปผังทัพ */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsExportImageModalOpen(true);
+                onActionClick?.();
+              }}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 px-3 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-200 cursor-pointer"
+            >
+              <span>📸</span>
+              <span>ส่งออกรูปผังทัพ</span>
+            </button>
 
-        {/* 4. จัดการรหัสผ่าน */}
-        <button
-          type="button"
-          onClick={() => setIsChangePinModalOpen(true)}
-          className="flex items-center gap-1.5 rounded-xl border border-amber-200 dark:border-slate-700/80 bg-amber-50 dark:bg-slate-800/90 hover:bg-amber-100 dark:hover:bg-slate-700/90 px-3 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 transition cursor-pointer"
-          title="เปลี่ยนรหัสผ่านผู้ดูแล (บันทึก Cloud)"
-        >
-          <span>🔑</span>
-          <span>จัดการรหัส</span>
-        </button>
+            {/* 4. จัดการรหัส */}
+            <button
+              type="button"
+              onClick={() => {
+                setIsChangePinModalOpen(true);
+                onActionClick?.();
+              }}
+              className="flex items-center justify-center gap-1.5 rounded-xl border border-amber-200 dark:border-slate-700 bg-amber-50 dark:bg-slate-800 hover:bg-amber-100 dark:hover:bg-slate-700 px-3 py-2 text-xs font-semibold text-amber-800 dark:text-amber-300 cursor-pointer"
+            >
+              <span>🔑</span>
+              <span>จัดการรหัส</span>
+            </button>
+          </div>
 
-        {/* 5. ออกจากระบบ */}
-        <button
-          type="button"
-          onClick={logout}
-          className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/90 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 dark:hover:border-rose-700/60 hover:text-rose-600 dark:hover:text-rose-300 px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 transition cursor-pointer"
-          title="ออกจากระบบ"
-        >
-          <span>🚪</span>
-          <span>ออกจากระบบ</span>
-        </button>
-      </div>
+          {/* 5. ออกจากระบบ */}
+          <button
+            type="button"
+            onClick={() => {
+              logout();
+              onActionClick?.();
+            }}
+            className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-900/60 bg-rose-50 dark:bg-rose-950/30 hover:bg-rose-100 dark:hover:bg-rose-900/50 px-3 py-2 text-xs font-bold text-rose-600 dark:text-rose-300 transition cursor-pointer"
+          >
+            <span>🚪</span>
+            <span>ออกจากระบบแอดมิน</span>
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+          {/* 1. นำเข้า .CSV */}
+          <button
+            type="button"
+            onClick={() => setIsImportModalOpen(true)}
+            className="flex items-center gap-1 sm:gap-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 px-2 sm:px-3 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/20 transition cursor-pointer"
+            title="นำเข้าสมาชิกจากไฟล์ .CSV"
+          >
+            <span>📥</span>
+            <span>นำเข้า .CSV</span>
+          </button>
+
+          {/* 2. ส่งออก CSV */}
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/90 hover:bg-slate-200 dark:hover:bg-slate-700/90 px-2 sm:px-3 py-1.5 text-xs font-semibold text-slate-700 dark:text-slate-200 transition cursor-pointer"
+            title="ส่งออกรายชื่อสมาชิกและข้อมูลเป็นไฟล์ CSV"
+          >
+            <span>📊</span>
+            <span>ส่งออก CSV</span>
+          </button>
+
+          {/* 3. ส่งออกรูปผังทัพ (PNG) */}
+          <button
+            type="button"
+            onClick={() => setIsExportImageModalOpen(true)}
+            className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-indigo-200 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/70 px-2 sm:px-3.5 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-200 transition cursor-pointer"
+            title="ส่งออกรูปภาพผังทัพที่จัด (PNG)"
+          >
+            <span>📸</span>
+            <span>ส่งออกรูปผังทัพ</span>
+          </button>
+
+          {/* 4. จัดการรหัสผ่าน */}
+          <button
+            type="button"
+            onClick={() => setIsChangePinModalOpen(true)}
+            className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-amber-200 dark:border-slate-700/80 bg-amber-50 dark:bg-slate-800/90 hover:bg-amber-100 dark:hover:bg-slate-700/90 px-2 sm:px-3 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 transition cursor-pointer"
+            title="เปลี่ยนรหัสผ่านผู้ดูแล (บันทึก Cloud)"
+          >
+            <span>🔑</span>
+            <span>จัดการรหัส</span>
+          </button>
+
+          {/* 5. ออกจากระบบ */}
+          <button
+            type="button"
+            onClick={logout}
+            className="flex items-center gap-1 sm:gap-1.5 rounded-xl border border-slate-200 dark:border-slate-700/80 bg-slate-100 dark:bg-slate-800/90 hover:bg-rose-50 dark:hover:bg-rose-950/60 hover:border-rose-300 dark:hover:border-rose-700/60 hover:text-rose-600 dark:hover:text-rose-300 px-2 sm:px-3 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 transition cursor-pointer"
+            title="ออกจากระบบ"
+          >
+            <span>🚪</span>
+            <span>ออกจากระบบ</span>
+          </button>
+        </div>
+      )}
 
       {/* Modals */}
       <ImportCsvModal

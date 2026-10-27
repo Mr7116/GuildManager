@@ -28,8 +28,11 @@ export interface QueueList {
   difficultyLabel?: string;   // e.g. "ทั่วไป", "ยาก", "ฝันร้าย", "นรก", "ไม่สิ้นสุด"
   maxPartySize: number;       // ค่าเริ่มต้น 5 คน ต่อปาร์ตี้
   maxCapacity?: number;       // รับคิวสูงสุดกี่คน (undefined = ไม่จำกัด)
-  status: 'open' | 'in_progress' | 'closed';
+  status: 'open' | 'in_progress' | 'closed' | 'scheduled';
   entries: QueueEntry[];
+  scheduledOpenAt?: string;   // วัน-เวลาที่ตั้งเวลาเปิดคิวอัตโนมัติ (ISO string)
+  scheduledCloseAt?: string;  // วัน-เวลาที่ตั้งเวลาปิดคิวอัตโนมัติ (ISO string)
+  preRegisteredMemberIds?: string[]; // รายชื่อสมาชิกที่เลือกไว้ล่วงหน้าให้ลงชื่ออัตโนมัติเมื่อเปิดคิว
   createdAt: string;
   updatedAt?: string;
   closedAt?: string;

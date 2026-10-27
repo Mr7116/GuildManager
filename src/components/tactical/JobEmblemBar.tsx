@@ -22,9 +22,10 @@ export default function JobEmblemBar({
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-800/90 bg-white dark:bg-[#141822]/90 px-4 py-3 shadow-md dark:shadow-lg backdrop-blur-sm">
       {/* Bar Header */}
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
         <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
-          <span>🛡️ ตราสัญลักษณ์และสถิติประจำสายอาชีพทั้ง 15 สาย (คลิกที่ไอคอนอาชีพเพื่อกรองดูเฉพาะสายนั้น)</span>
+          <span>🛡️ ตราสัญลักษณ์สายอาชีพทั้ง 15 สาย</span>
+          <span className="hidden sm:inline">(คลิกที่ไอคอนอาชีพเพื่อกรองดูเฉพาะสายนั้น)</span>
         </span>
         {selectedJob !== null && (
           <button

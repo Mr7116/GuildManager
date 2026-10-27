@@ -1,10 +1,16 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Kanit, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import Navbar from '@/components/layout/Navbar';
 import { AuthProvider } from '@/lib/auth';
 import { GuildProvider } from '@/lib/guildStore';
 import { ThemeProvider } from '@/lib/theme';
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+};
 
 const kanit = Kanit({
   subsets: ['thai', 'latin'],
