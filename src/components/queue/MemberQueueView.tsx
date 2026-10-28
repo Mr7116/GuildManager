@@ -365,41 +365,6 @@ export default function MemberQueueView({ onSwitchToAdmin, requireId = false }: 
         )}
       </div>
 
-      {/* TARGETED QUEUE URL BANNER (ใคร list มัน) */}
-      {selectedQueueIdFromUrl && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-indigo-900/60 to-purple-900/60 border-2 border-indigo-500 shadow-xl text-white">
-          <div className="flex items-center gap-3">
-            <span className="text-2xl p-2 rounded-xl bg-indigo-500/20 border border-indigo-400 shrink-0">🎯</span>
-            <div>
-              <div className="text-sm font-black flex flex-wrap items-center gap-2">
-                <span>กำลังเปิดเฉพาะ List คิว:</span>
-                <span className="text-amber-300 underline font-black">{targetedQueue?.title || selectedQueueIdFromUrl}</span>
-                <span className="font-mono text-xs text-indigo-300 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-500/40">#{selectedQueueIdFromUrl}</span>
-              </div>
-              <p className="text-xs text-indigo-200 mt-0.5">
-                {targetedQueue
-                  ? 'คุณเข้าผ่าน URL เฉพาะของ List นี้ สามารถเลือกลงชื่อเข้าคิวนี้ได้ทันที'
-                  : 'ไม่พบคิวรหัสนี้ หรือคิวอาจถูกปิดไปแล้ว'}
-              </p>
-            </div>
-          </div>
-          {!requireId && (
-            <button
-              type="button"
-              onClick={() => {
-                setSelectedQueueIdFromUrl(null);
-                if (typeof window !== 'undefined') {
-                  window.history.replaceState({}, '', window.location.pathname);
-                }
-              }}
-              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition shadow cursor-pointer shrink-0 active:scale-95"
-            >
-              📋 ดูคิวทั้งหมดของกิลด์ ({queueLists.length} คิว)
-            </button>
-          )}
-        </div>
-      )}
-
       {/* STEP 2: QUEUE LISTS */}
       <div className="space-y-3">
         {/* Filter Tabs (แสดงเฉพาะเมื่อดูรายการรวม) */}
