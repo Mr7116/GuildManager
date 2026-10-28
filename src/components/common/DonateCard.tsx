@@ -3,7 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export default function DonateCard() {
+interface DonateCardProps {
+  className?: string;
+}
+
+export default function DonateCard({ className = '' }: DonateCardProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
 
@@ -13,10 +17,10 @@ export default function DonateCard() {
 
   return (
     <>
-      {/* Donate QR Box (Permanent Left Box) */}
+      {/* Donate QR Box */}
       <div
         onClick={() => setIsModalOpen(true)}
-        className="bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-3 flex flex-col items-center text-center cursor-pointer group transition shadow-lg shadow-amber-950/20"
+        className={`bg-gradient-to-br from-amber-950/30 via-slate-900 to-slate-900 border border-amber-500/30 hover:border-amber-400/60 rounded-2xl p-3 flex flex-col items-center text-center cursor-pointer group transition shadow-lg shadow-amber-950/20 ${className}`}
       >
         <div className="flex items-center gap-1.5 mb-1 text-amber-300 font-bold text-xs">
           <span>☕</span>
@@ -35,11 +39,11 @@ export default function DonateCard() {
             https://hiwdo.com/natdanai1256
           </a>
         </p>
-        <div className="bg-white p-2.5 rounded-2xl shadow-md border-2 border-amber-400/70 group-hover:scale-105 transition duration-200 mt-2">
+        <div className="bg-white p-2 rounded-2xl shadow-md border-2 border-amber-400/70 group-hover:scale-105 transition duration-200 mt-2 overflow-hidden">
           <img
             src="/donate-qr.png"
             alt="QR Code โดเนท"
-            className="w-36 h-36 sm:w-40 sm:h-40 object-contain"
+            className="w-36 sm:w-44 h-auto object-contain rounded-xl"
           />
         </div>
       </div>
@@ -84,11 +88,11 @@ export default function DonateCard() {
               </a>
             </p>
 
-            <div className="bg-white p-4 rounded-2xl inline-block mx-auto shadow-xl border-4 border-amber-400/70">
+            <div className="bg-white p-2.5 rounded-2xl inline-block mx-auto shadow-xl border-4 border-amber-400/70 overflow-hidden">
               <img
                 src="/donate-qr.png"
                 alt="QR Code โดเนท"
-                className="w-60 h-60 object-contain mx-auto"
+                className="w-full max-w-[280px] sm:max-w-[320px] h-auto object-contain mx-auto rounded-xl"
               />
             </div>
 
@@ -108,4 +112,3 @@ export default function DonateCard() {
     </>
   );
 }
-

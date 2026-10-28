@@ -106,6 +106,10 @@ export interface GuildState {
   deleteAuctionItem: (auctionId: string) => void;
   cancelAuctionItem: (auctionId: string) => void;
 
+  // Leave Management (Atomic)
+  submitLeave: (memberId: string, reason: string) => Promise<{ success: boolean; message: string }>;
+  cancelLeave: (memberId: string) => Promise<{ success: boolean; message: string }>;
+
   // Queue Management
   queueLists: QueueList[];
   createQueueList: (data: Omit<QueueList, 'createdAt' | 'entries'> & { id?: string }) => string;
@@ -282,6 +286,8 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   );
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
   const hasModularTablesRef = useRef<boolean>(false);
+  const isSavingRef = useRef<boolean>(false);
+  const lastUserActionTimeRef = useRef<number>(0);
 
   // References to latest state to avoid stale closures in save
   const latestStateRef = useRef({
@@ -323,6 +329,10 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   // Apply parsed database state to React state
   const applyRemoteData = useCallback((data: any) => {
     if (!data) return;
+    // ป้องกัน Remote sync มาเขียนทับข้อมูลที่เพิ่งลากวางหรือแก้ไขใน 2.5 วินาที
+    if (Date.now() - lastUserActionTimeRef.current < 2500 || autoSaveTimerRef.current || isSavingRef.current) {
+      return;
+    }
     if (data.updated_at && data.updated_at === lastRemoteUpdatedAtRef.current) {
       return;
     }
@@ -501,9 +511,11 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // Silent reload from Supabase (can target a specific table or reload all)
-  const silentReloadFromCloud = useCallback(async (targetTable?: string) => {
-    // If pending local changes or saving, avoid overwriting local edits
-    if (autoSaveTimerRef.current) return;
+  const silentReloadFromCloud = useCallback(async (targetTable?: string, force = false) => {
+    // ป้องกัน Reload มาเขียนทับข้อมูลที่เพิ่งลากวางหรือแก้ไข
+    if (!force && (autoSaveTimerRef.current || isSavingRef.current || Date.now() - lastUserActionTimeRef.current < 2500)) {
+      return;
+    }
 
     try {
       if (targetTable === 'guild_queues') {
@@ -721,6 +733,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   // Save to Supabase (Modular tables + guild_state fallback)
   const saveToCloud = useCallback(async () => {
     setIsSaving(true);
+    isSavingRef.current = true;
     setSaveStatus('saving');
     try {
       const state = latestStateRef.current;
@@ -896,12 +909,14 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       setSaveStatus('error');
     } finally {
       setIsSaving(false);
+      isSavingRef.current = false;
     }
   }, []);
 
-  // Debounced Auto Save trigger
-  const triggerAutoSave = useCallback((delayMs: number = 800) => {
-    if (!isInitialLoadDone.current || isRemoteSyncingRef.current) return;
+  // Debounced Auto Save trigger (รวดเร็ว 250ms และไม่ถูกบล็อกโดย remote sync)
+  const triggerAutoSave = useCallback((delayMs: number = 250) => {
+    if (!isInitialLoadDone.current) return;
+    lastUserActionTimeRef.current = Date.now();
     setHasUnsavedChanges(true);
     setSaveStatus('pending');
 
@@ -943,13 +958,34 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const channel = supabase
       .channel(`moonz_guild_realtime_${GUILD_ID}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_queues', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_queues'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_auctions', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_auctions'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_members', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_members'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_gvg', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_gvg'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_siege', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_siege'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_polarity', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_polarity'))
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_settings', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_settings'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_queues', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_queues');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_auctions', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_auctions');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_members', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_members');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_gvg', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_gvg');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_siege', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_siege');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_polarity', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_polarity');
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_settings', filter: `id=eq.${GUILD_ID}` }, () => {
+        if (isSavingRef.current || autoSaveTimerRef.current || Date.now() - lastUserActionTimeRef.current < 3000) return;
+        silentReloadFromCloud('guild_settings');
+      })
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'guild_state', filter: `id=eq.${GUILD_ID}` },
@@ -977,6 +1013,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     // Cross-tab instant sync
     const handleStorage = (e: StorageEvent) => {
       if (!e.newValue) return;
+      if (Date.now() - lastUserActionTimeRef.current < 3000) return;
       if (e.key === 'Moonz_queue_lists') {
         try {
           const parsed = JSON.parse(e.newValue);
@@ -1097,6 +1134,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeMemberFromSlot = (partyId: string, slotIndex: number) => {
+    lastUserActionTimeRef.current = Date.now();
     setGvgParties((prev) =>
       prev.map((p) => {
         if (p.id !== partyId) return p;
@@ -1105,9 +1143,23 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         return { ...p, slots: nextSlots };
       })
     );
+
+    // บันทึกทันที 150ms เพื่อ Realtime ที่เร็วที่สุด
+    triggerAutoSave(150);
+
+    // Atomic RPC ควบคู่
+    void Promise.resolve(
+      supabase.rpc('clear_slot_atomic', {
+        p_guild_id: GUILD_ID,
+        p_mode: 'gvg',
+        p_party_id: partyId,
+        p_slot_idx: slotIndex,
+      })
+    ).catch(() => {});
   };
 
   const placeMemberInSlot = (partyId: string, slotIndex: number, memberId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setGvgParties((prev) => {
       const cleaned = prev.map((p) => {
         const slots = (p.slots || [null, null, null, null, null]).map((id) => (id === memberId ? null : id));
@@ -1121,9 +1173,24 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         return { ...p, slots };
       });
     });
+
+    // บันทึกทันที 150ms เพื่อ Realtime ที่เร็วที่สุด
+    triggerAutoSave(150);
+
+    // Atomic RPC ควบคู่
+    void Promise.resolve(
+      supabase.rpc('assign_slot_atomic', {
+        p_guild_id: GUILD_ID,
+        p_mode: 'gvg',
+        p_party_id: partyId,
+        p_slot_idx: slotIndex,
+        p_member_id: memberId,
+      })
+    ).catch(() => {});
   };
 
   const swapSlots = (fromPartyId: string, fromSlotIdx: number, toPartyId: string, toSlotIdx: number) => {
+    lastUserActionTimeRef.current = Date.now();
     setGvgParties((prev) => {
       const fromParty = prev.find((p) => p.id === fromPartyId);
       const toParty = prev.find((p) => p.id === toPartyId);
@@ -1152,6 +1219,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         return p;
       });
     });
+    triggerAutoSave(150);
   };
 
   const applyPresetToParty = (
@@ -1424,6 +1492,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   ) => {
     const now = new Date().toISOString();
     const currentRound = latestStateRef.current.activeRoundId || (latestStateRef.current.auctionRounds[0]?.id) || 'round_default';
+    lastUserActionTimeRef.current = Date.now();
     const newItems: AuctionItem[] = itemsData.map((itemData, index) => ({
       ...itemData,
       id: `auc_${Date.now()}_${index}_${Math.random().toString(36).substring(2, 6)}`,
@@ -1445,6 +1514,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const startAuction = (auctionId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setAuctionItems((prev) =>
       prev.map((item) =>
         item.id === auctionId
@@ -1460,6 +1530,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const startAllPendingAuctions = () => {
+    lastUserActionTimeRef.current = Date.now();
     const now = new Date().toISOString();
     setAuctionItems((prev) =>
       prev.map((item) =>
@@ -1475,10 +1546,34 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     triggerAutoSave();
   };
 
-  const addMemberToAuction = (auctionId: string, memberId: string) => {
+  const addMemberToAuction = async (auctionId: string, memberId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     const member = latestStateRef.current.members.find((m) => m.id === memberId);
     if (!member) return;
 
+    // 1. Atomic Database RPC
+    try {
+      const { data, error } = await supabase.rpc('join_auction_atomic', {
+        p_guild_id: GUILD_ID,
+        p_auction_id: auctionId,
+        p_member_id: member.id,
+        p_member_name: member.name,
+        p_member_job: member.job || null,
+      });
+
+      if (!error && data && typeof data === 'object') {
+        const res = data as { success: boolean; message: string; items?: any };
+        if (res.success && res.items) {
+          setAuctionItems(res.items);
+          silentReloadFromCloud('guild_auctions', true);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('join_auction_atomic RPC fallback', e);
+    }
+
+    // 2. Fallback local update
     setAuctionItems((prev) =>
       prev.map((item) => {
         if (item.id !== auctionId) return item;
@@ -1560,7 +1655,29 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     triggerAutoSave();
   };
 
-  const removeMemberFromAuction = (auctionId: string, memberId: string) => {
+  const removeMemberFromAuction = async (auctionId: string, memberId: string) => {
+    lastUserActionTimeRef.current = Date.now();
+    // 1. Atomic Database RPC
+    try {
+      const { data, error } = await supabase.rpc('leave_auction_atomic', {
+        p_guild_id: GUILD_ID,
+        p_auction_id: auctionId,
+        p_member_id: memberId,
+      });
+
+      if (!error && data && typeof data === 'object') {
+        const res = data as { success: boolean; items?: any };
+        if (res.success && res.items) {
+          setAuctionItems(res.items);
+          silentReloadFromCloud('guild_auctions', true);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('leave_auction_atomic RPC fallback', e);
+    }
+
+    // 2. Fallback
     setAuctionItems((prev) =>
       prev.map((item) => {
         if (item.id !== auctionId) return item;
@@ -1597,7 +1714,29 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     triggerAutoSave();
   };
 
-  const removeMemberEntryById = (auctionId: string, entryId: string) => {
+  const removeMemberEntryById = async (auctionId: string, entryId: string) => {
+    lastUserActionTimeRef.current = Date.now();
+    // 1. Atomic Database RPC
+    try {
+      const { data, error } = await supabase.rpc('remove_auction_entry_atomic', {
+        p_guild_id: GUILD_ID,
+        p_auction_id: auctionId,
+        p_entry_id: entryId,
+      });
+
+      if (!error && data && typeof data === 'object') {
+        const res = data as { success: boolean; items?: any };
+        if (res.success && res.items) {
+          setAuctionItems(res.items);
+          silentReloadFromCloud('guild_auctions', true);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('remove_auction_entry_atomic RPC fallback', e);
+    }
+
+    // 2. Fallback
     setAuctionItems((prev) =>
       prev.map((item) => {
         if (item.id !== auctionId) return item;
@@ -1611,6 +1750,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const setAuctionWinner = (auctionId: string, winnerMemberId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     const member = latestStateRef.current.members.find((m) => m.id === winnerMemberId);
     setAuctionItems((prev) =>
       prev.map((item) => {
@@ -1629,6 +1769,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const confirmAuctionWinners = (auctionId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setAuctionItems((prev) =>
       prev.map((item) => {
         if (item.id !== auctionId) return item;
@@ -1668,6 +1809,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetAuctionWinner = (auctionId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setAuctionItems((prev) =>
       prev.map((item) => {
         if (item.id !== auctionId) return item;
@@ -1693,6 +1835,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     amount: number,
     note?: string
   ): { success: boolean; message: string } => {
+    lastUserActionTimeRef.current = Date.now();
     const target = latestStateRef.current.auctionItems.find((a) => a.id === auctionId);
     if (!target) return { success: false, message: 'ไม่พบรายการประมูลนี้' };
     if (target.status !== 'active') return { success: false, message: 'การประมูลนี้สิ้นสุดหรือถูกยกเลิกแล้ว' };
@@ -1729,7 +1872,21 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       })
     );
 
-    triggerAutoSave();
+    triggerAutoSave(150);
+
+    // Atomic Database RPC
+    void Promise.resolve(
+      supabase.rpc('place_bid_atomic', {
+        p_guild_id: GUILD_ID,
+        p_auction_id: auctionId,
+        p_member_id: memberId,
+        p_member_name: memberName,
+        p_member_job: memberJob || null,
+        p_amount: amount,
+        p_note: note || null,
+      })
+    ).catch(() => {});
+
     return { success: true, message: `เสนอราคา ${amount.toLocaleString()} หน่วย สำเร็จ!` };
   };
 
@@ -1761,19 +1918,82 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteAuctionItem = (auctionId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setAuctionItems((prev) => prev.filter((item) => item.id !== auctionId));
     triggerAutoSave();
   };
 
   const cancelAuctionItem = (auctionId: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setAuctionItems((prev) =>
       prev.map((item) => (item.id === auctionId ? { ...item, status: 'cancelled' } : item))
     );
     triggerAutoSave();
   };
 
+// Leave Management (Atomic RPC)
+  const submitLeave = async (memberId: string, reason: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const { data, error } = await supabase.rpc('submit_leave_atomic', {
+        p_guild_id: GUILD_ID,
+        p_member_id: memberId,
+        p_reason: reason,
+      });
+      if (!error && data && typeof data === 'object') {
+        const res = data as { success: boolean; message: string; members?: any };
+        if (res.success && res.members) {
+          setMembers(res.members);
+          return { success: true, message: res.message };
+        }
+      }
+    } catch (e) {
+      console.warn('submit_leave_atomic fallback', e);
+    }
+
+    // Local fallback
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === memberId
+          ? { ...m, status: 'leave', leaveReason: reason, updatedAt: new Date().toISOString() }
+          : m
+      )
+    );
+    triggerAutoSave();
+    return { success: true, message: 'บันทึกการลาสำเร็จ' };
+  };
+
+  const cancelLeave = async (memberId: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      const { data, error } = await supabase.rpc('cancel_leave_atomic', {
+        p_guild_id: GUILD_ID,
+        p_member_id: memberId,
+      });
+      if (!error && data && typeof data === 'object') {
+        const res = data as { success: boolean; message: string; members?: any };
+        if (res.success && res.members) {
+          setMembers(res.members);
+          return { success: true, message: res.message };
+        }
+      }
+    } catch (e) {
+      console.warn('cancel_leave_atomic fallback', e);
+    }
+
+    // Local fallback
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === memberId
+          ? { ...m, status: 'ready', leaveReason: undefined, updatedAt: new Date().toISOString() }
+          : m
+      )
+    );
+    triggerAutoSave();
+    return { success: true, message: 'ยกเลิกการลาสำเร็จ กลับมาพร้อมรบ!' };
+  };
+
   // Queue Operations
   const createQueueList = (data: Omit<QueueList, 'createdAt' | 'entries'> & { id?: string }): string => {
+    lastUserActionTimeRef.current = Date.now();
     const rawId = (data.id && data.id.trim())
       ? data.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-')
       : '';
@@ -1810,6 +2030,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const updateQueueList = (id: string, updates: Partial<QueueList>) => {
+    lastUserActionTimeRef.current = Date.now();
     setQueueLists((prev) =>
       prev.map((q) => (q.id === id ? { ...q, ...updates, updatedAt: new Date().toISOString() } : q))
     );
@@ -1817,6 +2038,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const deleteQueueList = (id: string) => {
+    lastUserActionTimeRef.current = Date.now();
     setQueueLists((prev) => prev.filter((q) => q.id !== id));
     triggerAutoSave();
   };
@@ -1826,6 +2048,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     memberId: string,
     note?: string
   ): Promise<{ success: boolean; message: string }> => {
+    lastUserActionTimeRef.current = Date.now();
     const member = latestStateRef.current.members.find((m) => m.id === memberId);
     if (!member) return { success: false, message: 'ไม่พบข้อมูลสมาชิก' };
 
@@ -1844,7 +2067,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       if (!rpcErr && data && typeof data === 'object') {
         const res = data as { success: boolean; message: string; position?: number };
         if (res.success) {
-          silentReloadFromCloud('guild_queues');
+          silentReloadFromCloud('guild_queues', true);
           return {
             success: true,
             message: res.message || `เข้าร่วมคิวสำเร็จ! (อันดับที่ #${res.position})`,
@@ -1905,6 +2128,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeMemberFromQueue = async (queueId: string, entryId: string): Promise<void> => {
+    lastUserActionTimeRef.current = Date.now();
     try {
       const { data, error: rpcErr } = await supabase.rpc('remove_queue_entry_atomic', {
         p_guild_id: GUILD_ID,
@@ -1913,7 +2137,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!rpcErr && data && (data as any).success) {
-        silentReloadFromCloud('guild_queues');
+        silentReloadFromCloud('guild_queues', true);
         return;
       }
     } catch (rpcEx) {
@@ -1937,6 +2161,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     queueId: string,
     memberId: string
   ): Promise<{ success: boolean; message: string }> => {
+    lastUserActionTimeRef.current = Date.now();
     try {
       const { data, error: rpcErr } = await supabase.rpc('leave_queue_atomic', {
         p_guild_id: GUILD_ID,
@@ -1945,7 +2170,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       });
 
       if (!rpcErr && data && (data as any).success) {
-        silentReloadFromCloud('guild_queues');
+        silentReloadFromCloud('guild_queues', true);
         return { success: true, message: (data as any).message || 'ยกเลิกการต่อคิวเรียบร้อยแล้ว' };
       }
     } catch (rpcEx) {
@@ -1967,17 +2192,32 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   const reorderQueueEntries = (queueId: string, entries: QueueEntry[]) => {
-    setQueueLists((prev) =>
-      prev.map((q) => (q.id === queueId ? { ...q, entries, updatedAt: new Date().toISOString() } : q))
-    );
-    triggerAutoSave();
+    lastUserActionTimeRef.current = Date.now();
+    let nextLists: QueueList[] = [];
+    setQueueLists((prev) => {
+      nextLists = prev.map((q) => (q.id === queueId ? { ...q, entries, updatedAt: new Date().toISOString() } : q));
+      return nextLists;
+    });
+    if (nextLists.length > 0) {
+      latestStateRef.current = {
+        ...latestStateRef.current,
+        queueLists: nextLists,
+      };
+      try {
+        localStorage.setItem('Moonz_queue_lists', JSON.stringify(nextLists));
+      } catch (_) {}
+    }
+    triggerAutoSave(150);
   };
 
   const toggleQueueEntryCompleted = (queueId: string, entryId: string) => {
-    setQueueLists((prev) =>
-      prev.map((q) => {
+    lastUserActionTimeRef.current = Date.now();
+    let nextLists: QueueList[] = [];
+
+    setQueueLists((prev) => {
+      nextLists = prev.map((q) => {
         if (q.id !== queueId) return q;
-        const updatedEntries = q.entries.map((e) => {
+        const updatedEntries = (q.entries || []).map((e) => {
           if (e.id !== entryId) return e;
           const willBeCompleted = !e.isCompleted;
           return {
@@ -1987,9 +2227,21 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           };
         });
         return { ...q, entries: updatedEntries, updatedAt: new Date().toISOString() };
-      })
-    );
-    triggerAutoSave();
+      });
+      return nextLists;
+    });
+
+    if (nextLists.length > 0) {
+      latestStateRef.current = {
+        ...latestStateRef.current,
+        queueLists: nextLists,
+      };
+      try {
+        localStorage.setItem('Moonz_queue_lists', JSON.stringify(nextLists));
+      } catch (_) {}
+    }
+
+    triggerAutoSave(150);
   };
 
   const clearQueueEntries = (queueId: string) => {
@@ -2146,6 +2398,8 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         closeAuction,
         deleteAuctionItem,
         cancelAuctionItem,
+        submitLeave,
+        cancelLeave,
         queueLists,
         createQueueList,
         updateQueueList,

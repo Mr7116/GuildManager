@@ -241,3 +241,169 @@ JOB_FAMILIES.forEach(fam => {
     JOB_LOOKUP[j.toLowerCase()] = fam;
   });
 });
+
+export const JOB_ICON_MAP: Record<string, string> = {
+  // Novice
+  'novice': '/images/jobs/101.webp',
+
+  // Swordsman Line
+  'swordman': '/images/jobs/201.webp',
+  'swordsman': '/images/jobs/201.webp',
+  'นักดาบ': '/images/jobs/201.webp',
+  'knight': '/images/jobs/212.webp',
+  'ไนท์': '/images/jobs/212.webp',
+  'lord knight': '/images/jobs/213.webp',
+  'lordknight': '/images/jobs/213.webp',
+  'lk': '/images/jobs/213.webp',
+  'ลอร์ดไนท์': '/images/jobs/213.webp',
+  'crusader': '/images/jobs/222.webp',
+  'ครูเซเดอร์': '/images/jobs/222.webp',
+  'paladin': '/images/jobs/223.webp',
+  'พาลาดิน': '/images/jobs/223.webp',
+  'pala': '/images/jobs/223.webp',
+
+  // Mage Line
+  'mage': '/images/jobs/301.webp',
+  'magician': '/images/jobs/301.webp',
+  'เมจ': '/images/jobs/301.webp',
+  'wizard': '/images/jobs/312.webp',
+  'วิซาร์ด': '/images/jobs/312.webp',
+  'high wizard': '/images/jobs/313.webp',
+  'highwizard': '/images/jobs/313.webp',
+  'hw': '/images/jobs/313.webp',
+  'ไฮวิ': '/images/jobs/313.webp',
+  'ไฮวิซาร์ด': '/images/jobs/313.webp',
+  'sage': '/images/jobs/322.webp',
+  'เซจ': '/images/jobs/322.webp',
+  'professor': '/images/jobs/323.webp',
+  'prof': '/images/jobs/323.webp',
+  'scholar': '/images/jobs/323.webp',
+  'สกอลาร์': '/images/jobs/323.webp',
+  'โปรเฟสเซอร์': '/images/jobs/323.webp',
+
+  // Archer Line
+  'archer': '/images/jobs/401.webp',
+  'นักธนู': '/images/jobs/401.webp',
+  'hunter': '/images/jobs/412.webp',
+  'ฮันเตอร์': '/images/jobs/412.webp',
+  'sniper': '/images/jobs/413.webp',
+  'สไนเปอร์': '/images/jobs/413.webp',
+  'สไน': '/images/jobs/413.webp',
+  'bard': '/images/jobs/422.webp',
+  'บาร์ด': '/images/jobs/422.webp',
+  'clown': '/images/jobs/423.webp',
+  'ตัวตลก': '/images/jobs/423.webp',
+  'คลาวน์': '/images/jobs/423.webp',
+  'minstrel': '/images/jobs/423.webp',
+  'dancer': '/images/jobs/432.webp',
+  'แดนเซอร์': '/images/jobs/432.webp',
+  'gypsy': '/images/jobs/433.webp',
+  'ยิปซี': '/images/jobs/433.webp',
+
+  // Acolyte Line
+  'acolyte': '/images/jobs/501.webp',
+  'อโคไลท์': '/images/jobs/501.webp',
+  'priest': '/images/jobs/512.webp',
+  'พรีส': '/images/jobs/512.webp',
+  'high priest': '/images/jobs/513.webp',
+  'highpriest': '/images/jobs/513.webp',
+  'hp': '/images/jobs/513.webp',
+  'ไฮพรีส': '/images/jobs/513.webp',
+  'monk': '/images/jobs/522.webp',
+  'มองก์': '/images/jobs/522.webp',
+  'มองค์': '/images/jobs/522.webp',
+  'champion': '/images/jobs/523.webp',
+  'แชมเปียน': '/images/jobs/523.webp',
+  'แชมป์': '/images/jobs/523.webp',
+  'champ': '/images/jobs/523.webp',
+
+  // Thief Line
+  'thief': '/images/jobs/601.webp',
+  'โจร': '/images/jobs/601.webp',
+  'assassin': '/images/jobs/612.webp',
+  'แอสซาซิน': '/images/jobs/612.webp',
+  'assassin cross': '/images/jobs/613.webp',
+  'assassincross': '/images/jobs/613.webp',
+  'แอสคอส': '/images/jobs/613.webp',
+  'sin x': '/images/jobs/613.webp',
+  'sinx': '/images/jobs/613.webp',
+  'rogue': '/images/jobs/622.webp',
+  'โร้ก': '/images/jobs/622.webp',
+  'stalker': '/images/jobs/623.webp',
+  'สตอล์กเกอร์': '/images/jobs/623.webp',
+
+  // Merchant Line
+  'merchant': '/images/jobs/701.webp',
+  'พ่อค้า': '/images/jobs/701.webp',
+  'blacksmith': '/images/jobs/712.webp',
+  'bs': '/images/jobs/712.webp',
+  'แบล็คสมิธ': '/images/jobs/712.webp',
+  'whitesmith': '/images/jobs/713.webp',
+  'ws': '/images/jobs/713.webp',
+  'ไวท์สมิธ': '/images/jobs/713.webp',
+  'alchemist': '/images/jobs/722.webp',
+  'alche': '/images/jobs/722.webp',
+  'อัลเคมิสต์': '/images/jobs/722.webp',
+  'creator': '/images/jobs/723.webp',
+  'ครีเอเตอร์': '/images/jobs/723.webp',
+  'biochemist': '/images/jobs/723.webp',
+
+  // Gunslinger / Rebel Line
+  'gunslinger': '/images/jobs/801.webp',
+  'มือปืน': '/images/jobs/801.webp',
+  'rebel': '/images/jobs/812.webp',
+  'เรเบล': '/images/jobs/812.webp',
+  'night walker': '/images/jobs/813.webp',
+  'nightwalker': '/images/jobs/813.webp',
+
+  // Doram / Kanos Line
+  'doram': '/images/jobs/901.webp',
+  'druid': '/images/jobs/901.webp',
+  'ดรูอิด': '/images/jobs/901.webp',
+  'kanos': '/images/jobs/912.webp',
+  'คานอส': '/images/jobs/912.webp',
+  'alithea': '/images/jobs/913.webp',
+  'อาลิเทีย': '/images/jobs/913.webp'
+};
+
+const FAMILY_DEFAULT_ICON: Record<string, string> = {
+  knight: '/images/jobs/212.webp',
+  crusader: '/images/jobs/222.webp',
+  wizard: '/images/jobs/312.webp',
+  sage: '/images/jobs/322.webp',
+  hunter: '/images/jobs/412.webp',
+  bard: '/images/jobs/422.webp',
+  dancer: '/images/jobs/432.webp',
+  priest: '/images/jobs/512.webp',
+  monk: '/images/jobs/522.webp',
+  assassin: '/images/jobs/612.webp',
+  rogue: '/images/jobs/622.webp',
+  blacksmith: '/images/jobs/712.webp',
+  alchemist: '/images/jobs/722.webp',
+  rebel: '/images/jobs/812.webp',
+  kanos: '/images/jobs/912.webp',
+  novice: '/images/jobs/101.webp'
+};
+
+export function getJobIconUrl(jobName?: string): string {
+  if (!jobName) return '/images/jobs/101.webp';
+  const clean = jobName.trim().toLowerCase();
+
+  // 1. Exact match
+  if (JOB_ICON_MAP[clean]) {
+    return JOB_ICON_MAP[clean];
+  }
+
+  // 2. Substring match against known keys (longest first)
+  const sortedKeys = Object.keys(JOB_ICON_MAP).sort((a, b) => b.length - a.length);
+  for (const k of sortedKeys) {
+    if (clean.includes(k)) {
+      return JOB_ICON_MAP[k];
+    }
+  }
+
+  // 3. Fallback by family
+  const fam = getJobFamily(clean);
+  return FAMILY_DEFAULT_ICON[fam.familyKey] || '/images/jobs/101.webp';
+}
+

@@ -5,6 +5,7 @@ import { createPortal } from 'react-dom';
 import { useGuildStore } from '@/lib/guildStore';
 import { Member } from '@/types/member';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import DonateCard from '@/components/common/DonateCard';
 import JobEmblemBar from '@/components/tactical/JobEmblemBar';
 import TitleMedal from '@/components/tactical/TitleMedal';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
@@ -15,7 +16,7 @@ type SortField = 'name' | 'job' | 'position' | 'title' | 'status' | 'gear';
 type SortDirection = 'asc' | 'desc';
 
 export default function RosterPage() {
-  const { members, setMembers, saveToCloud, isSaving, lastSavedAt } = useGuildStore();
+  const { members, setMembers, saveToCloud, isSaving, lastSavedAt, triggerAutoSave } = useGuildStore();
 
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState('');
@@ -159,6 +160,7 @@ export default function RosterPage() {
   const handleDeleteOne = (id: string, name: string) => {
     if (!confirm(`คุณต้องการลบ "${name}" ออกจากกิลด์ใช่หรือไม่?`)) return;
     setMembers((prev) => prev.filter((m) => m.id !== id));
+    triggerAutoSave(150);
   };
 
   // Open modal
@@ -529,6 +531,11 @@ export default function RosterPage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Donate Card */}
+      <div className="pt-6 flex justify-center">
+        <DonateCard className="w-full max-w-sm" />
       </div>
 
       {/* Add / Edit Member Modal */}

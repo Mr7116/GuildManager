@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useGuildStore } from '@/lib/guildStore';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import DonateCard from '@/components/common/DonateCard';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import LiveClock from '@/components/common/LiveClock';
 import ThemeToggle from '@/components/layout/ThemeToggle';
@@ -765,6 +766,11 @@ export default function AdminQueueView({ onSwitchToMember }: AdminQueueViewProps
           })}
         </div>
       )}
+
+      {/* Donate Card */}
+      <div className="pt-4 flex justify-center">
+        <DonateCard className="w-full max-w-sm" />
+      </div>
 
       {/* CREATE QUEUE MODAL */}
       <CreateQueueModal

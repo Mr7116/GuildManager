@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { useGuildStore } from '@/lib/guildStore';
 import { useAuth } from '@/lib/auth';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import DonateCard from '@/components/common/DonateCard';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import LiveClock from '@/components/common/LiveClock';
@@ -929,6 +930,11 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
             })}
           </div>
         )}
+
+        {/* Donate Card */}
+        <div className="pt-6 flex justify-center">
+          <DonateCard className="w-full max-w-sm" />
+        </div>
       </div>
     </div>
   );

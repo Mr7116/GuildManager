@@ -6,6 +6,7 @@ import { useAuth } from '@/lib/auth';
 import { useGuildStore } from '@/lib/guildStore';
 import { getJobMeta } from '@/constants/jobs';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import DonateCard from '@/components/common/DonateCard';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
 const QUICK_REASONS = [
@@ -18,7 +19,7 @@ const QUICK_REASONS = [
 ];
 
 export default function LeavePage() {
-  const { guildName, members, setMembers, saveToCloud, isSaving, lastSavedAt } = useGuildStore();
+  const { guildName, members, setMembers, saveToCloud, isSaving, lastSavedAt, submitLeave, cancelLeave } = useGuildStore();
   const { isAuthenticated } = useAuth();
 
   const [selectedMemberId, setSelectedMemberId] = useState('');
@@ -46,7 +47,7 @@ export default function LeavePage() {
   }, [leaveMembers, searchLeave]);
 
   // Submit leave
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedMemberId) {
       setStatusMsg({ text: 'กรุณาเลือกชื่อของคุณ', isError: true });
@@ -58,56 +59,29 @@ export default function LeavePage() {
 
     const dateRangeText = startDate === endDate ? startDate : `${startDate} ถึง ${endDate}`;
     const reasonText = leaveReason.trim() || 'ติดภารกิจ';
+    const fullReason = `${reasonText} (${dateRangeText})`;
 
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== selectedMemberId) return m;
-        return {
-          ...m,
-          status: 'leave',
-          leaveReason: `${reasonText} (${dateRangeText})`,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+    const res = await submitLeave(selectedMemberId, fullReason);
 
     setStatusMsg({
-      text: `✅ บันทึกการลาของ "${member.name}" เรียบร้อยแล้ว (${dateRangeText})`,
-      isError: false,
+      text: res.message || `✅ บันทึกการลาของ "${member.name}" เรียบร้อยแล้ว (${dateRangeText})`,
+      isError: !res.success,
     });
 
     setLeaveReason('');
     setSelectedMemberId('');
-
-    setTimeout(() => {
-      saveToCloud();
-    }, 100);
   };
 
   // Cancel leave
-  const handleCancelLeave = (memberId: string, memberName: string) => {
+  const handleCancelLeave = async (memberId: string, memberName: string) => {
     if (!confirm(`ต้องการยกเลิกการลาของ "${memberName}" และกลับมาเป็นสถานะ "พร้อมวอร์" หรือไม่?`)) return;
 
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== memberId) return m;
-        return {
-          ...m,
-          status: 'ready',
-          leaveReason: undefined,
-          updatedAt: new Date().toISOString(),
-        };
-      })
-    );
+    const res = await cancelLeave(memberId);
 
     setStatusMsg({
-      text: `🟢 ยกเลิกการลาของ "${memberName}" สำเร็จ กลับมาพร้อมรบแล้ว!`,
-      isError: false,
+      text: res.message || `🟢 ยกเลิกการลาของ "${memberName}" สำเร็จ กลับมาพร้อมรบแล้ว!`,
+      isError: !res.success,
     });
-
-    setTimeout(() => {
-      saveToCloud();
-    }, 100);
   };
 
   return (
@@ -274,6 +248,11 @@ export default function LeavePage() {
               🚀 ยืนยันการแจ้งลาวอร์
             </button>
           </form>
+
+          {/* Donate Card */}
+          <div className="mt-4">
+            <DonateCard className="w-full" />
+          </div>
         </div>
 
         {/* Leave List Column */}

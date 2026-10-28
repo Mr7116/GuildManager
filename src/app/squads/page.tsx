@@ -20,6 +20,7 @@ export default function SquadsPage() {
     isSaving,
     loadFromCloud,
     saveToCloud,
+    triggerAutoSave,
   } = useGuildStore();
 
   const [selectedSlot, setSelectedSlot] = useState<{ partyId: string; slotIndex: number } | null>(null);
@@ -74,6 +75,7 @@ export default function SquadsPage() {
       });
       setSelectedMemberId(null);
       setSelectedSlot(null);
+      triggerAutoSave(150);
       return;
     }
 
@@ -110,6 +112,7 @@ export default function SquadsPage() {
         });
       });
       setSelectedSlot(null);
+      triggerAutoSave(150);
       return;
     }
 
@@ -131,12 +134,14 @@ export default function SquadsPage() {
         return { ...p, slots };
       })
     );
+    triggerAutoSave(150);
   };
 
   const handleClearParty = (partyId: string) => {
     setPresetParties((prev) =>
       prev.map((p) => (p.id === partyId ? { ...p, slots: [null, null, null, null, null] } : p))
     );
+    triggerAutoSave(150);
   };
 
   const handleAddParty = () => {
@@ -238,6 +243,7 @@ export default function SquadsPage() {
                   });
                 });
                 setSelectedSlot(null);
+                triggerAutoSave(150);
               } else {
                 setSelectedMemberId(mId === selectedMemberId ? null : mId);
               }

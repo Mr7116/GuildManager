@@ -15,6 +15,7 @@ import RoundHistoryModal from '@/components/modals/RoundHistoryModal';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
 import LiveClock from '@/components/common/LiveClock';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import DonateCard from '@/components/common/DonateCard';
 import TitleSvgIcon from '@/components/icons/TitleSvgIcon';
 import TitleChestSvgIcon from '@/components/icons/TitleChestSvgIcon';
 import RelicSvgIcon from '@/components/icons/RelicSvgIcon';
@@ -1365,6 +1366,11 @@ export default function AuctionPage() {
       )}
         </>
       )}
+
+      {/* Donate Card */}
+      <div className="pt-6 flex justify-center">
+        <DonateCard className="w-full max-w-sm" />
+      </div>
 
       {/* Modals */}
       <AddAuctionModal

@@ -1,5 +1,5 @@
-import React from 'react';
-import { getJobFamily, getJobInnerSymbolSVG } from '@/constants/jobs';
+import React, { useState } from 'react';
+import { getJobFamily, getJobIconUrl, getJobInnerSymbolSVG } from '@/constants/jobs';
 
 interface JobEmblemProps {
   job?: string;
@@ -10,6 +10,30 @@ interface JobEmblemProps {
 
 export const JobEmblem: React.FC<JobEmblemProps> = ({ job, jobName, size = 32, className = '' }) => {
   const resolvedJob = job || jobName || '';
+  const [imgError, setImgError] = useState(false);
+  const iconUrl = getJobIconUrl(resolvedJob);
+
+  if (!imgError && iconUrl) {
+    return (
+      <img
+        src={iconUrl}
+        alt={resolvedJob || 'Job Icon'}
+        width={size}
+        height={size}
+        onError={() => setImgError(true)}
+        className={`shrink-0 drop-shadow object-contain select-none pointer-events-none ${className}`}
+        style={{
+          width: `${size}px`,
+          height: `${size}px`,
+          minWidth: `${size}px`,
+          minHeight: `${size}px`
+        }}
+        loading="lazy"
+        draggable={false}
+      />
+    );
+  }
+
   const fam = getJobFamily(resolvedJob);
   const innerSvg = getJobInnerSymbolSVG(fam.familyKey);
 
@@ -64,4 +88,3 @@ export const JobEmblem: React.FC<JobEmblemProps> = ({ job, jobName, size = 32, c
 };
 
 export default JobEmblem;
-

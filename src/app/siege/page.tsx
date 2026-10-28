@@ -29,6 +29,7 @@ export default function SiegePage() {
     isLoading,
     isSaving,
     saveToCloud,
+    triggerAutoSave,
     setTeamColor,
   } = useGuildStore();
 
@@ -132,6 +133,7 @@ export default function SiegePage() {
       });
       setSelectedMemberId(null);
       setSelectedSlot(null);
+      triggerAutoSave(150);
       return;
     }
 
@@ -168,6 +170,7 @@ export default function SiegePage() {
         });
       });
       setSelectedSlot(null);
+      triggerAutoSave(150);
       return;
     }
 

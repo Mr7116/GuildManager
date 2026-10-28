@@ -26,6 +26,7 @@ export default function PolarityPage() {
     isSaving,
     loadFromCloud,
     saveToCloud,
+    triggerAutoSave,
   } = useGuildStore();
 
   const [selectedSlot, setSelectedSlot] = useState<{ partyId: string; slotIndex: number } | null>(null);
@@ -78,6 +79,7 @@ export default function PolarityPage() {
       });
       setSelectedMemberId(null);
       setSelectedSlot(null);
+      triggerAutoSave(150);
       return;
     }
 
@@ -114,6 +116,7 @@ export default function PolarityPage() {
         });
       });
       setSelectedSlot(null);
+      triggerAutoSave(150);
       return;
     }
 
@@ -131,12 +134,14 @@ export default function PolarityPage() {
         return { ...p, slots };
       })
     );
+    triggerAutoSave(150);
   };
 
   const handleClearParty = (partyId: string) => {
     setPolarityParties((prev) =>
       prev.map((p) => (p.id === partyId ? { ...p, slots: [null, null, null, null, null] } : p))
     );
+    triggerAutoSave(150);
   };
 
   const handleAddParty = () => {
@@ -274,6 +279,7 @@ export default function PolarityPage() {
                   });
                 });
                 setSelectedSlot(null);
+                triggerAutoSave(150);
               } else {
                 setSelectedMemberId(mId === selectedMemberId ? null : mId);
               }

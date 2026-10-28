@@ -8,6 +8,7 @@ import TeamSection from '@/components/tactical/TeamSection';
 import { PartyCard } from '@/components/tactical/PartyCard';
 import { MemberSlot } from '@/components/tactical/MemberSlot';
 import JobEmblem from '@/components/tactical/JobEmblem';
+import DonateCard from '@/components/common/DonateCard';
 import { getJobMeta } from '@/constants/jobs';
 import { getGvgLane } from '@/constants/lanes';
 import ThemeToggle from '@/components/layout/ThemeToggle';
@@ -331,6 +332,11 @@ export default function PublicPage() {
           </div>
         </div>
       )}
+
+      {/* Donate Card */}
+      <div className="pt-8 flex justify-center">
+        <DonateCard className="w-full max-w-sm" />
+      </div>
     </div>
   );
 }
