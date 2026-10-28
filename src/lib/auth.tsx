@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { GUILD_ID, DEFAULT_PIN } from '@/config/guildConfig';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -33,8 +34,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check auth status on mount
   useEffect(() => {
     const session =
-      localStorage.getItem('TUMDOOD_auth_session') === 'logged_in' ||
-      sessionStorage.getItem('TUMDOOD_auth_session') === 'logged_in';
+      localStorage.getItem('Moonz_auth_session') === 'logged_in' ||
+      sessionStorage.getItem('Moonz_auth_session') === 'logged_in';
 
     setIsAuthenticated(session);
     setIsLoading(false);
@@ -55,19 +56,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!trimmed) return false;
 
     // Fetch cloud PIN
-    let validPin = localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD';
+    let validPin = localStorage.getItem('Moonz_guild_pin') || DEFAULT_PIN;
     try {
-      const { data } = await supabase
-        .from('guild_state')
-        .select('parties')
-        .eq('id', 2)
+      const { data: settData, error: settErr } = await supabase
+        .from('guild_settings')
+        .select('pin')
+        .eq('id', GUILD_ID)
         .maybeSingle();
 
-      if (data && Array.isArray(data.parties)) {
-        const authEntry = data.parties.find((p: any) => p.id === '__guild_auth_config__');
-        if (authEntry && authEntry.pin) {
-          validPin = authEntry.pin;
-          localStorage.setItem('TUMDOOD_guild_pin', authEntry.pin);
+      if (!settErr && settData?.pin) {
+        validPin = settData.pin;
+        localStorage.setItem('Moonz_guild_pin', settData.pin);
+      } else {
+        const { data } = await supabase
+          .from('guild_state')
+          .select('parties')
+          .eq('id', GUILD_ID)
+          .maybeSingle();
+
+        if (data && Array.isArray(data.parties)) {
+          const authEntry = data.parties.find((p: any) => p.id === '__guild_auth_config__');
+          if (authEntry && authEntry.pin) {
+            validPin = authEntry.pin;
+            localStorage.setItem('Moonz_guild_pin', authEntry.pin);
+          }
         }
       }
     } catch (e) {
@@ -76,13 +88,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (trimmed.toLowerCase() === validPin.toLowerCase()) {
       const storage = remember ? localStorage : sessionStorage;
-      storage.setItem('TUMDOOD_auth_session', 'logged_in');
-      storage.setItem('TUMDOOD_auth_timestamp', Date.now().toString());
+      storage.setItem('Moonz_auth_session', 'logged_in');
+      storage.setItem('Moonz_auth_timestamp', Date.now().toString());
 
       if (remember) {
-        sessionStorage.removeItem('TUMDOOD_auth_session');
+        sessionStorage.removeItem('Moonz_auth_session');
       } else {
-        localStorage.removeItem('TUMDOOD_auth_session');
+        localStorage.removeItem('Moonz_auth_session');
       }
 
       setIsAuthenticated(true);
@@ -93,19 +105,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
-    localStorage.removeItem('TUMDOOD_auth_session');
-    sessionStorage.removeItem('TUMDOOD_auth_session');
+    localStorage.removeItem('Moonz_auth_session');
+    sessionStorage.removeItem('Moonz_auth_session');
     setIsAuthenticated(false);
     router.replace('/login');
   };
 
   const changePin = async (oldPin: string, newPin: string): Promise<{ success: boolean; message: string }> => {
-    let currentPin = localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD';
+    let currentPin = localStorage.getItem('Moonz_guild_pin') || DEFAULT_PIN;
     try {
       const { data } = await supabase
         .from('guild_state')
         .select('*')
-        .eq('id', 2)
+        .eq('id', GUILD_ID)
         .maybeSingle();
 
       let latestParties = data?.parties || [];
@@ -134,16 +146,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         latestParties.push(updatedAuth);
       }
 
+      // Also update guild_settings
+      try {
+        await supabase.from('guild_settings').upsert({
+          id: GUILD_ID,
+          pin: newPin,
+          updated_at: new Date().toISOString(),
+        });
+      } catch (_) {}
+
       await supabase.from('guild_state').upsert({
-        id: 2,
+        id: GUILD_ID,
         parties: latestParties,
         updated_at: new Date().toISOString(),
       });
 
-      localStorage.setItem('TUMDOOD_guild_pin', newPin);
+      localStorage.setItem('Moonz_guild_pin', newPin);
       return { success: true, message: 'เปลี่ยนรหัสผ่านสำเร็จแล้ว' };
     } catch (err: any) {
-      localStorage.setItem('TUMDOOD_guild_pin', newPin);
+      localStorage.setItem('Moonz_guild_pin', newPin);
       return { success: true, message: 'บันทึกรหัสผ่านใหม่เรียบร้อยแล้ว' };
     }
   };

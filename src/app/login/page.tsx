@@ -4,6 +4,7 @@ import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth';
+import { GUILD_NAME } from '@/config/guildConfig';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 
 function LoginForm() {
@@ -84,7 +85,7 @@ function LoginForm() {
         <div className="text-center space-y-3 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-white tracking-wide">
-              TUMDOOD <span className="text-indigo-400">Tactical</span>
+              {GUILD_NAME} <span className="text-indigo-400">Tactical</span>
             </h1>
             <p className="text-xs text-slate-400 mt-1">ระบบจัดผังทัพและยุทธศาสตร์กิลด์วอร์</p>
           </div>

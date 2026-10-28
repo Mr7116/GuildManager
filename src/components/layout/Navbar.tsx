@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/auth';
+import { useGuildStore } from '@/lib/guildStore';
+import { GUILD_NAME } from '@/config/guildConfig';
 import AdminNavActions from './AdminNavActions';
 import ThemeToggle from './ThemeToggle';
 
@@ -27,6 +29,8 @@ const navItems: NavItem[] = [
 export default function Navbar() {
   const pathname = usePathname();
   const { isAuthenticated } = useAuth();
+  const { guildName } = useGuildStore();
+  const displayGuildName = guildName || GUILD_NAME;
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Close mobile menu on page navigation
@@ -63,7 +67,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 min-w-0">
             <Link href="/gvg" className="flex items-center gap-1.5 shrink-0">
               <span className="text-base font-black tracking-wider bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-500 bg-clip-text text-transparent">
-                TUMDOOD
+                {displayGuildName}
               </span>
             </Link>
 
@@ -162,7 +166,7 @@ export default function Navbar() {
             <div className="flex items-center gap-3 shrink-0">
               <Link href="/gvg" className="flex items-center gap-2 transition hover:opacity-90">
                 <span className="text-lg font-black tracking-wider bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-500 bg-clip-text text-transparent">
-                  TUMDOOD
+                  {displayGuildName}
                 </span>
                 <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-100 dark:bg-slate-800/90 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/60">
                   Guild Manager

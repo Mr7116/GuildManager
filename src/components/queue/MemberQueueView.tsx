@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import NotFound from '@/app/not-found';
 import { useGuildStore } from '@/lib/guildStore';
 import { useAuth } from '@/lib/auth';
 import JobEmblem from '@/components/tactical/JobEmblem';
@@ -13,13 +14,15 @@ import { getQueuePreset } from '@/constants/queuePresets';
 
 interface MemberQueueViewProps {
   onSwitchToAdmin?: () => void;
+  requireId?: boolean;
 }
 
-export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProps) {
+export default function MemberQueueView({ onSwitchToAdmin, requireId = false }: MemberQueueViewProps) {
   const {
     guildName,
     members,
     queueLists,
+    isLoading,
     addMemberToQueue,
     removeMemberByMemberIdFromQueue,
   } = useGuildStore();
@@ -31,7 +34,19 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
   const [memberSearch, setMemberSearch] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'all' | 'open' | 'my' | 'vanished' | 'apocalypse'>('open');
   const [toastMsg, setToastMsg] = useState<{ text: string; isError?: boolean } | null>(null);
+  const [selectedQueueIdFromUrl, setSelectedQueueIdFromUrl] = useState<string | null>(null);
   const [, setTick] = useState(0);
+
+  // Read URL query parameter "?id=..." or "?list=..." on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const qId = params.get('id') || params.get('queueId') || params.get('list');
+      if (qId) {
+        setSelectedQueueIdFromUrl(qId);
+      }
+    }
+  }, []);
 
   // Live ticker for countdown update every second
   useEffect(() => {
@@ -42,7 +57,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
   // Restore saved member
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('TUMDOOD_queue_selected_member');
+      const saved = localStorage.getItem('Moonz_queue_selected_member');
       if (saved && members.some((m) => m.id === saved)) {
         setSelectedMemberId(saved);
       }
@@ -52,7 +67,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
   const handleSelectMember = (id: string) => {
     setSelectedMemberId(id);
     try {
-      localStorage.setItem('TUMDOOD_queue_selected_member', id);
+      localStorage.setItem('Moonz_queue_selected_member', id);
     } catch {}
   };
 
@@ -87,8 +102,17 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
     );
   }, [queueLists, selectedMemberId]);
 
+  // Targeted queue from URL ("ใคร list มัน")
+  const targetedQueue = useMemo(() => {
+    if (!selectedQueueIdFromUrl) return null;
+    return queueLists.find((q) => q.id === selectedQueueIdFromUrl) || null;
+  }, [queueLists, selectedQueueIdFromUrl]);
+
   // Filtered queue lists
   const displayLists = useMemo(() => {
+    if (selectedQueueIdFromUrl && targetedQueue) {
+      return [targetedQueue];
+    }
     let lists = [...queueLists];
     if (activeTab === 'open') {
       lists = lists.filter((q) => q.status === 'open' || q.status === 'scheduled');
@@ -100,9 +124,11 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
       lists = lists.filter((q) => q.dungeonCategory === 'apocalypse');
     }
     return lists;
-  }, [queueLists, activeTab, myQueueLists]);
+  }, [queueLists, activeTab, myQueueLists, selectedQueueIdFromUrl, targetedQueue]);
 
-  const handleJoin = (queue: QueueList) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleJoin = async (queue: QueueList) => {
     if (!currentMember) {
       showToast('กรุณาเลือกชื่อตัวละครของคุณก่อน', true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -112,34 +138,70 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
       showToast('คิวนี้ยังไม่เปิดรับ กรุณารอเวลาเปิดตามที่กำหนด', true);
       return;
     }
-    const res = addMemberToQueue(queue.id, currentMember.id);
-    showToast(res.message, !res.success);
-  };
-
-  const handleLeave = (queue: QueueList) => {
-    if (!currentMember) return;
-    if (window.confirm(`คุณต้องการยกเลิกการต่อคิว "${queue.title}" ใช่หรือไม่?`)) {
-      removeMemberByMemberIdFromQueue(queue.id, currentMember.id);
-      showToast(`ยกเลิกคิว "${queue.title}" เรียบร้อยแล้ว`);
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    try {
+      const res = await addMemberToQueue(queue.id, currentMember.id);
+      showToast(res.message, !res.success);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleLeave = async (queue: QueueList) => {
+    if (!currentMember) return;
+    if (window.confirm(`คุณต้องการยกเลิกการต่อคิว "${queue.title}" ใช่หรือไม่?`)) {
+      if (isSubmitting) return;
+      setIsSubmitting(true);
+      try {
+        const res = await removeMemberByMemberIdFromQueue(queue.id, currentMember.id);
+        showToast(res?.message || `ยกเลิกคิว "${queue.title}" เรียบร้อยแล้ว`);
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
+  };
+
+  // ถ้าเข้าผ่าน URL ที่เจาะจงคิว (?id=...)
+  // 1. ระหว่างกำลังโหลดข้อมูลจาก Cloud ให้แสดง Spinner รอ
+  if (isLoading && selectedQueueIdFromUrl) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-6 text-center space-y-3">
+        <div className="w-9 h-9 rounded-full border-3 border-indigo-500 border-t-transparent animate-spin" />
+        <p className="text-xs text-slate-400 font-medium">กำลังค้นหารายการคิว...</p>
+      </div>
+    );
+  }
+
+  // 2. ถ้าโหลดเสร็จแล้ว ไม่พบคิวรหัสนี้ หรือคิวถูกปิดไปแล้ว (status === 'closed') ให้เด้งไปหน้า Error 404
+  if (!isLoading && selectedQueueIdFromUrl && (!targetedQueue || targetedQueue.status === 'closed')) {
+    return <NotFound />;
+  }
+
   return (
-    <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 space-y-5 pb-16">
-      {/* Toast Notification */}
+    <>
+      {/* Toast Notification (อยู่นอก container หลัก ไม่ดัน space-y-5 ไม่ทำให้หน้าขยับ 100%) */}
       {toastMsg && (
-        <div
-          className={`fixed bottom-5 right-5 z-50 max-w-md rounded-2xl p-4 text-xs sm:text-sm font-bold shadow-2xl transition-all border animate-bounce ${
-            toastMsg.isError
-              ? 'bg-rose-900/90 text-rose-100 border-rose-500/60'
-              : 'bg-emerald-900/90 text-emerald-100 border-emerald-500/60'
-          }`}
-        >
-          {toastMsg.text}
+        <div className="fixed top-5 right-5 z-[9999] pointer-events-none transition-all duration-300 ease-out animate-in fade-in slide-in-from-top-3">
+          <div
+            className={`flex items-center gap-2.5 px-4 py-3 rounded-2xl border shadow-2xl backdrop-blur-md pointer-events-auto ${
+              toastMsg.isError
+                ? 'bg-rose-950/95 border-rose-500/60 text-rose-100 shadow-rose-950/50'
+                : 'bg-slate-900/95 border-indigo-500/60 text-indigo-100 shadow-indigo-950/50'
+            }`}
+          >
+            <span className="text-base shrink-0">
+              {toastMsg.isError ? '⚠️' : '✨'}
+            </span>
+            <span className="text-xs sm:text-sm font-bold tracking-wide">
+              {toastMsg.text}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* TOP HEADER */}
+      <div className="mx-auto max-w-5xl px-3 py-4 sm:px-6 space-y-5 pb-16">
+        {/* TOP HEADER */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-3xl border-2 border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0c101d] shadow-md">
         <div className="flex items-center gap-3">
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/15 text-2xl border border-indigo-500/30 text-indigo-400">
@@ -216,7 +278,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
               onClick={() => {
                 setSelectedMemberId('');
                 try {
-                  localStorage.removeItem('TUMDOOD_queue_selected_member');
+                  localStorage.removeItem('Moonz_queue_selected_member');
                 } catch {}
               }}
               className="text-xs font-bold text-rose-500 hover:underline cursor-pointer"
@@ -303,34 +365,71 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
         )}
       </div>
 
+      {/* TARGETED QUEUE URL BANNER (ใคร list มัน) */}
+      {selectedQueueIdFromUrl && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-gradient-to-r from-indigo-900/60 to-purple-900/60 border-2 border-indigo-500 shadow-xl text-white">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl p-2 rounded-xl bg-indigo-500/20 border border-indigo-400 shrink-0">🎯</span>
+            <div>
+              <div className="text-sm font-black flex flex-wrap items-center gap-2">
+                <span>กำลังเปิดเฉพาะ List คิว:</span>
+                <span className="text-amber-300 underline font-black">{targetedQueue?.title || selectedQueueIdFromUrl}</span>
+                <span className="font-mono text-xs text-indigo-300 bg-indigo-950 px-2 py-0.5 rounded border border-indigo-500/40">#{selectedQueueIdFromUrl}</span>
+              </div>
+              <p className="text-xs text-indigo-200 mt-0.5">
+                {targetedQueue
+                  ? 'คุณเข้าผ่าน URL เฉพาะของ List นี้ สามารถเลือกลงชื่อเข้าคิวนี้ได้ทันที'
+                  : 'ไม่พบคิวรหัสนี้ หรือคิวอาจถูกปิดไปแล้ว'}
+              </p>
+            </div>
+          </div>
+          {!requireId && (
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedQueueIdFromUrl(null);
+                if (typeof window !== 'undefined') {
+                  window.history.replaceState({}, '', window.location.pathname);
+                }
+              }}
+              className="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-bold text-white transition shadow cursor-pointer shrink-0 active:scale-95"
+            >
+              📋 ดูคิวทั้งหมดของกิลด์ ({queueLists.length} คิว)
+            </button>
+          )}
+        </div>
+      )}
+
       {/* STEP 2: QUEUE LISTS */}
       <div className="space-y-3">
-        {/* Filter Tabs */}
-        <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-2xl border-2 border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0c101d] shadow-sm">
-          {[
-            { id: 'open', label: '🟢 เปิดรับคิวอยู่', count: queueLists.filter((q) => q.status === 'open' || q.status === 'scheduled').length },
-            { id: 'vanished', label: '🌀 มายาสิ้นสูญ', count: queueLists.filter((q) => q.dungeonCategory === 'vanished').length },
-            { id: 'apocalypse', label: '⚔️ Apocalypse', count: queueLists.filter((q) => q.dungeonCategory === 'apocalypse').length },
-            { id: 'my', label: '📌 คิวของฉัน', count: myQueueLists.length },
-            { id: 'all', label: 'ทั้งหมด', count: queueLists.length },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
-                activeTab === tab.id
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-extrabold border border-slate-300 dark:border-slate-700'
-              }`}
-            >
-              <span>{tab.label}</span>
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/25 text-white font-mono font-bold">
-                {tab.count}
-              </span>
-            </button>
-          ))}
-        </div>
+        {/* Filter Tabs (แสดงเฉพาะเมื่อดูรายการรวม) */}
+        {!requireId && !selectedQueueIdFromUrl && (
+          <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-2xl border-2 border-slate-300 dark:border-slate-800 bg-white dark:bg-[#0c101d] shadow-sm">
+            {[
+              { id: 'open', label: '🟢 เปิดรับคิวอยู่', count: queueLists.filter((q) => q.status === 'open' || q.status === 'scheduled').length },
+              { id: 'vanished', label: '🌀 มายาสิ้นสูญ', count: queueLists.filter((q) => q.dungeonCategory === 'vanished').length },
+              { id: 'apocalypse', label: '⚔️ Apocalypse', count: queueLists.filter((q) => q.dungeonCategory === 'apocalypse').length },
+              { id: 'my', label: '📌 คิวของฉัน', count: myQueueLists.length },
+              { id: 'all', label: 'ทั้งหมด', count: queueLists.length },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as typeof activeTab)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition flex items-center gap-1.5 cursor-pointer ${
+                  activeTab === tab.id
+                    ? 'bg-indigo-600 text-white shadow-md'
+                    : 'bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 text-slate-800 dark:text-slate-200 font-extrabold border border-slate-300 dark:border-slate-700'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-black/25 text-white font-mono font-bold">
+                  {tab.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Empty state */}
         {displayLists.length === 0 ? (
@@ -395,6 +494,11 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                             {queue.title}
                           </h3>
 
+                          {/* ID Badge */}
+                          <span className="font-mono text-[10px] text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-400/40 font-bold" title={`รหัสคิว: ${queue.id}`}>
+                            #{queue.id}
+                          </span>
+
                           {/* Level / Difficulty badge */}
                           {preset && (
                             <span className={`px-2 py-0.5 rounded-lg text-xs font-black border shadow-sm ${preset.badgeBg} ${preset.badgeColor} ${preset.badgeBorder}`}>
@@ -450,6 +554,19 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
 
                     {/* Action Button for Member */}
                     <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = `${window.location.origin}/queue/join?id=${queue.id}`;
+                          navigator.clipboard.writeText(url);
+                          showToast(`คัดลอกลิงก์คิว "${queue.title}" แล้ว! 🔗 (รหัส: ${queue.id})`);
+                        }}
+                        className="p-2 sm:px-3 sm:py-2 rounded-xl border border-indigo-500/40 bg-indigo-50 dark:bg-indigo-950/40 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-700 dark:text-indigo-300 text-xs font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm shrink-0"
+                        title="คัดลอกลิงก์เฉพาะ List คิวนี้ เพื่อส่งให้เพื่อนเข้าต่อคิวได้ทันที"
+                      >
+                        <span>🔗</span>
+                        <span className="hidden sm:inline">คัดลอกลิงก์</span>
+                      </button>
                       {isScheduled ? (
                         isPreRegistered ? (
                           <span className="px-3.5 py-2 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 text-white text-xs font-black flex items-center gap-1.5 shadow-md">
@@ -507,14 +624,8 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
                   {/* QUEUE ENTRIES AS A CLEAN LIST */}
                   {entries.length === 0 ? (
                     isScheduled ? (
-                      <div className="p-6 text-center text-xs font-bold text-amber-700 dark:text-amber-300 border-2 border-dashed border-amber-400/50 rounded-2xl bg-amber-500/5 space-y-1">
+                      <div className="p-6 text-center text-xs font-bold text-amber-700 dark:text-amber-300 border-2 border-dashed border-amber-400/50 rounded-2xl bg-amber-500/5">
                         <div className="text-sm">⏰ คิวนี้ตั้งเวลาเปิดอัตโนมัติ</div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">
-                          จะเปิดรับคิวในอีก ~{minsUntilOpen} นาที ({queue.scheduledOpenAt ? new Date(queue.scheduledOpenAt).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''} น.)
-                          {queue.preRegisteredMemberIds && queue.preRegisteredMemberIds.length > 0
-                            ? ` · มีสมาชิกลงชื่ออัตโนมัติล่วงหน้า ${queue.preRegisteredMemberIds.length} คน`
-                            : ''}
-                        </p>
                       </div>
                     ) : (
                       <div className="p-8 text-center text-xs font-bold text-slate-500 dark:text-slate-400 border-2 border-dashed border-slate-300 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-transparent">
@@ -626,6 +737,7 @@ export default function MemberQueueView({ onSwitchToAdmin }: MemberQueueViewProp
         )}
       </div>
     </div>
+    </>
   );
 }
 

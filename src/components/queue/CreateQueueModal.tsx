@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { createPortal } from 'react-dom';
-import { QueueDungeonType, QueueList } from '@/types/queue';
+import { QueueDungeonType, QueueList, generateQueueId } from '@/types/queue';
 import { QUEUE_PRESETS, QueuePreset } from '@/constants/queuePresets';
 import { useGuildStore } from '@/lib/guildStore';
 import JobEmblem from '@/components/tactical/JobEmblem';
@@ -10,13 +10,15 @@ import JobEmblem from '@/components/tactical/JobEmblem';
 interface CreateQueueModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (data: Omit<QueueList, 'id' | 'createdAt' | 'entries'>) => void;
+  onCreate: (data: Omit<QueueList, 'createdAt' | 'entries'> & { id?: string }) => void;
 }
 
 export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQueueModalProps) {
   const { members } = useGuildStore();
 
   const [selectedPresetId, setSelectedPresetId] = useState<QueueDungeonType>('vanished_95');
+  const [customQueueId, setCustomQueueId] = useState<string>(() => generateQueueId('vanished_95'));
+  const [isCustomIdEdited, setIsCustomIdEdited] = useState(false);
   const [customTitle, setCustomTitle] = useState('');
   const [maxPartySize, setMaxPartySize] = useState<number>(5);
   const [maxCapacity, setMaxCapacity] = useState<number | undefined>(undefined);
@@ -73,6 +75,14 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
     setSelectedPresetId(preset.id);
     setCustomTitle(preset.name);
     setMaxPartySize(preset.defaultPartySize || 5);
+    if (!isCustomIdEdited) {
+      setCustomQueueId(generateQueueId(preset.id));
+    }
+  };
+
+  const handleRegenerateId = () => {
+    setCustomQueueId(generateQueueId(selectedPresetId));
+    setIsCustomIdEdited(false);
   };
 
   const handleAddMember = (mId: string) => {
@@ -132,6 +142,7 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
     }
 
     onCreate({
+      id: customQueueId.trim() || generateQueueId(selectedPresetId),
       title: finalTitle,
       dungeonType: selectedPresetId,
       dungeonCategory: currentPreset?.category || (isCustom ? 'custom' : 'vanished'),
@@ -267,6 +278,45 @@ export default function CreateQueueModal({ isOpen, onClose, onCreate }: CreateQu
                 placeholder="เช่น มายาสิ้นสูญ Lv.95 (รอบ 20:30 น.)"
                 className="w-full rounded-xl border border-slate-700 bg-slate-950 px-3.5 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
               />
+            </div>
+
+            {/* Queue URL ID / Slug (ใคร list มัน) */}
+            <div className="rounded-2xl border border-indigo-500/30 bg-indigo-950/20 p-3 sm:p-3.5 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-bold text-indigo-200 flex items-center gap-1.5">
+                  <span>🆔 รหัสประจำ List สำหรับใส่ URL (Queue URL ID):</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={handleRegenerateId}
+                  className="text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-900/40 hover:bg-indigo-900/60 px-2.5 py-1 rounded-lg border border-indigo-500/40 transition flex items-center gap-1 cursor-pointer active:scale-95"
+                  title="กดเพื่อสุ่มรหัส ID ใหม่"
+                >
+                  <span>🎲 สุ่มรหัสใหม่</span>
+                </button>
+              </div>
+
+              <div>
+                <input
+                  type="text"
+                  value={customQueueId}
+                  onChange={(e) => {
+                    const cleaned = e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+                    setCustomQueueId(cleaned);
+                    setIsCustomIdEdited(true);
+                  }}
+                  placeholder="เช่น apo-nightmare-8a2 หรือ party-1"
+                  className="w-full rounded-xl border border-indigo-500/40 bg-slate-950 px-3.5 py-2 font-mono text-sm text-indigo-300 placeholder-slate-600 focus:border-indigo-400 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400 font-medium pt-0.5">
+                <span>🔗 ลิงก์ตรงสำหรับส่งให้สมาชิก:</span>
+                <span className="font-mono text-indigo-300 bg-slate-900/90 px-2 py-0.5 rounded-md border border-indigo-500/30 font-bold truncate max-w-full">
+                  /queue/join?id={customQueueId || '...'}
+                </span>
+                <span className="text-slate-500 text-[10px]">(สมาชิกกดลิงก์นี้จะเปิดเฉพาะ List นี้ทันที)</span>
+              </div>
             </div>
 
             {/* Max Queue Capacity */}

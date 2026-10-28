@@ -3,10 +3,12 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import type { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import { GUILD_ID, GUILD_NAME, DEFAULT_PIN } from '@/config/guildConfig';
 import { Member } from '@/types/member';
 import { Party, Team, LaneKey, FieldZoneKey } from '@/types/party';
 import { AuctionItem, AuctionEntry, AuctionRound, BidRecord, isTitleItem, isChestItem, isMultiEntryItem } from '@/types/auction';
 import { QueueList, QueueEntry } from '@/types/queue';
+import { TUMDOOD_PRESET_PARTIES } from '@/data/tumdoodSquads';
 
 export interface GuildState {
   guildName: string;
@@ -106,12 +108,12 @@ export interface GuildState {
 
   // Queue Management
   queueLists: QueueList[];
-  createQueueList: (data: Omit<QueueList, 'id' | 'createdAt' | 'entries'>) => string;
+  createQueueList: (data: Omit<QueueList, 'createdAt' | 'entries'> & { id?: string }) => string;
   updateQueueList: (id: string, updates: Partial<QueueList>) => void;
   deleteQueueList: (id: string) => void;
-  addMemberToQueue: (queueId: string, memberId: string, note?: string) => { success: boolean; message: string };
-  removeMemberFromQueue: (queueId: string, entryId: string) => void;
-  removeMemberByMemberIdFromQueue: (queueId: string, memberId: string) => void;
+  addMemberToQueue: (queueId: string, memberId: string, note?: string) => Promise<{ success: boolean; message: string }>;
+  removeMemberFromQueue: (queueId: string, entryId: string) => Promise<void>;
+  removeMemberByMemberIdFromQueue: (queueId: string, memberId: string) => Promise<{ success: boolean; message: string }>;
   reorderQueueEntries: (queueId: string, entries: QueueEntry[]) => void;
   toggleQueueEntryCompleted: (queueId: string, entryId: string) => void;
   clearQueueEntries: (queueId: string) => void;
@@ -141,125 +143,123 @@ const DEFAULT_GVG_PARTIES: Party[] = [
   { id: 'gvg_p8', name: 'ปาร์ตี้ 8', teamId: 'team_c', lane: 'roam_right', slots: [null, null, null, null, null] },
 ];
 
+export const MOONZ_PRESET_PARTIES: Party[] = [
+  {
+    id: 'preset_p_default_1',
+    name: 'ตี้ประจำ 1',
+    teamId: 'preset',
+    teamColor: 'rose',
+    category: 'preset',
+    slots: ['m_csv_1792954365593_1_4zxo', 'm_csv_1792954365593_3_tjfl', 'm_csv_1792954365593_4_d5bt', 'm_csv_1792954365593_6_j3b0', 'm_csv_1792954365593_8_ec78'],
+  },
+  {
+    id: 'preset_p_default_2',
+    name: 'ตี้ประจำ 2',
+    teamId: 'preset',
+    teamColor: 'blue',
+    category: 'preset',
+    slots: ['m_csv_1792696734525_87', 'm_csv_1792696734525_6', 'm_csv_1792696734525_10', 'm_csv_1792696734525_19', 'm_csv_1792696734525_23'],
+  },
+  { id: 'preset_p_default_3', name: 'ตี้ประจำ 3', teamId: 'preset', teamColor: 'amber', category: 'preset', slots: [null, null, null, null, null] },
+  { id: 'preset_p_default_4', name: 'ตี้ประจำ 4', teamId: 'preset', teamColor: 'emerald', category: 'preset', slots: [null, null, null, null, null] },
+  { id: 'preset_p_default_5', name: 'ตี้ประจำ 5', teamId: 'preset', teamColor: 'purple', category: 'preset', slots: [null, null, null, null, null] },
+  { id: 'preset_p_default_6', name: 'ตี้ประจำ 6', teamId: 'preset', teamColor: 'cyan', category: 'preset', slots: [null, null, null, null, null] },
+  { id: 'preset_p_default_7', name: 'ตี้ประจำ 7', teamId: 'preset', teamColor: 'rose', category: 'preset', slots: [null, null, null, null, null] },
+  { id: 'preset_p_default_8', name: 'ตี้ประจำ 8', teamId: 'preset', teamColor: 'blue', category: 'preset', slots: [null, null, null, null, null] },
+];
+
+export const DEFAULT_PRESET_PARTIES: Party[] = GUILD_ID === 2 ? TUMDOOD_PRESET_PARTIES : MOONZ_PRESET_PARTIES;
+
 const GuildContext = createContext<GuildState | null>(null);
 
 export function GuildProvider({ children }: { children: React.ReactNode }) {
-  const [guildName, setGuildName] = useState('TUMDOOD');
+  const [guildName, setGuildName] = useState(GUILD_NAME);
   const [fileTimestamp, setFileTimestamp] = useState('กำลังโหลด...');
   const [members, setMembers] = useState<Member[]>([]);
   const [gvgTeams, setGvgTeams] = useState<Team[]>(DEFAULT_GVG_TEAMS);
   const [gvgParties, setGvgParties] = useState<Party[]>(DEFAULT_GVG_PARTIES);
-  const [siegeTeams, setSiegeTeams] = useState<Team[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('TUMDOOD_siege_teams');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-    }
-    return [{ id: 'siege_team_1', name: 'ทีมปราสาท 1', color: 'sky', field: 'main' }];
-  });
+  const [siegeTeams, setSiegeTeams] = useState<Team[]>([
+    { id: 'siege_team_1', name: 'ทีมปราสาท 1', color: 'sky', field: 'main' }
+  ]);
   const [siegeParties, setSiegeParties] = useState<Party[]>([]);
-  const [polarityTeams, setPolarityTeams] = useState<Team[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('TUMDOOD_polarity_teams');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-        }
-      } catch (e) {}
-    }
-    return [{ id: 'pol_main', name: 'สงครามดาว', color: 'amber', field: 'main' }];
-  });
+  const [polarityTeams, setPolarityTeams] = useState<Team[]>([
+    { id: 'pol_main', name: 'สงครามดาว', color: 'amber', field: 'main' }
+  ]);
   const [polarityParties, setPolarityParties] = useState<Party[]>([]);
-  const [presetParties, setPresetParties] = useState<Party[]>([]);
-  const [auctionRounds, setAuctionRounds] = useState<AuctionRound[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('TUMDOOD_auction_rounds');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+  const [presetParties, setPresetParties] = useState<Party[]>(DEFAULT_PRESET_PARTIES);
+  const [auctionRounds, setAuctionRounds] = useState<AuctionRound[]>([
+    {
+      id: 'round_default',
+      name: 'รอบประมูลรอบที่ 1',
+      date: new Date().toISOString().split('T')[0],
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      note: 'รอบประมูลเริ่มต้น',
+    },
+  ]);
+  const [activeRoundId, setActiveRoundId] = useState<string | null>('round_default');
+  const [auctionItems, setAuctionItems] = useState<AuctionItem[]>([]);
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [queueLists, setQueueLists] = useState<QueueList[]>([]);
+
+  // Hydrate local cache on client mount to eliminate SSR hydration mismatch
+  useEffect(() => {
+    try {
+      const cachedSiege = localStorage.getItem('Moonz_siege_teams');
+      if (cachedSiege) {
+        const parsed = JSON.parse(cachedSiege);
+        if (Array.isArray(parsed) && parsed.length > 0) setSiegeTeams(parsed);
+      }
+      const cachedPol = localStorage.getItem('Moonz_polarity_teams');
+      if (cachedPol) {
+        const parsed = JSON.parse(cachedPol);
+        if (Array.isArray(parsed) && parsed.length > 0) setPolarityTeams(parsed);
+      }
+      const cachedRounds = localStorage.getItem('Moonz_auction_rounds');
+      if (cachedRounds) {
+        const parsed = JSON.parse(cachedRounds);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setAuctionRounds(parsed);
+          const active = parsed.find((r: AuctionRound) => r.status === 'active');
+          setActiveRoundId(active ? active.id : parsed[0].id);
         }
-      } catch (e) {}
-    }
-    return [
-      {
-        id: 'round_default',
-        name: 'รอบประมูลรอบที่ 1',
-        date: new Date().toISOString().split('T')[0],
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        note: 'รอบประมูลเริ่มต้น',
-      },
-    ];
-  });
-  const [activeRoundId, setActiveRoundId] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cachedRounds = localStorage.getItem('TUMDOOD_auction_rounds');
-        if (cachedRounds) {
-          const parsed = JSON.parse(cachedRounds);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            const active = parsed.find((r: AuctionRound) => r.status === 'active');
-            return active ? active.id : parsed[0].id;
+      }
+      const cachedAuctions = localStorage.getItem('Moonz_auctions');
+      if (cachedAuctions) {
+        const parsed = JSON.parse(cachedAuctions);
+        if (Array.isArray(parsed)) setAuctionItems(parsed);
+      }
+      const cachedQueues = localStorage.getItem('Moonz_queue_lists');
+      if (cachedQueues) {
+        const parsed = JSON.parse(cachedQueues);
+        if (Array.isArray(parsed)) setQueueLists(parsed);
+      }
+      const cachedPreset = localStorage.getItem(`${GUILD_NAME}_preset_parties`) || localStorage.getItem('Moonz_preset_parties');
+      if (cachedPreset) {
+        const parsed = JSON.parse(cachedPreset);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          if (GUILD_ID === 2 && parsed.length < 32) {
+            setPresetParties(DEFAULT_PRESET_PARTIES);
+          } else {
+            setPresetParties(parsed);
           }
         }
-      } catch (e) {}
-    }
-    return 'round_default';
-  });
+      }
+    } catch (_) {}
+  }, []);
 
-  const [auctionItems, setAuctionItems] = useState<AuctionItem[]>(() => {
-    if (typeof window !== 'undefined') {
+  useEffect(() => {
+    if (typeof window !== 'undefined' && presetParties.length > 0) {
       try {
-        const cached = localStorage.getItem('TUMDOOD_auctions');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) return parsed;
-        }
+        localStorage.setItem(`${GUILD_NAME}_preset_parties`, JSON.stringify(presetParties));
       } catch (e) {}
     }
-    return [];
-  });
-  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  }, [presetParties]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       try {
-        localStorage.setItem('TUMDOOD_auctions', JSON.stringify(auctionItems));
-      } catch (e) {}
-    }
-  }, [auctionItems]);
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify(auctionRounds));
-      } catch (e) {}
-    }
-  }, [auctionRounds]);
-
-  const [queueLists, setQueueLists] = useState<QueueList[]>(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        const cached = localStorage.getItem('TUMDOOD_queue_lists');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed)) return parsed;
-        }
-      } catch (e) {}
-    }
-    return [];
-  });
-
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        localStorage.setItem('TUMDOOD_queue_lists', JSON.stringify(queueLists));
+        localStorage.setItem('Moonz_queue_lists', JSON.stringify(queueLists));
       } catch (e) {}
     }
   }, [queueLists]);
@@ -281,6 +281,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       : 'server'
   );
   const realtimeChannelRef = useRef<RealtimeChannel | null>(null);
+  const hasModularTablesRef = useRef<boolean>(false);
 
   // References to latest state to avoid stale closures in save
   const latestStateRef = useRef({
@@ -376,7 +377,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       if (polTeamsConfig && Array.isArray(polTeamsConfig.teams) && polTeamsConfig.teams.length > 0) {
         setPolarityTeams(polTeamsConfig.teams);
         try {
-          localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(polTeamsConfig.teams));
+          localStorage.setItem('Moonz_polarity_teams', JSON.stringify(polTeamsConfig.teams));
         } catch (e) {}
       }
 
@@ -401,7 +402,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       if (siegeTeamsConfig && Array.isArray(siegeTeamsConfig.teams) && siegeTeamsConfig.teams.length > 0) {
         setSiegeTeams(siegeTeamsConfig.teams);
         try {
-          localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
+          localStorage.setItem('Moonz_siege_teams', JSON.stringify(siegeTeamsConfig.teams));
         } catch (e) {}
       } else if (siegeRaw.length > 0) {
         const teamMap = new Map<string, Team>();
@@ -420,7 +421,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         if (extracted.length > 0) {
           setSiegeTeams(extracted);
           try {
-            localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(extracted));
+            localStorage.setItem('Moonz_siege_teams', JSON.stringify(extracted));
           } catch (e) {}
         }
       }
@@ -450,14 +451,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       if (presetRaw.length > 0) {
         setPresetParties(presetRaw);
       } else {
-        setPresetParties(
-          Array.from({ length: 8 }, (_, i) => ({
-            id: `preset_p${i + 1}`,
-            name: `ตี้ประจำ ${i + 1}`,
-            teamId: 'preset',
-            slots: [null, null, null, null, null],
-          }))
-        );
+        setPresetParties(DEFAULT_PRESET_PARTIES);
       }
 
       // Auction Items & Rounds
@@ -466,7 +460,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         if (Array.isArray((auctionEntry as any).rounds)) {
           setAuctionRounds((auctionEntry as any).rounds);
           try {
-            localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify((auctionEntry as any).rounds));
+            localStorage.setItem('Moonz_auction_rounds', JSON.stringify((auctionEntry as any).rounds));
           } catch (e) {}
         }
         if (Array.isArray((auctionEntry as any).items)) {
@@ -486,7 +480,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
           });
           setAuctionItems(sanitizedItems);
           try {
-            localStorage.setItem('TUMDOOD_auctions', JSON.stringify(sanitizedItems));
+            localStorage.setItem('Moonz_auctions', JSON.stringify(sanitizedItems));
           } catch (e) {}
         }
       }
@@ -496,7 +490,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       if (queueEntry && Array.isArray((queueEntry as any).lists)) {
         setQueueLists((queueEntry as any).lists);
         try {
-          localStorage.setItem('TUMDOOD_queue_lists', JSON.stringify((queueEntry as any).lists));
+          localStorage.setItem('Moonz_queue_lists', JSON.stringify((queueEntry as any).lists));
         } catch (e) {}
       }
     }
@@ -506,16 +500,107 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     }, 800);
   }, []);
 
-  // Silent reload from Supabase (without toggling full-page loading spinner)
-  const silentReloadFromCloud = useCallback(async () => {
+  // Silent reload from Supabase (can target a specific table or reload all)
+  const silentReloadFromCloud = useCallback(async (targetTable?: string) => {
     // If pending local changes or saving, avoid overwriting local edits
     if (autoSaveTimerRef.current) return;
 
     try {
+      if (targetTable === 'guild_queues') {
+        const { data } = await supabase.from('guild_queues').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data && Array.isArray(data.lists)) {
+          isRemoteSyncingRef.current = true;
+          setQueueLists(data.lists);
+          try { localStorage.setItem('Moonz_queue_lists', JSON.stringify(data.lists)); } catch (_) {}
+          setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          return;
+        }
+      }
+
+      if (targetTable === 'guild_auctions') {
+        const { data } = await supabase.from('guild_auctions').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data) {
+          isRemoteSyncingRef.current = true;
+          if (Array.isArray(data.items)) {
+            setAuctionItems(data.items);
+            try { localStorage.setItem('Moonz_auctions', JSON.stringify(data.items)); } catch (_) {}
+          }
+          if (Array.isArray(data.rounds)) {
+            setAuctionRounds(data.rounds);
+            try { localStorage.setItem('Moonz_auction_rounds', JSON.stringify(data.rounds)); } catch (_) {}
+          }
+          setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          return;
+        }
+      }
+
+      if (targetTable === 'guild_members') {
+        const { data } = await supabase.from('guild_members').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data && Array.isArray(data.members)) {
+          isRemoteSyncingRef.current = true;
+          setMembers(data.members);
+          setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          return;
+        }
+      }
+
+      if (targetTable === 'guild_gvg') {
+        const { data } = await supabase.from('guild_gvg').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data) {
+          isRemoteSyncingRef.current = true;
+          if (Array.isArray(data.teams) && data.teams.length > 0) setGvgTeams(data.teams);
+          if (Array.isArray(data.parties)) setGvgParties(data.parties);
+          setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          return;
+        }
+      }
+
+      if (targetTable === 'guild_siege') {
+        const { data } = await supabase.from('guild_siege').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data) {
+          isRemoteSyncingRef.current = true;
+          if (Array.isArray(data.teams) && data.teams.length > 0) {
+            setSiegeTeams(data.teams);
+            try { localStorage.setItem('Moonz_siege_teams', JSON.stringify(data.teams)); } catch (_) {}
+          }
+          if (Array.isArray(data.parties)) setSiegeParties(data.parties);
+          setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          return;
+        }
+      }
+
+      if (targetTable === 'guild_polarity') {
+        const { data } = await supabase.from('guild_polarity').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data) {
+          isRemoteSyncingRef.current = true;
+          if (Array.isArray(data.teams) && data.teams.length > 0) {
+            setPolarityTeams(data.teams);
+            try { localStorage.setItem('Moonz_polarity_teams', JSON.stringify(data.teams)); } catch (_) {}
+          }
+          if (Array.isArray(data.parties)) setPolarityParties(data.parties);
+          if (Array.isArray(data.preset_parties) && data.preset_parties.length > 0) {
+            setPresetParties(data.preset_parties);
+            try { localStorage.setItem(`${GUILD_NAME}_preset_parties`, JSON.stringify(data.preset_parties)); } catch (_) {}
+          }
+          setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
+          return;
+        }
+      }
+
+      if (targetTable === 'guild_settings') {
+        const { data } = await supabase.from('guild_settings').select('*').eq('id', GUILD_ID).maybeSingle();
+        if (data) {
+          if (data.guild_name) setGuildName(data.guild_name);
+          if (data.file_timestamp) setFileTimestamp(data.file_timestamp);
+          return;
+        }
+      }
+
+      // Universal fallback: guild_state
       const { data, error: fetchErr } = await supabase
         .from('guild_state')
         .select('*')
-        .eq('id', 2)
+        .eq('id', GUILD_ID)
         .maybeSingle();
 
       if (fetchErr) {
@@ -531,15 +616,91 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyRemoteData]);
 
-  // Initial Fetch from Supabase
+  // Initial Fetch from Supabase (Modular tables with guild_state fallback)
   const loadFromCloud = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
+      // 1. Try parallel fetch from modular tables
+      try {
+        const [settRes, memRes, gvgRes, siegeRes, polRes, aucRes, queRes] = await Promise.all([
+          supabase.from('guild_settings').select('*').eq('id', GUILD_ID).maybeSingle(),
+          supabase.from('guild_members').select('*').eq('id', GUILD_ID).maybeSingle(),
+          supabase.from('guild_gvg').select('*').eq('id', GUILD_ID).maybeSingle(),
+          supabase.from('guild_siege').select('*').eq('id', GUILD_ID).maybeSingle(),
+          supabase.from('guild_polarity').select('*').eq('id', GUILD_ID).maybeSingle(),
+          supabase.from('guild_auctions').select('*').eq('id', GUILD_ID).maybeSingle(),
+          supabase.from('guild_queues').select('*').eq('id', GUILD_ID).maybeSingle(),
+        ]);
+
+        const hasAnyModular = !!(
+          settRes.data || memRes.data || gvgRes.data || siegeRes.data ||
+          polRes.data || aucRes.data || queRes.data
+        );
+
+        if (hasAnyModular) {
+          hasModularTablesRef.current = true;
+
+          if (settRes.data) {
+            if (settRes.data.guild_name) setGuildName(settRes.data.guild_name);
+            if (settRes.data.file_timestamp) setFileTimestamp(settRes.data.file_timestamp);
+            if (settRes.data.pin) {
+              try { localStorage.setItem('Moonz_guild_pin', settRes.data.pin); } catch (_) {}
+            }
+          }
+          if (memRes.data && Array.isArray(memRes.data.members)) {
+            setMembers(memRes.data.members);
+          }
+          if (gvgRes.data) {
+            if (Array.isArray(gvgRes.data.teams) && gvgRes.data.teams.length > 0) setGvgTeams(gvgRes.data.teams);
+            if (Array.isArray(gvgRes.data.parties)) setGvgParties(gvgRes.data.parties);
+          }
+          if (siegeRes.data) {
+            if (Array.isArray(siegeRes.data.teams) && siegeRes.data.teams.length > 0) {
+              setSiegeTeams(siegeRes.data.teams);
+              try { localStorage.setItem('Moonz_siege_teams', JSON.stringify(siegeRes.data.teams)); } catch (_) {}
+            }
+            if (Array.isArray(siegeRes.data.parties)) setSiegeParties(siegeRes.data.parties);
+          }
+          if (polRes.data) {
+            if (Array.isArray(polRes.data.teams) && polRes.data.teams.length > 0) {
+              setPolarityTeams(polRes.data.teams);
+              try { localStorage.setItem('Moonz_polarity_teams', JSON.stringify(polRes.data.teams)); } catch (_) {}
+            }
+            if (Array.isArray(polRes.data.parties)) setPolarityParties(polRes.data.parties);
+            if (Array.isArray(polRes.data.preset_parties) && polRes.data.preset_parties.length > 0) {
+              setPresetParties(polRes.data.preset_parties);
+              try { localStorage.setItem(`${GUILD_NAME}_preset_parties`, JSON.stringify(polRes.data.preset_parties)); } catch (_) {}
+            } else {
+              setPresetParties(DEFAULT_PRESET_PARTIES);
+              try { localStorage.setItem(`${GUILD_NAME}_preset_parties`, JSON.stringify(DEFAULT_PRESET_PARTIES)); } catch (_) {}
+            }
+          }
+          if (aucRes.data) {
+            if (Array.isArray(aucRes.data.items)) {
+              setAuctionItems(aucRes.data.items);
+              try { localStorage.setItem('Moonz_auctions', JSON.stringify(aucRes.data.items)); } catch (_) {}
+            }
+            if (Array.isArray(aucRes.data.rounds)) {
+              setAuctionRounds(aucRes.data.rounds);
+              try { localStorage.setItem('Moonz_auction_rounds', JSON.stringify(aucRes.data.rounds)); } catch (_) {}
+            }
+          }
+          if (queRes.data && Array.isArray(queRes.data.lists)) {
+            setQueueLists(queRes.data.lists);
+            try { localStorage.setItem('Moonz_queue_lists', JSON.stringify(queRes.data.lists)); } catch (_) {}
+          }
+          return;
+        }
+      } catch (modularErr) {
+        console.warn('Modular tables check fallback to guild_state:', modularErr);
+      }
+
+      // 2. Fallback to guild_state
       const { data, error: fetchErr } = await supabase
         .from('guild_state')
         .select('*')
-        .eq('id', 2)
+        .eq('id', GUILD_ID)
         .maybeSingle();
 
       if (fetchErr) throw fetchErr;
@@ -557,7 +718,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     }
   }, [applyRemoteData]);
 
-  // Save to Supabase (uses latestStateRef)
+  // Save to Supabase (Modular tables + guild_state fallback)
   const saveToCloud = useCallback(async () => {
     setIsSaving(true);
     setSaveStatus('saving');
@@ -585,7 +746,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         };
       });
 
-      const pin = typeof window !== 'undefined' ? localStorage.getItem('TUMDOOD_guild_pin') || 'TUMDOOD' : 'TUMDOOD';
+      const pin = typeof window !== 'undefined' ? localStorage.getItem('Moonz_guild_pin') || DEFAULT_PIN : DEFAULT_PIN;
       const authEntry = {
         id: '__guild_auth_config__',
         category: '__system__',
@@ -633,11 +794,12 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       };
 
       try {
-        localStorage.setItem('TUMDOOD_siege_teams', JSON.stringify(state.siegeTeams));
-        localStorage.setItem('TUMDOOD_polarity_teams', JSON.stringify(state.polarityTeams));
-        localStorage.setItem('TUMDOOD_auctions', JSON.stringify(sanitizedAuctionItems));
-        localStorage.setItem('TUMDOOD_auction_rounds', JSON.stringify(state.auctionRounds));
-        localStorage.setItem('TUMDOOD_queue_lists', JSON.stringify(state.queueLists));
+        localStorage.setItem('Moonz_siege_teams', JSON.stringify(state.siegeTeams));
+        localStorage.setItem('Moonz_polarity_teams', JSON.stringify(state.polarityTeams));
+        localStorage.setItem('Moonz_auctions', JSON.stringify(sanitizedAuctionItems));
+        localStorage.setItem('Moonz_auction_rounds', JSON.stringify(state.auctionRounds));
+        localStorage.setItem('Moonz_queue_lists', JSON.stringify(state.queueLists));
+        localStorage.setItem('Moonz_preset_parties', JSON.stringify(state.presetParties));
       } catch (e) {}
 
       const combinedParties = [
@@ -655,16 +817,60 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       const newUpdatedAt = new Date().toISOString();
       lastRemoteUpdatedAtRef.current = newUpdatedAt;
 
-      const { error: saveErr } = await supabase.from('guild_state').upsert({
-        id: 2,
-        guild_name: state.guildName,
-        file_timestamp: state.fileTimestamp,
-        members: state.members,
-        parties: combinedParties,
-        updated_at: newUpdatedAt,
-      });
-
-      if (saveErr) throw saveErr;
+      // Parallel saves across all modular tables + guild_state fallback
+      await Promise.allSettled([
+        supabase.from('guild_settings').upsert({
+          id: GUILD_ID,
+          guild_name: state.guildName,
+          pin,
+          file_timestamp: state.fileTimestamp,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_members').upsert({
+          id: GUILD_ID,
+          members: state.members,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_gvg').upsert({
+          id: GUILD_ID,
+          teams: state.gvgTeams,
+          parties: gvgPartiesWithMeta,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_siege').upsert({
+          id: GUILD_ID,
+          teams: state.siegeTeams,
+          parties: siegePartiesWithMeta,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_polarity').upsert({
+          id: GUILD_ID,
+          teams: state.polarityTeams,
+          parties: state.polarityParties,
+          preset_parties: state.presetParties,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_auctions').upsert({
+          id: GUILD_ID,
+          items: sanitizedAuctionItems,
+          rounds: state.auctionRounds,
+          active_round_id: state.activeRoundId || null,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_queues').upsert({
+          id: GUILD_ID,
+          lists: state.queueLists,
+          updated_at: newUpdatedAt,
+        }),
+        supabase.from('guild_state').upsert({
+          id: GUILD_ID,
+          guild_name: state.guildName,
+          file_timestamp: state.fileTimestamp,
+          members: state.members,
+          parties: combinedParties,
+          updated_at: newUpdatedAt,
+        }),
+      ]);
 
       // Broadcast realtime event to all other open tabs/windows/devices
       if (realtimeChannelRef.current) {
@@ -731,15 +937,22 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   }, [loadFromCloud]);
 
   // Multi-tier Realtime Synchronization:
-  // 1. Supabase Realtime channel (postgres_changes + broadcast)
+  // 1. Supabase Realtime channel (postgres_changes per modular table + broadcast)
   // 2. Browser StorageEvent (instant cross-tab update on same computer)
-  // 3. Fallback polling interval (3.5 seconds) ensuring updates even if WebSockets disconnect
+  // 3. Fallback polling interval (10 seconds)
   useEffect(() => {
     const channel = supabase
-      .channel('TUMDOOD_guild_realtime')
+      .channel(`moonz_guild_realtime_${GUILD_ID}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_queues', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_queues'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_auctions', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_auctions'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_members', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_members'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_gvg', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_gvg'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_siege', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_siege'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_polarity', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_polarity'))
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'guild_settings', filter: `id=eq.${GUILD_ID}` }, () => silentReloadFromCloud('guild_settings'))
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'guild_state', filter: 'id=eq.2' },
+        { event: '*', schema: 'public', table: 'guild_state', filter: `id=eq.${GUILD_ID}` },
         (payload: any) => {
           if (payload?.new) {
             if (payload.new.updated_at && payload.new.updated_at === lastRemoteUpdatedAtRef.current) {
@@ -747,7 +960,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
             }
             applyRemoteData(payload.new);
           } else {
-            silentReloadFromCloud();
+            silentReloadFromCloud('guild_state');
           }
         }
       )
@@ -755,7 +968,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         if (payload?.payload?.senderId === clientSessionId.current) {
           return;
         }
-        silentReloadFromCloud();
+        silentReloadFromCloud(payload?.payload?.table);
       })
       .subscribe();
 
@@ -764,7 +977,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     // Cross-tab instant sync
     const handleStorage = (e: StorageEvent) => {
       if (!e.newValue) return;
-      if (e.key === 'TUMDOOD_queue_lists') {
+      if (e.key === 'Moonz_queue_lists') {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
@@ -773,7 +986,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
           }
         } catch (_) {}
-      } else if (e.key === 'TUMDOOD_auctions') {
+      } else if (e.key === 'Moonz_auctions') {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
@@ -782,7 +995,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
             setTimeout(() => { isRemoteSyncingRef.current = false; }, 300);
           }
         } catch (_) {}
-      } else if (e.key === 'TUMDOOD_auction_rounds') {
+      } else if (e.key === 'Moonz_auction_rounds') {
         try {
           const parsed = JSON.parse(e.newValue);
           if (Array.isArray(parsed)) {
@@ -795,7 +1008,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener('storage', handleStorage);
 
-    // 10s Heartbeat polling (รีเฟรชทุกๆ 10 วินาที นิ่งๆ ไม่เด้ง)
+    // 10s Heartbeat polling (fallback check)
     const pollingInterval = setInterval(async () => {
       if (typeof document !== 'undefined' && document.hidden) return;
       if (autoSaveTimerRef.current || isRemoteSyncingRef.current) return;
@@ -803,7 +1016,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
         const { data, error } = await supabase
           .from('guild_state')
           .select('updated_at')
-          .eq('id', 2)
+          .eq('id', GUILD_ID)
           .maybeSingle();
 
         if (!error && data?.updated_at && data.updated_at !== lastRemoteUpdatedAtRef.current) {
@@ -1560,8 +1773,11 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Queue Operations
-  const createQueueList = (data: Omit<QueueList, 'id' | 'createdAt' | 'entries'>): string => {
-    const newId = `queue_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+  const createQueueList = (data: Omit<QueueList, 'createdAt' | 'entries'> & { id?: string }): string => {
+    const rawId = (data.id && data.id.trim())
+      ? data.id.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-')
+      : '';
+    const newId = rawId || `queue_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
     const isFutureSchedule = data.scheduledOpenAt ? new Date(data.scheduledOpenAt).getTime() > Date.now() : false;
     const preRegIds = data.preRegisteredMemberIds || [];
 
@@ -1605,10 +1821,46 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     triggerAutoSave();
   };
 
-  const addMemberToQueue = (queueId: string, memberId: string, note?: string): { success: boolean; message: string } => {
+  const addMemberToQueue = async (
+    queueId: string,
+    memberId: string,
+    note?: string
+  ): Promise<{ success: boolean; message: string }> => {
     const member = latestStateRef.current.members.find((m) => m.id === memberId);
     if (!member) return { success: false, message: 'ไม่พบข้อมูลสมาชิก' };
 
+    // 1. เรียก Atomic Database Function (RPC) บน Supabase ล็อกแถวด้วย FOR UPDATE
+    // ป้องกันคนกดพร้อมกันแล้วแย่งกัน / เด้งออก 100%
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('join_queue_atomic', {
+        p_guild_id: GUILD_ID,
+        p_queue_id: queueId,
+        p_member_id: member.id,
+        p_member_name: member.name,
+        p_member_job: member.job || null,
+        p_note: note?.trim() || null,
+      });
+
+      if (!rpcErr && data && typeof data === 'object') {
+        const res = data as { success: boolean; message: string; position?: number };
+        if (res.success) {
+          silentReloadFromCloud('guild_queues');
+          return {
+            success: true,
+            message: res.message || `เข้าร่วมคิวสำเร็จ! (อันดับที่ #${res.position})`,
+          };
+        } else {
+          return {
+            success: false,
+            message: res.message || 'ไม่สามารถเข้าร่วมคิวได้',
+          };
+        }
+      }
+    } catch (rpcEx) {
+      console.warn('join_queue_atomic RPC fallback:', rpcEx);
+    }
+
+    // 2. Fallback: ถ้ายังไม่ได้รัน SQL RPC บน Cloud
     let added = false;
     let errMessage = '';
     let newPosition = 1;
@@ -1652,7 +1904,22 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     return { success: false, message: errMessage || 'ไม่สามารถเข้าร่วมคิวได้' };
   };
 
-  const removeMemberFromQueue = (queueId: string, entryId: string) => {
+  const removeMemberFromQueue = async (queueId: string, entryId: string): Promise<void> => {
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('remove_queue_entry_atomic', {
+        p_guild_id: GUILD_ID,
+        p_queue_id: queueId,
+        p_entry_id: entryId,
+      });
+
+      if (!rpcErr && data && (data as any).success) {
+        silentReloadFromCloud('guild_queues');
+        return;
+      }
+    } catch (rpcEx) {
+      console.warn('remove_queue_entry_atomic RPC fallback:', rpcEx);
+    }
+
     setQueueLists((prev) =>
       prev.map((q) => {
         if (q.id !== queueId) return q;
@@ -1666,7 +1933,25 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
     triggerAutoSave();
   };
 
-  const removeMemberByMemberIdFromQueue = (queueId: string, memberId: string) => {
+  const removeMemberByMemberIdFromQueue = async (
+    queueId: string,
+    memberId: string
+  ): Promise<{ success: boolean; message: string }> => {
+    try {
+      const { data, error: rpcErr } = await supabase.rpc('leave_queue_atomic', {
+        p_guild_id: GUILD_ID,
+        p_queue_id: queueId,
+        p_member_id: memberId,
+      });
+
+      if (!rpcErr && data && (data as any).success) {
+        silentReloadFromCloud('guild_queues');
+        return { success: true, message: (data as any).message || 'ยกเลิกการต่อคิวเรียบร้อยแล้ว' };
+      }
+    } catch (rpcEx) {
+      console.warn('leave_queue_atomic RPC fallback:', rpcEx);
+    }
+
     setQueueLists((prev) =>
       prev.map((q) => {
         if (q.id !== queueId) return q;
@@ -1678,6 +1963,7 @@ export function GuildProvider({ children }: { children: React.ReactNode }) {
       })
     );
     triggerAutoSave();
+    return { success: true, message: 'ยกเลิกการต่อคิวเรียบร้อยแล้ว' };
   };
 
   const reorderQueueEntries = (queueId: string, entries: QueueEntry[]) => {

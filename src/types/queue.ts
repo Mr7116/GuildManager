@@ -75,3 +75,25 @@ export function formatQueueDateTime(isoStr?: string): string {
   }
 }
 
+/**
+ * สุ่มสร้าง ID / Slug สั้นๆ สำหรับ URL ของแต่ละ List คิว
+ * เช่น: apo-nightmare-8a2, maya-95-4k1, custom-9x3
+ */
+export function generateQueueId(dungeonType?: QueueDungeonType): string {
+  const prefixMap: Record<QueueDungeonType, string> = {
+    vanished_75: 'maya-75',
+    vanished_95: 'maya-95',
+    apocalypse_normal: 'apo-normal',
+    apocalypse_hard: 'apo-hard',
+    apocalypse_nightmare: 'apo-nightmare',
+    apocalypse_hell: 'apo-hell',
+    apocalypse_endless: 'apo-endless',
+    custom: 'q',
+  };
+
+  const prefix = (dungeonType && prefixMap[dungeonType]) || 'q';
+  const rand = Math.random().toString(36).substring(2, 6);
+  return `${prefix}-${rand}`;
+}
+
+

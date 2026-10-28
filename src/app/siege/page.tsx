@@ -356,7 +356,7 @@ export default function SiegePage() {
             <h1 className="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-white tracking-wide">
               ศึกชิงปราสาท (Siege War) — {guildName}
             </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400" suppressHydrationWarning>
               จัดทัพป้องกันและบุกยึดปราสาท • {effectiveTeams.length} ทีม • {siegeParties.length} ปาร์ตี้
             </p>
           </div>

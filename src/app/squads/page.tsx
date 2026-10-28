@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useGuildStore } from '@/lib/guildStore';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useGuildStore, DEFAULT_PRESET_PARTIES } from '@/lib/guildStore';
 import MemberPool from '@/components/tactical/MemberPool';
 import JobEmblemBar from '@/components/tactical/JobEmblemBar';
 import AutoSaveBadge from '@/components/common/AutoSaveBadge';
@@ -25,6 +25,12 @@ export default function SquadsPage() {
   const [selectedSlot, setSelectedSlot] = useState<{ partyId: string; slotIndex: number } | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string | null>(null);
   const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isLoading && presetParties.length === 0) {
+      setPresetParties(DEFAULT_PRESET_PARTIES);
+    }
+  }, [isLoading, presetParties.length, setPresetParties]);
 
   const assignedMemberIds = useMemo(() => {
     const ids = new Set<string>();

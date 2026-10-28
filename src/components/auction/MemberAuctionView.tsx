@@ -50,7 +50,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
   // Restore saved member from localStorage
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('TUMDOOD_auction_selected_member');
+      const saved = localStorage.getItem('Moonz_auction_selected_member');
       if (saved && members.some((m) => m.id === saved)) {
         setSelectedMemberId(saved);
       }
@@ -61,7 +61,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
   const handleSelectMember = (id: string) => {
     setSelectedMemberId(id);
     try {
-      localStorage.setItem('TUMDOOD_auction_selected_member', id);
+      localStorage.setItem('Moonz_auction_selected_member', id);
     } catch {}
   };
 
@@ -364,7 +364,7 @@ export default function MemberAuctionView({ onSwitchToAdmin }: MemberAuctionView
               onClick={() => {
                 setSelectedMemberId('');
                 try {
-                  localStorage.removeItem('TUMDOOD_auction_selected_member');
+                  localStorage.removeItem('Moonz_auction_selected_member');
                 } catch {}
               }}
               className="text-xs font-bold text-rose-600 dark:text-rose-400 hover:underline cursor-pointer"

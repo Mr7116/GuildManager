@@ -5,6 +5,7 @@ import Navbar from '@/components/layout/Navbar';
 import { AuthProvider } from '@/lib/auth';
 import { GuildProvider } from '@/lib/guildStore';
 import { ThemeProvider } from '@/lib/theme';
+import { GUILD_NAME } from '@/config/guildConfig';
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -27,7 +28,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'TUMDOOD Tactical — ระบบจัดทัพกิลด์วอร์',
+  title: `${GUILD_NAME} Tactical — ระบบจัดทัพกิลด์วอร์`,
   description: 'ระบบจัดผังทัพกิลด์วอร์ ROX (GVG / Siege / Polarity / Squads)',
 };
 
@@ -44,7 +45,7 @@ export default function RootLayout({
             __html: `
               (function() {
                 try {
-                  var t = localStorage.getItem('TUMDOOD_theme');
+                  var t = localStorage.getItem('Moonz_theme');
                   var isDark = t === 'dark' || (!t && window.matchMedia('(prefers-color-scheme: dark)').matches) || !t;
                   if (t === 'light') isDark = false;
                   if (isDark) {
