@@ -47,7 +47,8 @@ export default function Navbar() {
     pathname === '/auctions' ||
     pathname === '/auction/join' ||
     pathname === '/queues' ||
-    pathname === '/queue/join'
+    pathname === '/queue/join' ||
+    pathname === '/tactics/view'
   ) {
     return null;
   }

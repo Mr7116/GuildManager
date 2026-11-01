@@ -6,6 +6,7 @@ import { MAP_PRESETS, TACTICAL_ICONS, TACTICAL_COLORS } from '@/config/tacticsCo
 import TacticalPinMarker from './TacticalPinMarker';
 import TacticalDrawingCanvas from './TacticalDrawingCanvas';
 import TacticalPinEditModal from './TacticalPinEditModal';
+import TacticalPinViewModal from './TacticalPinViewModal';
 
 interface TacticalMapBoardProps {
   plan: TacticalPlan;
@@ -18,6 +19,7 @@ interface TacticalMapBoardProps {
   onUndoLine?: () => void;
   onClearLines?: () => void;
   availableParties?: string[];
+  isReadOnly?: boolean;
 }
 
 export default function TacticalMapBoard({
@@ -29,6 +31,7 @@ export default function TacticalMapBoard({
   isDrawingMode,
   drawingColor,
   availableParties,
+  isReadOnly = false,
 }: TacticalMapBoardProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const boardWrapperRef = useRef<HTMLDivElement>(null);
@@ -36,6 +39,7 @@ export default function TacticalMapBoard({
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [selectedPin, setSelectedPin] = useState<TacticalPin | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [draggingPinId, setDraggingPinId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -45,7 +49,7 @@ export default function TacticalMapBoard({
 
   // Handle placing a new pin on map click
   const handleMapClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDrawingMode || draggingPinId) return;
+    if (isReadOnly || isDrawingMode || draggingPinId) return;
     if (!containerRef.current) return;
 
     // Check if clicked directly on map container or map image
@@ -81,7 +85,7 @@ export default function TacticalMapBoard({
 
   // Dragging Pin logic
   const handleDragStart = (pin: TacticalPin, e: React.MouseEvent | React.TouchEvent) => {
-    if (isDrawingMode) return;
+    if (isReadOnly || isDrawingMode) return;
     setDraggingPinId(pin.id);
   };
 
@@ -252,33 +256,35 @@ export default function TacticalMapBoard({
           }}
           className="relative max-w-full max-h-full flex items-center justify-center"
         >
-          {/* Main Map Canvas Container with 1:1 or aspect ratio matching the map image */}
+          {/* Main Map Canvas Container: Perfectly shrink-wrapped around the image */}
           <div
             ref={containerRef}
             onClick={handleMapClick}
-            className={`relative rounded-2xl shadow-2xl overflow-hidden border-2 border-slate-700/80 bg-slate-900 select-none ${
-              isDrawingMode
+            className={`relative inline-block rounded-2xl shadow-2xl overflow-hidden border-2 border-slate-700/80 bg-slate-900 select-none shrink-0 ${
+              isReadOnly
+                ? 'cursor-default'
+                : isDrawingMode
                 ? 'cursor-crosshair'
                 : 'cursor-cell hover:border-indigo-500/70 transition-colors'
             }`}
-            style={{
-              width: 'min(92vw, 980px)',
-              maxHeight: '82vh',
-            }}
           >
-            {/* The Map Image */}
+            {/* The Map Image: Preserves natural aspect ratio without clipping on any screen */}
             <img
               src={mapImageUrl}
               alt={plan.name}
               draggable={false}
-              className="w-full h-auto object-contain block pointer-events-none select-none"
+              className={`block w-auto h-auto select-none pointer-events-none ${
+                isFullscreen
+                  ? 'max-h-[88vh] max-w-[94vw]'
+                  : 'max-h-[72vh] max-w-[min(90vw,900px)]'
+              }`}
             />
 
             {/* Tactical Route Drawing Layer */}
             <TacticalDrawingCanvas
               lines={plan.lines || []}
               activeColor={drawingColor}
-              isDrawingMode={isDrawingMode}
+              isDrawingMode={!isReadOnly && isDrawingMode}
               onAddLine={handleAddLine}
               containerRef={containerRef}
             />
@@ -292,10 +298,17 @@ export default function TacticalMapBoard({
                 isDragging={draggingPinId === pin.id}
                 onSelect={(p) => {
                   setSelectedPin(p);
+                  if (isReadOnly) {
+                    setIsViewModalOpen(true);
+                  }
                 }}
                 onEdit={(p) => {
                   setSelectedPin(p);
-                  setIsEditModalOpen(true);
+                  if (isReadOnly) {
+                    setIsViewModalOpen(true);
+                  } else {
+                    setIsEditModalOpen(true);
+                  }
                 }}
                 onDragStart={handleDragStart}
               />
@@ -306,22 +319,40 @@ export default function TacticalMapBoard({
         {/* Map Bottom Hint Pill */}
         <div className="absolute bottom-3 left-1/2 -translate-x-1/2 pointer-events-none z-20">
           <div className="px-3 py-1 rounded-full bg-slate-950/85 backdrop-blur-md border border-slate-700/80 text-[11px] font-bold text-slate-300 shadow-xl flex items-center gap-2">
-            <span>{isDrawingMode ? '✏️ โหมดวาดเส้น: ลากเมาส์/นิ้วเพื่อวาดเส้นเดินทัพ' : '📌 คลิกแผนที่เพื่อปักหมุด · ลากเพื่อย้าย · ดับเบิ้ลคลิก 2 ครั้งเพื่อแก้ไข'}</span>
+            <span>
+              {isReadOnly
+                ? '👁️ มุมมองดูอย่างเดียว: คลิกที่หมุดเพื่อดูรายละเอียดคำสั่งประจำจุด'
+                : isDrawingMode
+                ? '✏️ โหมดวาดเส้น: ลากเมาส์/นิ้วเพื่อวาดเส้นเดินทัพ'
+                : '📌 คลิกแผนที่เพื่อปักหมุด · ลากเพื่อย้าย · ดับเบิ้ลคลิก 2 ครั้งเพื่อแก้ไข'}
+            </span>
           </div>
         </div>
       </div>
 
-      {/* Pin Edit Modal */}
-      <TacticalPinEditModal
+      {/* Pin Edit Modal (Admin / Edit Mode) */}
+      {!isReadOnly && (
+        <TacticalPinEditModal
+          pin={selectedPin}
+          isOpen={isEditModalOpen}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedPin(null);
+          }}
+          onSave={handleSavePin}
+          onDelete={handleDeletePin}
+          availableParties={availableParties}
+        />
+      )}
+
+      {/* Pin View Modal (Member / Read-Only Mode) */}
+      <TacticalPinViewModal
         pin={selectedPin}
-        isOpen={isEditModalOpen}
+        isOpen={isViewModalOpen}
         onClose={() => {
-          setIsEditModalOpen(false);
+          setIsViewModalOpen(false);
           setSelectedPin(null);
         }}
-        onSave={handleSavePin}
-        onDelete={handleDeletePin}
-        availableParties={availableParties}
       />
     </div>
   );
