@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
   { label: 'Siege ปราสาท', href: '/siege', icon: '🏰' },
   { label: 'Polarity สงครามดาว', href: '/polarity', icon: '✨' },
   { label: 'ตี้ประจำ (Squads)', href: '/squads', icon: '👥' },
+  { label: 'แผนการรบ (Tactics)', href: '/tactics', icon: '🗺️' },
   { label: 'จัดการสมาชิก', href: '/roster', icon: '🛡️' },
   { label: 'กิจกรรมประจำสัปดาห์', href: '/events', icon: '📅' },
   { label: 'ประมูลไอเทม', href: '/auction', icon: '💎' },
