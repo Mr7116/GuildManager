@@ -90,9 +90,25 @@ export default function ImportCsvModal({ isOpen, onClose }: ImportCsvModalProps)
         }
 
         const imported: Member[] = rows.map((r, idx) => {
-          const name = (r['ชื่อผู้เล่น'] || r['ชื่อ'] || r['Name'] || `Member_${idx + 1}`).trim();
-          const onlineStr = (r['สถานะออนไลน์'] || r['Online'] || '[ออนไลน์]').trim();
-          const isLongOffline = ['ออฟไลน์ 4 วัน', 'ออฟไลน์ 5 วัน', 'ออฟไลน์ 6 วัน', 'ออฟไลน์เกิน 7 วัน'].includes(onlineStr);
+          const name = (
+            r['ชื่อตัวละคร'] ||
+            r['ชื่อผู้เล่น'] ||
+            r['ชื่อ'] ||
+            r['Name'] ||
+            `Member_${idx + 1}`
+          ).trim();
+          const onlineStr = (
+            r['สถานะการออนไลน์'] ||
+            r['สถานะออนไลน์'] ||
+            r['Online'] ||
+            '[ออนไลน์]'
+          ).trim();
+          const isLongOffline = [
+            'ออฟไลน์ 4 วัน',
+            'ออฟไลน์ 5 วัน',
+            'ออฟไลน์ 6 วัน',
+            'ออฟไลน์เกิน 7 วัน',
+          ].includes(onlineStr);
 
           return {
             id: `m_csv_${Date.now()}_${r['ID'] || idx + 1}_${Math.random().toString(36).substring(2, 6)}`,
@@ -104,9 +120,18 @@ export default function ImportCsvModal({ isOpen, onClose }: ImportCsvModalProps)
             gender: (r['เพศ'] || r['Gender'] || '-').trim(),
             position: (r['ตำแหน่ง'] || r['Position'] || 'สมาชิก').trim(),
             gear: parseInt(r['คะแนน Gear'] || r['Gear'] || r['คะแนน'] || '0', 10) || 0,
-            weeklyActivity: parseInt(r['กิจกรรมสัปดาห์นี้'] || '0', 10) || 0,
-            weeklyContrib: parseInt(r['แต้มสนับสนุนสัปดาห์นี้'] || '0', 10) || 0,
-            totalContrib: parseInt(r['แต้มสนับสนุนสะสม'] || '0', 10) || 0,
+            weeklyActivity: parseInt(
+              r['กิจกรรมกิลด์รายสัปดาห์'] || r['กิจกรรมสัปดาห์นี้'] || '0',
+              10
+            ) || 0,
+            weeklyContrib: parseInt(
+              r['คะแนนบริจาคสัปดาห์'] || r['แต้มสนับสนุนสัปดาห์นี้'] || '0',
+              10
+            ) || 0,
+            totalContrib: parseInt(
+              r['คะแนนบริจาครวม'] || r['แต้มสนับสนุนสะสม'] || '0',
+              10
+            ) || 0,
             onlineStatus: onlineStr,
             status: isLongOffline ? 'leave' : 'ready',
             leaveReason: isLongOffline ? onlineStr : undefined,
