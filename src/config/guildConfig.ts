@@ -10,14 +10,14 @@
  * ทุกหน้า ทุกตาราง และระบบ Realtime ทั้งหมดจะเปลี่ยนตามทันที!
  */
 
-// 1. กำหนด ID กิลด์ (1 = Moonz, 2 = TUMDOOD)
+// 1. กำหนด ID กิลด์ (1 = Moonz, 2 = TAMDAAD)
 export const GUILD_ID: number = (() => {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_GUILD_ID) {
     const parsed = Number(process.env.NEXT_PUBLIC_GUILD_ID);
     if (!isNaN(parsed) && parsed > 0) return parsed;
   }
-  // 👈 เปลี่ยนเลข ID เริ่มต้นตรงนี้ (2 = TUMDOOD, 1 = Moonz)
-  return 1;
+  // 👈 เปลี่ยนเลข ID เริ่มต้นตรงนี้ (2 = TAMDAAD, 1 = Moonz)
+  return 2;
 })();
 
 // 2. กำหนดชื่อกิลด์หลัก (Guild Name)
@@ -25,7 +25,7 @@ export const GUILD_NAME: string = (() => {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_GUILD_NAME) {
     return process.env.NEXT_PUBLIC_GUILD_NAME;
   }
-  return GUILD_ID === 2 ? 'TUMDOOD' : 'Moonz';
+  return GUILD_ID === 2 ? 'TAMDAAD' : 'Moonz';
 })();
 
 // 3. กำหนดรหัสผ่านเริ่มต้น (Default Passcode)
@@ -33,7 +33,7 @@ export const DEFAULT_PIN: string = (() => {
   if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_GUILD_PIN) {
     return process.env.NEXT_PUBLIC_GUILD_PIN;
   }
-  return GUILD_ID === 2 ? 'TUMDOOD' : 'Moonz';
+  return GUILD_ID === 2 ? 'TAMDAAD' : 'Moonz';
 })();
 
 export const DEFAULT_GUILD_ID = GUILD_ID;
