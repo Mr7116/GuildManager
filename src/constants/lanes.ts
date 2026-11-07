@@ -35,6 +35,17 @@ export const GVG_LANES: GvgLaneMeta[] = [
     activeClass: 'bg-red-500 text-white font-bold'
   },
   {
+    key: 'roam_mid',
+    name: 'โรมกลาง (Roaming mid)',
+    shortName: 'โรมกลาง',
+    fullName: '⚔️ โรมกลาง (Roaming mid)',
+    subtitle: 'หน่วยเคลื่อนที่เร็วฝั่งกลาง ซ้อนเสริมจังหวะและซัพพอร์ตเลนกลาง',
+    icon: '⚔️',
+    hexAccent: '#9415dd',
+    badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/40',
+    activeClass: 'bg-purple-500 text-white font-bold'
+  },
+  {
     key: 'roam_left',
     name: 'โรมซ้าย (Roaming left)',
     shortName: 'โรมซ้าย',

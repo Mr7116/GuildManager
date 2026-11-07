@@ -17,7 +17,7 @@ export const GUILD_ID: number = (() => {
     if (!isNaN(parsed) && parsed > 0) return parsed;
   }
   // 👈 เปลี่ยนเลข ID เริ่มต้นตรงนี้ (2 = TUMDOOD, 1 = Moonz)
-  return 2;
+  return 1;
 })();
 
 // 2. กำหนดชื่อกิลด์หลัก (Guild Name)

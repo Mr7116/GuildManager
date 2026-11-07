@@ -1,5 +1,5 @@
 export type FieldZoneKey = 'main' | 'sub';
-export type LaneKey = 'lane_mid' | 'lane_left' | 'lane_right' | 'roam_left' | 'roam_right';
+export type LaneKey = 'lane_mid' | 'lane_left' | 'lane_right' | 'roam_left' | 'roam_right' | 'roam_mid';
 
 export interface FieldZoneMeta {
   key: FieldZoneKey;
